@@ -1,0 +1,21 @@
+spring:
+  # ── DataSource ──
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USER}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+
+  # ── Redis ──
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+
+# ── Logging ──
+logging:
+  level:
+    com.agroconnect: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN

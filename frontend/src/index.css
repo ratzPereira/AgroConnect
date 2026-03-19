@@ -1,0 +1,132 @@
+@import "tailwindcss";
+
+/* ── AgroConnect Design System ── */
+
+@theme {
+  /* Primary: Forest Green */
+  --color-primary-50: #F0F9F0;
+  --color-primary-100: #D6F0D6;
+  --color-primary-200: #A8DCA8;
+  --color-primary-300: #6EC26E;
+  --color-primary-400: #3DA63D;
+  --color-primary-500: #2D8A2D;
+  --color-primary-600: #236E23;
+  --color-primary-700: #1A5C1A;
+  --color-primary-800: #134A13;
+  --color-primary-900: #0C3A0C;
+  --color-primary-950: #062106;
+
+  /* Secondary: Sky Blue */
+  --color-secondary-50: #EFF8FF;
+  --color-secondary-100: #D8EEFF;
+  --color-secondary-200: #B9E0FF;
+  --color-secondary-300: #7CC8FF;
+  --color-secondary-400: #36ABFF;
+  --color-secondary-500: #0C8CE8;
+  --color-secondary-600: #006FC6;
+  --color-secondary-700: #005AA1;
+  --color-secondary-800: #004C85;
+  --color-secondary-900: #003F6E;
+
+  /* Earth: Warm Brown */
+  --color-earth-50: #FDFAF5;
+  --color-earth-100: #F7F0E4;
+  --color-earth-200: #EFE3CC;
+  --color-earth-300: #E2CFA8;
+  --color-earth-400: #C9A86E;
+  --color-earth-500: #B08E4A;
+  --color-earth-600: #8F6F32;
+  --color-earth-700: #735826;
+  --color-earth-800: #5C461E;
+  --color-earth-900: #4A381A;
+
+  /* Leaf: Bright Green */
+  --color-leaf-50: #EDFCE5;
+  --color-leaf-100: #D4F8C4;
+  --color-leaf-200: #ACF08F;
+  --color-leaf-300: #7CE24F;
+  --color-leaf-400: #5ACA2D;
+  --color-leaf-500: #3FA517;
+  --color-leaf-600: #2F830F;
+  --color-leaf-700: #246410;
+  --color-leaf-800: #215013;
+  --color-leaf-900: #1D4414;
+
+  /* Neutral: Warm Grays */
+  --color-neutral-50: #FAFAF8;
+  --color-neutral-100: #F5F4F0;
+  --color-neutral-200: #E8E6E0;
+  --color-neutral-300: #D4D1C9;
+  --color-neutral-400: #B0ADA3;
+  --color-neutral-500: #8F8C82;
+  --color-neutral-600: #706D65;
+  --color-neutral-700: #5A5850;
+  --color-neutral-800: #3D3B36;
+  --color-neutral-900: #27261F;
+  --color-neutral-950: #141310;
+
+  /* Warning */
+  --color-warning-50: #FFF8EB;
+  --color-warning-100: #FFECC2;
+  --color-warning-400: #F5A623;
+  --color-warning-600: #C47A00;
+  --color-warning-800: #7A4D00;
+
+  /* Danger */
+  --color-danger-50: #FFF1F0;
+  --color-danger-100: #FFD9D6;
+  --color-danger-400: #E24B4A;
+  --color-danger-600: #B91C1C;
+  --color-danger-800: #7F1D1D;
+
+  /* Info */
+  --color-info-50: #EFF8FF;
+  --color-info-100: #D8EEFF;
+  --color-info-400: #36ABFF;
+  --color-info-600: #006FC6;
+  --color-info-800: #004C85;
+
+  /* Fonts */
+  --font-sans: "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-display: "Cal Sans", "Plus Jakarta Sans", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.04);
+  --shadow-card-hover: 0 4px 12px rgba(0, 0, 0, 0.06);
+  --shadow-dropdown: 0 8px 24px rgba(0, 0, 0, 0.08);
+
+  /* Animations */
+  --animate-shimmer: shimmer 1.5s infinite;
+  --animate-fade-in: fade-in 200ms ease-out;
+  --animate-slide-up: slide-up 200ms ease-out;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes fade-in {
+  0% { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+@keyframes slide-up {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Base ── */
+
+body {
+  margin: 0;
+  background-color: var(--color-neutral-50);
+  color: var(--color-neutral-800);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+#root {
+  min-height: 100svh;
+}
