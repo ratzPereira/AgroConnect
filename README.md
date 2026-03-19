@@ -124,11 +124,13 @@ cp .env.example .env
 # Levantar tudo
 docker compose -f docker-compose.dev.yml up
 
-# Aceder à aplicação
-# App:         http://localhost
-# Swagger UI:  http://localhost/swagger-ui.html
-# MinIO:       http://localhost:9001
-# Grafana:     http://localhost:3001
+# Aceder à aplicação (dev)
+# App:         http://localhost:10080
+# Swagger UI:  http://localhost:10080/swagger-ui.html
+# API direto:  http://localhost:18080/api/actuator/health
+# MinIO:       http://localhost:19001
+# PostgreSQL:  localhost:15432
+# Redis:       localhost:16379
 ```
 
 ---
