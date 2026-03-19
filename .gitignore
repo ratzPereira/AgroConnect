@@ -1,7 +1,12 @@
 # ═══════════════════════════════════════════
 # AgroConnect .gitignore
 # ═══════════════════════════════════════════
+
+# ── AI / Dev instructions (local only) ──
 docs/
+CLAUDE.md
+DESIGN_SYSTEM.md
+ROADMAP.md
 # ── IDE ──
 .idea/
 *.iml
