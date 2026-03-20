@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ls:*)",
+      "Bash(cd:*)",
+      "Bash(cd /c/AgroConnect/backend && mvn compile -q 2>&1)",
+      "Bash(cd /c/AgroConnect/backend && mvn test -q 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npm init vite@latest . -- --template react-ts 2>&1)",
+      "Bash(rm -rf /c/AgroConnect/frontend/src /c/AgroConnect/frontend/public && cd /c/AgroConnect/frontend && npm init vite@latest . -- --template react-ts 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npm install 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npm install react-router-dom @tanstack/react-query zustand react-hook-form @hookform/resolvers zod axios react-leaflet leaflet lucide-react clsx tailwind-merge date-fns 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npm install -D tailwindcss @tailwindcss/vite @types/leaflet vitest @testing-library/react @testing-library/jest-dom @testing-library/user-event msw jsdom 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npm run build 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npx tsc --noEmit 2>&1)",
+      "Bash(tail:*)"
+    ]
+  }
+}

@@ -6,6 +6,8 @@ import { Dashboard } from '@/pages/Dashboard';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
 import { Requests } from '@/pages/Requests';
+import { CreateRequest } from '@/pages/CreateRequest';
+import { RequestDetail } from '@/pages/RequestDetail';
 import { NotFound } from '@/pages/NotFound';
 
 export const router = createBrowserRouter([
@@ -18,6 +20,8 @@ export const router = createBrowserRouter([
           { path: '/', element: <Dashboard /> },
           { path: '/dashboard', element: <Dashboard /> },
           { path: '/requests', element: <Requests /> },
+          { path: '/requests/new', element: <CreateRequest /> },
+          { path: '/requests/:id', element: <RequestDetail /> },
         ],
       },
     ],
