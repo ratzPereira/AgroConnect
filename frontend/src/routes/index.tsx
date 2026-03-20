@@ -2,6 +2,7 @@ import { createBrowserRouter } from 'react-router-dom';
 import { MainLayout } from '@/layouts/MainLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { ProtectedRoute, PublicOnlyRoute } from '@/components/ProtectedRoute';
+import { RoleRoute } from '@/components/RoleRoute';
 import { Dashboard } from '@/pages/Dashboard';
 import { Login } from '@/pages/Login';
 import { Register } from '@/pages/Register';
@@ -10,6 +11,13 @@ import { CreateRequest } from '@/pages/CreateRequest';
 import { RequestDetail } from '@/pages/RequestDetail';
 import { Transactions } from '@/pages/Transactions';
 import { Notifications } from '@/pages/Notifications';
+import { ProviderDashboard } from '@/pages/provider/Dashboard';
+import { Team } from '@/pages/provider/Team';
+import { Machines } from '@/pages/provider/Machines';
+import { Inventory } from '@/pages/provider/Inventory';
+import { Finance } from '@/pages/provider/Finance';
+import { AdminDashboard } from '@/pages/admin/Dashboard';
+import { AdminUsers } from '@/pages/admin/Users';
 import { NotFound } from '@/pages/NotFound';
 
 export const router = createBrowserRouter([
@@ -26,6 +34,23 @@ export const router = createBrowserRouter([
           { path: '/requests/:id', element: <RequestDetail /> },
           { path: '/transactions', element: <Transactions /> },
           { path: '/notifications', element: <Notifications /> },
+          {
+            element: <RoleRoute allowedRoles={['PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR']} />,
+            children: [
+              { path: '/provider/dashboard', element: <ProviderDashboard /> },
+              { path: '/provider/team', element: <Team /> },
+              { path: '/provider/machines', element: <Machines /> },
+              { path: '/provider/inventory', element: <Inventory /> },
+              { path: '/provider/finance', element: <Finance /> },
+            ],
+          },
+          {
+            element: <RoleRoute allowedRoles={['ADMIN']} />,
+            children: [
+              { path: '/admin/dashboard', element: <AdminDashboard /> },
+              { path: '/admin/users', element: <AdminUsers /> },
+            ],
+          },
         ],
       },
     ],

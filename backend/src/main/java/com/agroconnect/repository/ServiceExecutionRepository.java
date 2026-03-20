@@ -22,4 +22,16 @@ public interface ServiceExecutionRepository extends JpaRepository<ServiceExecuti
             AND r.status = com.agroconnect.model.enums.RequestStatus.AWAITING_CONFIRMATION
             """)
     List<ServiceExecution> findCompletedAwaitingConfirmationBefore(@Param("cutoff") Instant cutoff);
+
+    @Query("""
+            SELECT se FROM ServiceExecution se
+            JOIN se.proposal p
+            JOIN p.provider pp
+            WHERE pp.id = :providerId
+            AND se.createdAt >= :from
+            AND se.createdAt <= :to
+            """)
+    List<ServiceExecution> findByProviderAndDateRange(@Param("providerId") Long providerId,
+                                                      @Param("from") Instant from,
+                                                      @Param("to") Instant to);
 }

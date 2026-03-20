@@ -39,4 +39,20 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
 
     @Query("SELECT sr FROM ServiceRequest sr WHERE sr.status = com.agroconnect.model.enums.RequestStatus.COMPLETED AND sr.updatedAt < :cutoff")
     List<ServiceRequest> findCompletedBeforeDate(@Param("cutoff") Instant cutoff);
+
+    long countByStatus(RequestStatus status);
+
+    @Query("""
+            SELECT COUNT(sr) FROM ServiceRequest sr
+            WHERE sr.status NOT IN (
+                com.agroconnect.model.enums.RequestStatus.RATED,
+                com.agroconnect.model.enums.RequestStatus.EXPIRED,
+                com.agroconnect.model.enums.RequestStatus.CANCELLED
+            )
+            """)
+    long countActiveRequests();
+
+    Page<ServiceRequest> findByStatusOrderByCreatedAtDesc(RequestStatus status, Pageable pageable);
+
+    long countByClientId(Long clientId);
 }

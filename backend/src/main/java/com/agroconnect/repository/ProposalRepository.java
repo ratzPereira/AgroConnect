@@ -25,4 +25,6 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
 
     @Query("SELECT p FROM Proposal p WHERE p.status = 'PENDING' AND p.validUntil IS NOT NULL AND p.validUntil < :now")
     List<Proposal> findExpiredPending(@Param("now") Instant now);
+
+    long countByProviderUserId(Long userId);
 }

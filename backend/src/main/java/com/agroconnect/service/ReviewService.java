@@ -130,6 +130,17 @@ public class ReviewService {
                         provider.getCompanyName()));
     }
 
+    public java.util.List<ReviewResponse> getRequestReviews(Long requestId) {
+        ServiceRequest request = requestRepository.findById(requestId)
+                .orElseThrow(() -> new ResourceNotFoundException("Pedido de serviço não encontrado."));
+
+        return reviewRepository.findByRequestId(requestId).stream()
+                .map(review -> ReviewMapper.toResponse(review,
+                        getDisplayName(review.getAuthor().getId()),
+                        getDisplayName(review.getTarget().getId())))
+                .toList();
+    }
+
     public Page<ReviewResponse> getMyReceivedReviews(Long userId, Pageable pageable) {
         return reviewRepository.findByTargetIdOrderByCreatedAtDesc(userId, pageable)
                 .map(review -> ReviewMapper.toResponse(review,

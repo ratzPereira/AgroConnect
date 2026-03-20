@@ -1,0 +1,151 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 1,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "title": "Service Requests Created (per hour)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/requests\", method=\"POST\", status=\"201\"}[1h])",
+          "legendFormat": "Requests Created",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Proposals Submitted (per hour)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/api/v1/requests/.*/proposals\", method=\"POST\", status=\"201\"}[1h])",
+          "legendFormat": "Proposals Submitted",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "User Registrations (per hour)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/auth/register\", method=\"POST\", status=\"201\"}[1h])",
+          "legendFormat": "Registrations",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Transaction Volume (per hour)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/api/v1/requests/.*/accept\", method=\"POST\", status=\"200\"}[1h])",
+          "legendFormat": "Proposals Accepted (escrow created)",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "API Endpoint Usage (Top 10)",
+      "type": "barchart",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "options": {
+        "orientation": "horizontal"
+      },
+      "targets": [
+        {
+          "expr": "topk(10, sum(increase(http_server_requests_seconds_count{application=\"agroconnect\"}[1h])) by (uri))",
+          "legendFormat": "{{uri}}",
+          "refId": "A",
+          "instant": true
+        }
+      ]
+    },
+    {
+      "title": "Chat Messages Sent (per hour)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "short" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/api/v1/requests/.*/messages\", method=\"POST\", status=\"201\"}[1h])",
+          "legendFormat": "Messages Sent",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Average Request Completion Time",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "fieldConfig": {
+        "defaults": { "unit": "s" },
+        "overrides": []
+      },
+      "targets": [
+        {
+          "expr": "histogram_quantile(0.50, sum(rate(http_server_requests_seconds_bucket{application=\"agroconnect\", uri=~\"/api/v1/requests.*\"}[5m])) by (le))",
+          "legendFormat": "p50 Request Latency",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Active WebSocket Connections",
+      "type": "stat",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "datasource": { "type": "prometheus", "uid": "PBFA97CFB590B2093" },
+      "targets": [
+        {
+          "expr": "tomcat_sessions_active_current_sessions{application=\"agroconnect\"}",
+          "legendFormat": "Active Sessions",
+          "refId": "A"
+        }
+      ]
+    }
+  ],
+  "schemaVersion": 39,
+  "tags": ["agroconnect", "business"],
+  "templating": { "list": [] },
+  "time": { "from": "now-24h", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "AgroConnect - Business Metrics",
+  "uid": "agroconnect-business",
+  "version": 1
+}

@@ -13,7 +13,10 @@
       "Bash(cd /c/AgroConnect/frontend && npm run build 2>&1)",
       "Bash(cd /c/AgroConnect/frontend && npx tsc --noEmit 2>&1)",
       "Bash(tail:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(head:*)",
+      "Bash(cd /c/AgroConnect && docker compose -f docker-compose.dev.yml ps 2>&1)",
+      "Bash(wc:*)"
     ]
   }
 }

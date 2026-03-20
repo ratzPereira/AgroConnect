@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getExecutionByRequest } from '@/api/executions';
+import { useState, type ReactNode } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getExecutionByRequest, completeExecution } from '@/api/executions';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { AssignmentForm } from './AssignmentForm';
 import { CheckinButton } from './CheckinButton';
 import { ExecutionPhotoUpload } from './ExecutionPhotoUpload';
@@ -56,6 +57,24 @@ export function ExecutionPanel({ requestId, requestStatus, isProvider }: Executi
       </Card>
     );
   }
+
+  const queryClient = useQueryClient();
+  const [completeNotes, setCompleteNotes] = useState('');
+  const [completeMaterials, setCompleteMaterials] = useState('');
+  const [showCompleteForm, setShowCompleteForm] = useState(false);
+
+  const completeMutation = useMutation({
+    mutationFn: () =>
+      completeExecution(execution.id, {
+        notes: completeNotes || undefined,
+        materialsUsed: completeMaterials || undefined,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['execution', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      setShowCompleteForm(false);
+    },
+  });
 
   const isCheckedIn = execution.checkinTime !== null;
   const isCompleted = execution.completedAt !== null;
@@ -176,6 +195,65 @@ export function ExecutionPanel({ requestId, requestStatus, isProvider }: Executi
             <p className="text-sm text-neutral-500">Nenhuma foto carregada.</p>
           )}
         </div>
+
+        {/* Complete button (provider, after check-in, not yet completed) */}
+        {isProvider && isCheckedIn && !isCompleted && (
+          <div>
+            <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
+              Concluir Serviço
+            </h3>
+            {!showCompleteForm ? (
+              <Button onClick={() => setShowCompleteForm(true)}>
+                <CheckCircle2 className="h-4 w-4" />
+                Marcar como Concluído
+              </Button>
+            ) : (
+              <div className="space-y-3">
+                <div className="space-y-1.5">
+                  <label htmlFor="completeNotes" className="block text-sm font-medium text-neutral-700">
+                    Notas (opcional)
+                  </label>
+                  <textarea
+                    id="completeNotes"
+                    rows={2}
+                    value={completeNotes}
+                    onChange={(e) => setCompleteNotes(e.target.value)}
+                    placeholder="Observações sobre o trabalho realizado..."
+                    className="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label htmlFor="completeMaterials" className="block text-sm font-medium text-neutral-700">
+                    Materiais utilizados (opcional)
+                  </label>
+                  <input
+                    id="completeMaterials"
+                    type="text"
+                    value={completeMaterials}
+                    onChange={(e) => setCompleteMaterials(e.target.value)}
+                    placeholder="Ex: Herbicida 5L, Adubo 20kg"
+                    className="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <Button
+                    onClick={() => completeMutation.mutate()}
+                    loading={completeMutation.isPending}
+                  >
+                    <CheckCircle2 className="h-4 w-4" />
+                    Confirmar Conclusão
+                  </Button>
+                  <Button variant="outline" onClick={() => setShowCompleteForm(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+                {completeMutation.isError && (
+                  <p className="text-sm text-red-600">Erro ao concluir. Tente novamente.</p>
+                )}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Notes */}
         {isCompleted && (execution.notes || execution.materialsUsed) && (

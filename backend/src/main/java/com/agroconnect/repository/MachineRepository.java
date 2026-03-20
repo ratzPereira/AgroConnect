@@ -9,6 +9,8 @@ import java.util.Optional;
 
 public interface MachineRepository extends JpaRepository<Machine, Long> {
 
+    List<Machine> findByProviderId(Long providerId);
+
     List<Machine> findByProviderIdAndStatus(Long providerId, MachineStatus status);
 
     Optional<Machine> findByIdAndProviderId(Long id, Long providerId);

@@ -4,7 +4,47 @@ import { logout as logoutApi } from '@/api/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationBell } from '@/components/NotificationBell';
 import { cn } from '@/utils/cn';
-import { LayoutDashboard, FileText, CreditCard, Bell, LogOut } from 'lucide-react';
+import {
+  LayoutDashboard, FileText, CreditCard, Bell, LogOut,
+  Users, Wrench, Package, DollarSign, Shield, UserCog,
+} from 'lucide-react';
+import type { Role } from '@/types/auth';
+
+interface NavItem {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+}
+
+function buildNavItems(role?: Role): NavItem[] {
+  const common: NavItem[] = [
+    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+    { to: '/requests', label: 'Pedidos', icon: FileText },
+    { to: '/transactions', label: 'Transações', icon: CreditCard },
+    { to: '/notifications', label: 'Notificações', icon: Bell },
+  ];
+
+  const providerItems: NavItem[] = [
+    { to: '/provider/dashboard', label: 'Backoffice', icon: LayoutDashboard },
+    { to: '/provider/team', label: 'Equipa', icon: Users },
+    { to: '/provider/machines', label: 'Máquinas', icon: Wrench },
+    { to: '/provider/inventory', label: 'Inventário', icon: Package },
+    { to: '/provider/finance', label: 'Finanças', icon: DollarSign },
+  ];
+
+  const adminItems: NavItem[] = [
+    { to: '/admin/dashboard', label: 'Administração', icon: Shield },
+    { to: '/admin/users', label: 'Utilizadores', icon: UserCog },
+  ];
+
+  if (role === 'PROVIDER_MANAGER' || role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR') {
+    return [...common, ...providerItems];
+  }
+  if (role === 'ADMIN') {
+    return [...common, ...adminItems];
+  }
+  return common;
+}
 
 export function MainLayout() {
   const navigate = useNavigate();
@@ -23,12 +63,7 @@ export function MainLayout() {
     navigate('/login');
   }
 
-  const navItems = [
-    { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { to: '/requests', label: 'Pedidos', icon: FileText },
-    { to: '/transactions', label: 'Transações', icon: CreditCard },
-    { to: '/notifications', label: 'Notificações', icon: Bell },
-  ];
+  const navItems = buildNavItems(user?.role);
 
   return (
     <div className="min-h-svh flex">

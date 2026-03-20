@@ -7,6 +7,11 @@ export async function createReview(requestId: number, data: CreateReviewRequest)
   return response.data;
 }
 
+export async function getRequestReviews(requestId: number): Promise<Review[]> {
+  const response = await apiClient.get<Review[]>(`/requests/${requestId}/reviews`);
+  return response.data;
+}
+
 export async function getProviderReviews(
   providerId: number,
   page = 0,

@@ -11,4 +11,6 @@ public interface TeamMemberRepository extends JpaRepository<TeamMember, Long> {
     List<TeamMember> findByProviderIdAndActiveTrue(Long providerId);
 
     Optional<TeamMember> findByIdAndProviderId(Long id, Long providerId);
+
+    boolean existsByProviderIdAndEmail(Long providerId, String email);
 }

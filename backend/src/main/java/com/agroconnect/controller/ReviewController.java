@@ -57,6 +57,18 @@ public class ReviewController {
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
+    @GetMapping("/requests/{id}/reviews")
+    @Operation(summary = "Get reviews for a service request",
+            description = "Returns all reviews submitted for a specific service request (max 2: one from client, one from provider).")
+    @ApiResponse(responseCode = "200", description = "List of reviews")
+    @ApiResponse(responseCode = "404", description = "Request not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<java.util.List<ReviewResponse>> getRequestReviews(
+            @Parameter(description = "Service request ID") @PathVariable Long id) {
+        var result = reviewService.getRequestReviews(id);
+        return ResponseEntity.ok(result);
+    }
+
     @GetMapping("/providers/{id}/reviews")
     @Operation(summary = "Get provider reviews",
             description = "Returns paginated list of reviews for a provider. Public endpoint.")

@@ -3,10 +3,16 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRequest, cancelRequest } from '@/api/requests';
 import { getRequestProposals, createProposal, acceptProposal } from '@/api/proposals';
+import { getRequestReviews } from '@/api/reviews';
 import { useAuthStore } from '@/stores/authStore';
 import { RequestStatusBadge } from '@/features/requests/components/RequestStatusBadge';
 import { ProposalCard } from '@/features/proposals/components/ProposalCard';
 import { CreateProposalModal } from '@/features/proposals/components/CreateProposalModal';
+import { ExecutionPanel } from '@/features/executions/components/ExecutionPanel';
+import { ConfirmationPanel } from '@/features/requests/components/ConfirmationPanel';
+import { ReviewForm } from '@/features/reviews/components/ReviewForm';
+import { ReviewCard } from '@/features/reviews/components/ReviewCard';
+import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { ArrowLeft, MapPin, Layers, Clock, Loader2, X } from 'lucide-react';
@@ -17,6 +23,16 @@ const urgencyLabels: Record<string, string> = {
   MEDIUM: 'Média',
   HIGH: 'Alta',
 };
+
+const EXECUTION_STATUSES = new Set([
+  'AWARDED', 'IN_PROGRESS', 'AWAITING_CONFIRMATION', 'COMPLETED', 'RATED', 'DISPUTED',
+]);
+
+const CHAT_STATUSES = new Set([
+  'AWARDED', 'IN_PROGRESS', 'AWAITING_CONFIRMATION', 'COMPLETED', 'DISPUTED',
+]);
+
+const REVIEW_STATUSES = new Set(['COMPLETED', 'RATED']);
 
 export function RequestDetail() {
   const { id } = useParams<{ id: string }>();
@@ -38,6 +54,12 @@ export function RequestDetail() {
     queryKey: ['proposals', requestId],
     queryFn: () => getRequestProposals(requestId),
     enabled: !isNaN(requestId),
+  });
+
+  const { data: reviews } = useQuery({
+    queryKey: ['request-reviews', requestId],
+    queryFn: () => getRequestReviews(requestId),
+    enabled: !isNaN(requestId) && !!request && REVIEW_STATUSES.has(request.status),
   });
 
   const cancelMutation = useMutation({
@@ -67,6 +89,12 @@ export function RequestDetail() {
   const isOwner = request && request.clientId === user?.id;
   const canPropose = isProvider && request && (request.status === 'PUBLISHED' || request.status === 'WITH_PROPOSALS');
   const canCancel = isOwner && request && !['RATED', 'EXPIRED', 'CANCELLED'].includes(request.status);
+
+  const showExecution = request && EXECUTION_STATUSES.has(request.status);
+  const showChat = request && CHAT_STATUSES.has(request.status);
+  const showConfirmation = isOwner && request?.status === 'AWAITING_CONFIRMATION';
+  const showReviewForm = request && REVIEW_STATUSES.has(request.status) &&
+    reviews && !reviews.some((r) => r.authorId === user?.id);
 
   if (requestLoading) {
     return (
@@ -169,6 +197,42 @@ export function RequestDetail() {
                   alt="Foto do pedido"
                   className="w-full h-32 object-cover rounded-lg border border-neutral-200"
                 />
+              ))}
+            </div>
+          </CardBody>
+        </Card>
+      )}
+
+      {/* Execution Panel (>=AWARDED) */}
+      {showExecution && (
+        <ExecutionPanel
+          requestId={requestId}
+          requestStatus={request.status}
+          isProvider={isProvider}
+        />
+      )}
+
+      {/* Chat Panel (>=AWARDED, for both client and provider) */}
+      {showChat && <ChatPanel requestId={requestId} />}
+
+      {/* Confirmation Panel (AWAITING_CONFIRMATION, client only) */}
+      {showConfirmation && <ConfirmationPanel requestId={requestId} />}
+
+      {/* Review Form (COMPLETED/RATED, user hasn't reviewed yet) */}
+      {showReviewForm && <ReviewForm requestId={requestId} />}
+
+      {/* Reviews submitted for this request */}
+      {reviews && reviews.length > 0 && (
+        <Card className="mb-6">
+          <CardHeader>
+            <h2 className="font-semibold text-neutral-900 text-sm">
+              Avaliações ({reviews.length})
+            </h2>
+          </CardHeader>
+          <CardBody>
+            <div className="space-y-3">
+              {reviews.map((review) => (
+                <ReviewCard key={review.id} review={review} />
               ))}
             </div>
           </CardBody>
