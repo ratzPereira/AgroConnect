@@ -1,12 +1,17 @@
 import { NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { logout as logoutApi } from '@/api/auth';
+import { useNotifications } from '@/hooks/useNotifications';
+import { NotificationBell } from '@/components/NotificationBell';
 import { cn } from '@/utils/cn';
-import { LayoutDashboard, FileText, LogOut } from 'lucide-react';
+import { LayoutDashboard, FileText, CreditCard, Bell, LogOut } from 'lucide-react';
 
 export function MainLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
+
+  // Initialize notification polling
+  useNotifications();
 
   async function handleLogout() {
     try {
@@ -21,6 +26,8 @@ export function MainLayout() {
   const navItems = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/requests', label: 'Pedidos', icon: FileText },
+    { to: '/transactions', label: 'Transações', icon: CreditCard },
+    { to: '/notifications', label: 'Notificações', icon: Bell },
   ];
 
   return (
@@ -65,6 +72,10 @@ export function MainLayout() {
 
       <main className="flex-1 bg-neutral-50">
         <div className="max-w-[1200px] mx-auto px-8 py-6">
+          {/* Top bar with notification bell */}
+          <div className="flex justify-end mb-4">
+            <NotificationBell />
+          </div>
           <Outlet />
         </div>
       </main>

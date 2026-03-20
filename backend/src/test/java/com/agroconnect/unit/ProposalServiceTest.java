@@ -20,6 +20,7 @@ import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.repository.TransactionRepository;
+import com.agroconnect.service.ExecutionService;
 import com.agroconnect.service.NotificationService;
 import com.agroconnect.service.ProposalService;
 import org.junit.jupiter.api.BeforeEach;
@@ -27,6 +28,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -50,6 +52,7 @@ class ProposalServiceTest {
     @Mock private ProviderProfileRepository providerProfileRepository;
     @Mock private TransactionRepository transactionRepository;
     @Mock private NotificationService notificationService;
+    @Mock private ExecutionService executionService;
 
     private ProposalService service;
 
@@ -64,7 +67,8 @@ class ProposalServiceTest {
         service = new ProposalService(
                 proposalRepository, requestRepository,
                 providerProfileRepository, transactionRepository,
-                notificationService);
+                notificationService, executionService);
+        ReflectionTestUtils.setField(service, "commissionRate", new BigDecimal("0.1200"));
 
         clientUser = UserFixture.aClientUser().build();
         providerUser = UserFixture.aProviderUser().build();

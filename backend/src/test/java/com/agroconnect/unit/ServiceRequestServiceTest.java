@@ -19,8 +19,11 @@ import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.RequestPhotoRepository;
 import com.agroconnect.repository.ServiceCategoryRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
+import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.repository.UserRepository;
+import com.agroconnect.service.NotificationService;
 import com.agroconnect.service.ServiceRequestService;
+import com.agroconnect.service.TransactionService;
 import io.minio.MinioClient;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +51,9 @@ class ServiceRequestServiceTest {
     @Mock private ProviderProfileRepository providerProfileRepository;
     @Mock private RequestPhotoRepository photoRepository;
     @Mock private ProposalRepository proposalRepository;
+    @Mock private TransactionRepository transactionRepository;
+    @Mock private TransactionService transactionService;
+    @Mock private NotificationService notificationService;
     @Mock private MinioClient minioClient;
 
     private ServiceRequestService service;
@@ -61,7 +67,8 @@ class ServiceRequestServiceTest {
         service = new ServiceRequestService(
                 requestRepository, categoryRepository, userRepository,
                 clientProfileRepository, providerProfileRepository,
-                photoRepository, proposalRepository, minioClient);
+                photoRepository, proposalRepository, transactionRepository,
+                transactionService, notificationService, minioClient);
 
         clientUser = UserFixture.aClientUser().build();
         clientProfile = UserFixture.aClientProfile().user(clientUser).build();

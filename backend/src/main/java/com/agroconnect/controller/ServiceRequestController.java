@@ -1,6 +1,8 @@
 package com.agroconnect.controller;
 
 import com.agroconnect.dto.request.CreateServiceRequestDto;
+import com.agroconnect.dto.request.DisputeRequestDto;
+import com.agroconnect.dto.request.ResolveDisputeDto;
 import com.agroconnect.dto.request.UpdateServiceRequestDto;
 import com.agroconnect.dto.response.PresignedUrlResponse;
 import com.agroconnect.dto.response.ServiceRequestResponse;
@@ -224,5 +226,71 @@ public class ServiceRequestController {
             @AuthenticationPrincipal UserPrincipal principal) {
         requestService.deletePhoto(id, photoId, principal.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    @PostMapping("/{id}/confirm")
+    @PreAuthorize("hasRole('CLIENT')")
+    @Operation(summary = "Confirm service completion",
+            description = "Client confirms that the service was completed satisfactorily. Releases payment to provider.")
+    @ApiResponse(responseCode = "200", description = "Service confirmed, payment released")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not the owner of this request",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Request not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Request not in AWAITING_CONFIRMATION state",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ServiceRequestResponse> confirm(
+            @Parameter(description = "Request ID") @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = requestService.confirm(id, principal.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/dispute")
+    @PreAuthorize("hasRole('CLIENT')")
+    @Operation(summary = "Dispute service execution",
+            description = "Client disputes the service execution. Admin will review and resolve.")
+    @ApiResponse(responseCode = "200", description = "Dispute created")
+    @ApiResponse(responseCode = "400", description = "Invalid reason",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not the owner of this request",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Request not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Request not in AWAITING_CONFIRMATION state",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ServiceRequestResponse> dispute(
+            @Parameter(description = "Request ID") @PathVariable Long id,
+            @Valid @RequestBody DisputeRequestDto dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = requestService.dispute(id, dto, principal.getId());
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/resolve")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Resolve a dispute (Admin only)",
+            description = "Admin resolves a disputed request. Can RELEASE funds to provider or REFUND to client.")
+    @ApiResponse(responseCode = "200", description = "Dispute resolved")
+    @ApiResponse(responseCode = "400", description = "Invalid resolution data",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Only admins can resolve disputes",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Request not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Request not in DISPUTED state",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ServiceRequestResponse> resolveDispute(
+            @Parameter(description = "Request ID") @PathVariable Long id,
+            @Valid @RequestBody ResolveDisputeDto dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = requestService.resolveDispute(id, dto);
+        return ResponseEntity.ok(response);
     }
 }

@@ -1,6 +1,8 @@
 package com.agroconnect.service;
 
 import com.agroconnect.dto.request.CreateServiceRequestDto;
+import com.agroconnect.dto.request.DisputeRequestDto;
+import com.agroconnect.dto.request.ResolveDisputeDto;
 import com.agroconnect.dto.request.UpdateServiceRequestDto;
 import com.agroconnect.dto.response.PresignedUrlResponse;
 import com.agroconnect.dto.response.ServiceRequestResponse;
@@ -11,10 +13,12 @@ import com.agroconnect.exception.ResourceNotFoundException;
 import com.agroconnect.exception.ValidationException;
 import com.agroconnect.mapper.ServiceRequestMapper;
 import com.agroconnect.model.ClientProfile;
+import com.agroconnect.model.Proposal;
 import com.agroconnect.model.RequestPhoto;
 import com.agroconnect.model.ServiceCategory;
 import com.agroconnect.model.ServiceRequest;
 import com.agroconnect.model.User;
+import com.agroconnect.model.enums.ProposalStatus;
 import com.agroconnect.model.enums.RequestStatus;
 import com.agroconnect.model.enums.Urgency;
 import com.agroconnect.repository.ClientProfileRepository;
@@ -23,6 +27,7 @@ import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.RequestPhotoRepository;
 import com.agroconnect.repository.ServiceCategoryRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
+import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.repository.UserRepository;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
@@ -82,6 +87,9 @@ public class ServiceRequestService {
     private final ProviderProfileRepository providerProfileRepository;
     private final RequestPhotoRepository photoRepository;
     private final ProposalRepository proposalRepository;
+    private final TransactionRepository transactionRepository;
+    private final TransactionService transactionService;
+    private final NotificationService notificationService;
     private final MinioClient minioClient;
 
     @Value("${agroconnect.minio.bucket}")
@@ -206,12 +214,120 @@ public class ServiceRequestService {
             throw new InvalidStateException("Não é possível cancelar um pedido no estado " + request.getStatus() + ".");
         }
 
+        // If there's a held transaction, refund it
+        transactionRepository.findByRequestId(id).ifPresent(tx -> {
+            if (tx.getStatus() == com.agroconnect.model.enums.TransactionStatus.HELD) {
+                transactionService.refund(id);
+            }
+        });
+
         request.setStatus(RequestStatus.CANCELLED);
         request = requestRepository.save(request);
 
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request cancelled: {}", id);
+        return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
+    }
+
+    @Transactional
+    public ServiceRequestResponse confirm(Long id, Long userId) {
+        ServiceRequest request = findByIdOrThrow(id);
+        validateOwnership(request, userId);
+        validateTransition(request.getStatus(), RequestStatus.COMPLETED);
+
+        request.setStatus(RequestStatus.COMPLETED);
+        request = requestRepository.save(request);
+
+        // Release the held funds to the provider
+        transactionService.release(id);
+
+        // Notify the provider
+        Proposal acceptedProposal = findAcceptedProposal(id);
+        notificationService.create(
+                acceptedProposal.getProvider().getUser().getId(),
+                "SERVICE_CONFIRMED",
+                "Serviço confirmado",
+                "O cliente confirmou a conclusão do serviço \"" + request.getTitle() + "\". O pagamento foi liberado."
+        );
+
+        String clientName = getClientName(userId);
+        int proposalCount = proposalRepository.findByRequestId(id).size();
+        log.info("Service request confirmed: {}", id);
+        return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
+    }
+
+    @Transactional
+    public ServiceRequestResponse dispute(Long id, DisputeRequestDto dto, Long userId) {
+        ServiceRequest request = findByIdOrThrow(id);
+        validateOwnership(request, userId);
+        validateTransition(request.getStatus(), RequestStatus.DISPUTED);
+
+        request.setStatus(RequestStatus.DISPUTED);
+        request = requestRepository.save(request);
+
+        // Notify the provider
+        Proposal acceptedProposal = findAcceptedProposal(id);
+        notificationService.create(
+                acceptedProposal.getProvider().getUser().getId(),
+                "SERVICE_DISPUTED",
+                "Serviço disputado",
+                "O cliente abriu uma disputa para o serviço \"" + request.getTitle() + "\": " + dto.reason()
+        );
+
+        String clientName = getClientName(userId);
+        int proposalCount = proposalRepository.findByRequestId(id).size();
+        log.info("Service request disputed: {} - reason: {}", id, dto.reason());
+        return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
+    }
+
+    @Transactional
+    public ServiceRequestResponse resolveDispute(Long id, ResolveDisputeDto dto) {
+        ServiceRequest request = findByIdOrThrow(id);
+        if (request.getStatus() != RequestStatus.DISPUTED) {
+            throw new InvalidStateException("Só é possível resolver pedidos no estado DISPUTED.");
+        }
+
+        Proposal acceptedProposal = findAcceptedProposal(id);
+
+        if (dto.resolution() == ResolveDisputeDto.Resolution.RELEASE) {
+            request.setStatus(RequestStatus.COMPLETED);
+            transactionService.release(id);
+
+            notificationService.create(
+                    request.getClient().getId(),
+                    "DISPUTE_RESOLVED",
+                    "Disputa resolvida",
+                    "A disputa foi resolvida a favor do prestador. O pagamento foi liberado."
+            );
+            notificationService.create(
+                    acceptedProposal.getProvider().getUser().getId(),
+                    "DISPUTE_RESOLVED",
+                    "Disputa resolvida",
+                    "A disputa foi resolvida a seu favor. O pagamento foi liberado."
+            );
+        } else {
+            request.setStatus(RequestStatus.CANCELLED);
+            transactionService.refund(id);
+
+            notificationService.create(
+                    request.getClient().getId(),
+                    "DISPUTE_RESOLVED",
+                    "Disputa resolvida",
+                    "A disputa foi resolvida a seu favor. O reembolso foi processado."
+            );
+            notificationService.create(
+                    acceptedProposal.getProvider().getUser().getId(),
+                    "DISPUTE_RESOLVED",
+                    "Disputa resolvida",
+                    "A disputa foi resolvida a favor do cliente. O pagamento foi reembolsado."
+            );
+        }
+
+        request = requestRepository.save(request);
+        String clientName = getClientName(request.getClient().getId());
+        int proposalCount = proposalRepository.findByRequestId(id).size();
+        log.info("Dispute resolved for request {}: {} - notes: {}", id, dto.resolution(), dto.notes());
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
     }
 
@@ -343,6 +459,13 @@ public class ServiceRequestService {
         return clientProfileRepository.findByUserId(userId)
                 .map(ClientProfile::getName)
                 .orElse("Desconhecido");
+    }
+
+    private Proposal findAcceptedProposal(Long requestId) {
+        return proposalRepository.findByRequestId(requestId).stream()
+                .filter(p -> p.getStatus() == ProposalStatus.ACCEPTED)
+                .findFirst()
+                .orElseThrow(() -> new ResourceNotFoundException("Proposta aceite não encontrada."));
     }
 
     private Point createPoint(double longitude, double latitude) {

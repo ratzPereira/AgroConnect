@@ -1,5 +1,7 @@
 package com.agroconnect.service;
 
+import com.agroconnect.dto.response.NotificationResponse;
+import com.agroconnect.mapper.NotificationMapper;
 import com.agroconnect.model.Notification;
 import com.agroconnect.model.User;
 import com.agroconnect.repository.NotificationRepository;
@@ -22,6 +24,7 @@ public class NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final NotificationPublisher notificationPublisher;
 
     @Transactional
     public void create(Long userId, String type, String title, String body) {
@@ -35,11 +38,27 @@ public class NotificationService {
                 .body(body)
                 .build();
 
-        notificationRepository.save(notification);
+        notification = notificationRepository.save(notification);
+
+        // Send real-time notification via WebSocket
+        NotificationResponse response = NotificationMapper.toResponse(notification);
+        notificationPublisher.sendToUser(userId, response);
+
         log.debug("Notification created for user {}: {}", userId, type);
     }
 
-    public Page<Notification> listByUser(Long userId, Pageable pageable) {
-        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
+    public Page<NotificationResponse> listByUser(Long userId, Pageable pageable) {
+        return notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
+                .map(NotificationMapper::toResponse);
+    }
+
+    public long getUnreadCount(Long userId) {
+        return notificationRepository.countByUserIdAndReadFalse(userId);
+    }
+
+    @Transactional
+    public void markAllAsRead(Long userId) {
+        notificationRepository.markAllAsReadByUserId(userId);
+        log.debug("All notifications marked as read for user {}", userId);
     }
 }

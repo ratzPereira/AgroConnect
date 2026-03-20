@@ -69,3 +69,16 @@ export async function confirmPhoto(requestId: number, photoUrl: string): Promise
 export async function deletePhoto(requestId: number, photoId: number): Promise<void> {
   await apiClient.delete(`/requests/${requestId}/photos/${photoId}`);
 }
+
+export async function confirmRequest(id: number): Promise<ServiceRequestResponse> {
+  const response = await apiClient.post<ServiceRequestResponse>(`/requests/${id}/confirm`);
+  return response.data;
+}
+
+export async function disputeRequest(
+  id: number,
+  data: { reason: string },
+): Promise<ServiceRequestResponse> {
+  const response = await apiClient.post<ServiceRequestResponse>(`/requests/${id}/dispute`, data);
+  return response.data;
+}

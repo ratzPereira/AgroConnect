@@ -50,6 +50,7 @@ public class ProposalService {
     private final ProviderProfileRepository providerProfileRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationService notificationService;
+    private final ExecutionService executionService;
 
     @Value("${agroconnect.commission.rate}")
     private BigDecimal commissionRate;
@@ -151,6 +152,9 @@ public class ProposalService {
                 .build();
 
         transactionRepository.save(transaction);
+
+        // Create execution for the accepted proposal
+        executionService.createForProposal(proposal);
 
         // Notify accepted provider
         notificationService.create(
