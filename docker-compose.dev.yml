@@ -163,6 +163,14 @@ services:
       - prometheus
     restart: unless-stopped
 
+  mailpit:
+    image: axllent/mailpit
+    container_name: agroconnect-mailpit
+    ports:
+      - "11025:1025"
+      - "18025:8025"
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   redis-data:

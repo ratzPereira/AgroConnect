@@ -45,7 +45,9 @@ export function Login() {
         typeof (err as Record<string, unknown>).response === 'object'
       ) {
         const axiosErr = err as { response: { status: number; data?: { message?: string } } };
-        if (axiosErr.response.status === 401) {
+        if (axiosErr.response.status === 403) {
+          setError(axiosErr.response.data?.message ?? 'Verifique o seu email antes de iniciar sessão.');
+        } else if (axiosErr.response.status === 401) {
           setError('Email ou palavra-passe incorretos.');
         } else {
           setError(axiosErr.response.data?.message ?? 'Ocorreu um erro. Tente novamente.');
@@ -96,6 +98,12 @@ export function Login() {
             Entrar
           </Button>
         </form>
+
+        <p className="text-sm text-center mt-4">
+          <Link to="/forgot-password" className="text-neutral-500 hover:text-neutral-700">
+            Esqueceu a palavra-passe?
+          </Link>
+        </p>
 
         <p className="text-sm text-neutral-500 text-center mt-6">
           Não tem conta?{' '}

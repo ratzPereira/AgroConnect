@@ -18,6 +18,9 @@ import { Inventory } from '@/pages/provider/Inventory';
 import { Finance } from '@/pages/provider/Finance';
 import { AdminDashboard } from '@/pages/admin/Dashboard';
 import { AdminUsers } from '@/pages/admin/Users';
+import { VerifyEmail } from '@/pages/VerifyEmail';
+import { ForgotPassword } from '@/pages/ForgotPassword';
+import { ResetPassword } from '@/pages/ResetPassword';
 import { NotFound } from '@/pages/NotFound';
 
 export const router = createBrowserRouter([
@@ -67,5 +70,8 @@ export const router = createBrowserRouter([
       },
     ],
   },
+  { path: '/verify-email', element: <VerifyEmail /> },
+  { path: '/forgot-password', element: <ForgotPassword /> },
+  { path: '/reset-password', element: <ResetPassword /> },
   { path: '*', element: <NotFound /> },
 ]);

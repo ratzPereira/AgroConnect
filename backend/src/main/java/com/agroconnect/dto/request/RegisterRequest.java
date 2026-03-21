@@ -1,5 +1,6 @@
 package com.agroconnect.dto.request;
 
+import com.agroconnect.validation.ValidPassword;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -16,8 +17,8 @@ public record RegisterRequest(
         String email,
 
         @NotBlank(message = "A palavra-passe é obrigatória")
-        @Size(min = 8, max = 100, message = "A palavra-passe deve ter entre 8 e 100 caracteres")
-        @Schema(description = "User password (min 8 characters)", example = "password123")
+        @ValidPassword
+        @Schema(description = "User password (min 8 chars, uppercase, lowercase, digit)", example = "Password1")
         String password,
 
         @NotBlank(message = "A confirmação da palavra-passe é obrigatória")

@@ -33,3 +33,20 @@ export interface AuthResponse {
   expiresIn: number;
   user: UserResponse;
 }
+
+export interface MessageResponse {
+  message: string;
+}
+
+export interface ResendVerificationRequest {
+  email: string;
+}
+
+export interface ForgotPasswordRequest {
+  email: string;
+}
+
+export interface ResetPasswordRequest {
+  token: string;
+  newPassword: string;
+}

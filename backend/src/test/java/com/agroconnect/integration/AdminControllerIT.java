@@ -50,7 +50,7 @@ class AdminControllerIT extends TestContainersConfig {
                 .build();
         admin = userRepository.save(admin);
         adminUserId = admin.getId();
-        adminToken = jwtService.generateAccessToken(admin.getId(), admin.getEmail(), admin.getRole().name());
+        adminToken = jwtService.generateAccessToken(admin);
     }
 
     @Test

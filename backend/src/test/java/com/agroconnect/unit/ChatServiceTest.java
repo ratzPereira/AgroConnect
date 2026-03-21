@@ -98,8 +98,6 @@ class ChatServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(clientUser));
         when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(saved);
         when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.of(clientProfile));
-        when(clientProfileRepository.findByUserId(2L)).thenReturn(Optional.empty());
-        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
 
         ChatMessageResponse response = service.sendMessage(1L, dto, 1L);
 
@@ -134,7 +132,6 @@ class ChatServiceTest {
     @Test
     void getMessages_givenValidParticipant_shouldReturnMessages() {
         when(requestRepository.findById(1L)).thenReturn(Optional.of(awardedRequest));
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(acceptedProposal));
         when(chatMessageRepository.findByRequestIdOrderBySentAtAsc(eq(1L), any()))
                 .thenReturn(org.springframework.data.domain.Page.empty());
 

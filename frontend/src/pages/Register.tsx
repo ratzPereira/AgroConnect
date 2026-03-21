@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/authStore';
+import { Link } from 'react-router-dom';
 import { register as registerApi } from '@/api/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -29,9 +28,8 @@ const registerSchema = z
 type RegisterForm = z.infer<typeof registerSchema>;
 
 export function Register() {
-  const navigate = useNavigate();
-  const { setTokens, setUser } = useAuthStore();
   const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
 
   const {
     register,
@@ -57,10 +55,8 @@ export function Register() {
         companyName: data.companyName,
         nif: data.nif,
       };
-      const response = await registerApi(request);
-      setTokens(response.accessToken, response.refreshToken);
-      setUser(response.user);
-      navigate('/dashboard');
+      await registerApi(request);
+      setSuccess(true);
     } catch (err: unknown) {
       if (
         typeof err === 'object' &&
@@ -78,6 +74,23 @@ export function Register() {
         setError('Não foi possível ligar ao servidor.');
       }
     }
+  }
+
+  if (success) {
+    return (
+      <div className="min-h-svh flex items-center justify-center bg-neutral-50 py-12">
+        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-8 w-full max-w-md text-center">
+          <img src="/logotipo.png" alt="AgroConnect" className="h-16 mx-auto mb-6" />
+          <h1 className="text-xl font-semibold text-neutral-800 mb-4">Verifique o seu email</h1>
+          <p className="text-sm text-neutral-600 mb-6">
+            Enviámos um link de verificação para o seu email. Por favor verifique a sua caixa de correio para ativar a sua conta.
+          </p>
+          <Link to="/login" className="text-green-600 hover:text-green-700 font-medium text-sm">
+            Voltar ao login
+          </Link>
+        </div>
+      </div>
+    );
   }
 
   return (
