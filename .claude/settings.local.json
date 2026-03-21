@@ -12,7 +12,9 @@
       "Bash(cd C:/AgroConnect/frontend && npx vitest run src/hooks/__tests__/useBreadcrumbs.test.ts 2>&1)",
       "Bash(cd C:/AgroConnect/frontend && npx vitest run 2>&1)",
       "Bash(cd /c/AgroConnect/frontend && npx vitest run 2>&1)",
-      "Bash(cd \"C:\\\\AgroConnect\\\\frontend\" && npm run build 2>&1)"
+      "Bash(cd \"C:\\\\AgroConnect\\\\frontend\" && npm run build 2>&1)",
+      "Bash(cd /c/AgroConnect/backend && mvn test -Dtest=\"AccountServiceTest\" -pl . 2>&1)",
+      "Bash(cd C:\\\\AgroConnect\\\\backend && mvn compile -q 2>&1)"
     ],
     "deny": [
       "Bash(git:*)"

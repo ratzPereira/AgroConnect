@@ -24,6 +24,8 @@ public interface ReviewRepository extends JpaRepository<Review, Long> {
 
     int countByTargetId(Long targetId);
 
+    List<Review> findByAuthorId(Long authorId);
+
     @Query("SELECT COALESCE(AVG(r.rating), 0) FROM Review r")
     double findAverageRating();
 }

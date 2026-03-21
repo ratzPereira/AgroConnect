@@ -9,6 +9,7 @@ import { cn } from '@/utils/cn';
 import {
   LayoutDashboard, FileText, CreditCard, Bell, LogOut,
   Users, Wrench, Package, DollarSign, Shield, UserCog,
+  User as UserIcon,
 } from 'lucide-react';
 import type { Role } from '@/types/auth';
 
@@ -24,6 +25,7 @@ function buildNavItems(role?: Role): NavItem[] {
     { to: '/requests', label: 'Pedidos', icon: FileText },
     { to: '/transactions', label: 'Transações', icon: CreditCard },
     { to: '/notifications', label: 'Notificações', icon: Bell },
+    { to: '/profile', label: 'Perfil', icon: UserIcon },
   ];
 
   const providerItems: NavItem[] = [

@@ -55,4 +55,6 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     Page<ServiceRequest> findByStatusOrderByCreatedAtDesc(RequestStatus status, Pageable pageable);
 
     long countByClientId(Long clientId);
+
+    List<ServiceRequest> findByClientId(Long clientId);
 }
