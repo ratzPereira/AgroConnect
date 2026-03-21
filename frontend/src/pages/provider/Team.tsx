@@ -1,9 +1,15 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { listTeamMembers, createTeamMember, deactivateTeamMember } from '@/api/teamMembers';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { Loader2, Plus, UserMinus } from 'lucide-react';
+import { AnimatedPage } from '@/components/AnimatedPage';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { EmptyTeam } from '@/components/illustrations/EmptyTeam';
+import { useMotionConfig } from '@/hooks/useMotionConfig';
+import { Plus, UserMinus } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import type { TeamMember, CreateTeamMemberRequest, TeamMemberRole } from '@/types/teamMember';
 
@@ -18,6 +24,7 @@ export function Team() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<TeamMember | null>(null);
+  const { listContainerVariants, listItemVariants } = useMotionConfig();
 
   const { data: members, isLoading } = useQuery({
     queryKey: ['team-members'],
@@ -34,12 +41,8 @@ export function Team() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['team-members'] }),
   });
 
-  if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-neutral-400" /></div>;
-  }
-
   return (
-    <div className="animate-fade-in">
+    <AnimatedPage>
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-xl font-bold text-neutral-900">Equipa</h1>
         <Button size="sm" onClick={() => { setEditing(null); setShowForm(true); }}><Plus className="h-4 w-4" />Adicionar</Button>
@@ -56,29 +59,55 @@ export function Team() {
           </CardBody>
         </Card>
       )}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {members?.map((m) => (
-          <Card key={m.id}>
-            <CardBody>
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-medium text-neutral-900">{m.name}</p>
-                  <p className="text-xs text-neutral-500">{m.email}</p>
-                  {m.phone && <p className="text-xs text-neutral-500">{m.phone}</p>}
-                </div>
-                <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', roleColors[m.role])}>{roleLabels[m.role]}</span>
-              </div>
-              <div className="flex gap-2 mt-3">
-                <Button size="sm" variant="ghost" onClick={() => deactivateMut.mutate(m.id)}>
-                  <UserMinus className="h-4 w-4" />Desativar
-                </Button>
-              </div>
-            </CardBody>
-          </Card>
-        ))}
-      </div>
-      {members?.length === 0 && <p className="text-sm text-neutral-500 text-center py-6">Nenhum membro de equipa encontrado.</p>}
-    </div>
+
+      {isLoading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <Skeleton.Card />
+          <Skeleton.Card />
+          <Skeleton.Card />
+        </div>
+      ) : members && members.length > 0 ? (
+        <motion.div
+          variants={listContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
+        >
+          {members.map((m) => (
+            <motion.div variants={listItemVariants} key={m.id}>
+              <Card>
+                <CardBody>
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <p className="font-medium text-neutral-900">{m.name}</p>
+                      <p className="text-xs text-neutral-500">{m.email}</p>
+                      {m.phone && <p className="text-xs text-neutral-500">{m.phone}</p>}
+                    </div>
+                    <span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', roleColors[m.role])}>{roleLabels[m.role]}</span>
+                  </div>
+                  <div className="flex gap-2 mt-3">
+                    <Button size="sm" variant="ghost" onClick={() => deactivateMut.mutate(m.id)}>
+                      <UserMinus className="h-4 w-4" />Desativar
+                    </Button>
+                  </div>
+                </CardBody>
+              </Card>
+            </motion.div>
+          ))}
+        </motion.div>
+      ) : (
+        <EmptyState
+          illustration={<EmptyTeam className="w-48 h-auto" />}
+          title="A sua equipa está vazia"
+          description="Adicione membros à sua equipa para gerir os seus serviços de forma mais eficiente."
+          action={
+            <Button onClick={() => { setEditing(null); setShowForm(true); }}>
+              <Plus className="h-4 w-4" />Adicionar membro
+            </Button>
+          }
+        />
+      )}
+    </AnimatedPage>
   );
 }
 

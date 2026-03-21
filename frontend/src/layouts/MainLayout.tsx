@@ -3,6 +3,8 @@ import { useAuthStore } from '@/stores/authStore';
 import { logout as logoutApi } from '@/api/auth';
 import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationBell } from '@/components/NotificationBell';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { MobileNav } from '@/components/MobileNav';
 import { cn } from '@/utils/cn';
 import {
   LayoutDashboard, FileText, CreditCard, Bell, LogOut,
@@ -50,7 +52,6 @@ export function MainLayout() {
   const navigate = useNavigate();
   const { user, logout } = useAuthStore();
 
-  // Initialize notification polling
   useNotifications();
 
   async function handleLogout() {
@@ -67,6 +68,7 @@ export function MainLayout() {
 
   return (
     <div className="min-h-svh flex">
+      {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200">
         <div className="p-6">
           <img src="/logotipo.png" alt="AgroConnect" className="h-10" />
@@ -78,9 +80,9 @@ export function MainLayout() {
               to={item.to}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors',
+                  'flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors duration-150',
                   isActive
-                    ? 'bg-neutral-800 text-white font-medium'
+                    ? 'bg-primary-950 text-primary-400 font-medium border-l-[3px] border-primary-400'
                     : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50',
                 )
               }
@@ -105,15 +107,26 @@ export function MainLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 bg-neutral-50">
-        <div className="max-w-[1200px] mx-auto px-8 py-6">
-          {/* Top bar with notification bell */}
-          <div className="flex justify-end mb-4">
+      <main className="flex-1 bg-neutral-50 pb-16 lg:pb-0">
+        {/* Mobile top header */}
+        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-white lg:hidden">
+          <img src="/logotipo.png" alt="AgroConnect" className="h-8" />
+          <NotificationBell />
+        </div>
+
+        <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-6">
+          {/* Desktop notification bell */}
+          <div className="hidden lg:flex justify-end mb-4">
             <NotificationBell />
           </div>
-          <Outlet />
+          <ErrorBoundary>
+            <Outlet />
+          </ErrorBoundary>
         </div>
       </main>
+
+      {/* Mobile bottom navigation */}
+      <MobileNav />
     </div>
   );
 }

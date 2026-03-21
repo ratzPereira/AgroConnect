@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { getMyTransactions } from '@/api/transactions';
 import { TransactionCard } from '@/features/transactions/components/TransactionCard';
+import { AnimatedPage } from '@/components/AnimatedPage';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { EmptyTransactions } from '@/components/illustrations/EmptyTransactions';
 import { Button } from '@/components/ui/Button';
-import { Loader2 } from 'lucide-react';
+import { useMotionConfig } from '@/hooks/useMotionConfig';
 
 export function Transactions() {
   const [page, setPage] = useState(0);
+  const { listContainerVariants, listItemVariants } = useMotionConfig();
 
   const { data, isLoading } = useQuery({
     queryKey: ['my-transactions', page],
@@ -14,7 +20,7 @@ export function Transactions() {
   });
 
   return (
-    <div className="animate-fade-in">
+    <AnimatedPage>
       <div className="mb-6">
         <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900">
           Transações
@@ -25,16 +31,21 @@ export function Transactions() {
       </div>
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
-        </div>
+        <Skeleton.Table />
       ) : data && data.content.length > 0 ? (
         <>
-          <div className="space-y-3">
+          <motion.div
+            variants={listContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3"
+          >
             {data.content.map((transaction) => (
-              <TransactionCard key={transaction.id} transaction={transaction} />
+              <motion.div variants={listItemVariants} key={transaction.id}>
+                <TransactionCard transaction={transaction} />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
           {data.totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-6">
               <Button
@@ -60,10 +71,12 @@ export function Transactions() {
           )}
         </>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-sm text-neutral-500">Ainda não tem transações.</p>
-        </div>
+        <EmptyState
+          illustration={<EmptyTransactions className="w-48 h-auto" />}
+          title="Nenhuma transação ainda"
+          description="As suas transações aparecerão aqui assim que concluir o seu primeiro serviço."
+        />
       )}
-    </div>
+    </AnimatedPage>
   );
 }

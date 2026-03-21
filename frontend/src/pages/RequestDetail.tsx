@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { getRequest, cancelRequest } from '@/api/requests';
 import { getRequestProposals, createProposal, acceptProposal } from '@/api/proposals';
@@ -13,9 +13,13 @@ import { ConfirmationPanel } from '@/features/requests/components/ConfirmationPa
 import { ReviewForm } from '@/features/reviews/components/ReviewForm';
 import { ReviewCard } from '@/features/reviews/components/ReviewCard';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
+import { AnimatedPage } from '@/components/AnimatedPage';
+import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
+import { StatusTimeline } from '@/components/ui/StatusTimeline';
+import { Skeleton } from '@/components/ui/Skeleton';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { ArrowLeft, MapPin, Layers, Clock, Loader2, X } from 'lucide-react';
+import { MapPin, Layers, Clock, X } from 'lucide-react';
 import type { CreateProposalDto } from '@/types/proposal';
 
 const urgencyLabels: Record<string, string> = {
@@ -34,9 +38,28 @@ const CHAT_STATUSES = new Set([
 
 const REVIEW_STATUSES = new Set(['COMPLETED', 'RATED']);
 
+function buildTimelineSteps(status: string): Array<{ label: string; status: 'completed' | 'active' | 'upcoming' }> {
+  const allSteps = [
+    { key: 'DRAFT', label: 'Rascunho' },
+    { key: 'PUBLISHED', label: 'Publicado' },
+    { key: 'WITH_PROPOSALS', label: 'Com Propostas' },
+    { key: 'AWARDED', label: 'Adjudicado' },
+    { key: 'IN_PROGRESS', label: 'Em Curso' },
+    { key: 'AWAITING_CONFIRMATION', label: 'Aguarda Confirmação' },
+    { key: 'COMPLETED', label: 'Concluído' },
+    { key: 'RATED', label: 'Avaliado' },
+  ];
+
+  const currentIndex = allSteps.findIndex((s) => s.key === status);
+
+  return allSteps.map((step, index) => ({
+    label: step.label,
+    status: index < currentIndex ? 'completed' as const : index === currentIndex ? 'active' as const : 'upcoming' as const,
+  }));
+}
+
 export function RequestDetail() {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const [showProposalModal, setShowProposalModal] = useState(false);
@@ -98,9 +121,17 @@ export function RequestDetail() {
 
   if (requestLoading) {
     return (
-      <div className="flex justify-center py-12">
-        <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
-      </div>
+      <AnimatedPage className="max-w-3xl mx-auto">
+        <Skeleton.Line className="h-4 w-40 mb-4" />
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div className="space-y-2">
+            <Skeleton.Line className="h-5 w-24" />
+            <Skeleton.Line className="h-6 w-64" />
+          </div>
+        </div>
+        <Skeleton.Rect className="h-40 mb-6" />
+        <Skeleton.Rect className="h-32" />
+      </AnimatedPage>
     );
   }
 
@@ -113,14 +144,11 @@ export function RequestDetail() {
   }
 
   return (
-    <div className="animate-fade-in max-w-3xl mx-auto">
-      <button
-        onClick={() => navigate('/requests')}
-        className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-700 mb-4"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Voltar aos pedidos
-      </button>
+    <AnimatedPage className="max-w-3xl mx-auto">
+      <Breadcrumbs
+        items={[{ label: 'Pedidos', to: '/requests' }, { label: request.title }]}
+        className="mb-4"
+      />
 
       {/* Header */}
       <div className="flex items-start justify-between gap-4 mb-6">
@@ -151,128 +179,148 @@ export function RequestDetail() {
         </div>
       </div>
 
-      {/* Details */}
-      <Card className="mb-6">
-        <CardBody>
-          <p className="text-sm text-neutral-700 whitespace-pre-wrap">{request.description}</p>
-          <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-neutral-500">
-            {request.parish && (
-              <span className="inline-flex items-center gap-1">
-                <MapPin className="h-4 w-4" />
-                {[request.parish, request.municipality, request.island].filter(Boolean).join(', ')}
-              </span>
-            )}
-            {request.area != null && (
-              <span className="inline-flex items-center gap-1">
-                <Layers className="h-4 w-4" />
-                {request.area} {request.areaUnit}
-              </span>
-            )}
-            <span className="inline-flex items-center gap-1">
-              <Clock className="h-4 w-4" />
-              Urgência: {urgencyLabels[request.urgency] ?? request.urgency}
-            </span>
-          </div>
-          {request.preferredDateFrom && (
-            <p className="text-xs text-neutral-400 mt-2">
-              Data preferida: {request.preferredDateFrom}
-              {request.preferredDateTo && ` — ${request.preferredDateTo}`}
-            </p>
+      {/* Two-column layout: main content + timeline sidebar */}
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_240px] gap-6">
+        {/* Left column — main content */}
+        <div>
+          {/* Details */}
+          <Card className="mb-6">
+            <CardBody>
+              <p className="text-sm text-neutral-700 whitespace-pre-wrap">{request.description}</p>
+              <div className="flex flex-wrap items-center gap-4 mt-4 text-sm text-neutral-500">
+                {request.parish && (
+                  <span className="inline-flex items-center gap-1">
+                    <MapPin className="h-4 w-4" />
+                    {[request.parish, request.municipality, request.island].filter(Boolean).join(', ')}
+                  </span>
+                )}
+                {request.area != null && (
+                  <span className="inline-flex items-center gap-1">
+                    <Layers className="h-4 w-4" />
+                    {request.area} {request.areaUnit}
+                  </span>
+                )}
+                <span className="inline-flex items-center gap-1">
+                  <Clock className="h-4 w-4" />
+                  Urgência: {urgencyLabels[request.urgency] ?? request.urgency}
+                </span>
+              </div>
+              {request.preferredDateFrom && (
+                <p className="text-xs text-neutral-400 mt-2">
+                  Data preferida: {request.preferredDateFrom}
+                  {request.preferredDateTo && ` — ${request.preferredDateTo}`}
+                </p>
+              )}
+            </CardBody>
+          </Card>
+
+          {/* Photos */}
+          {request.photos.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <h2 className="font-semibold text-neutral-900 text-sm">Fotos</h2>
+              </CardHeader>
+              <CardBody>
+                <div className="grid grid-cols-3 gap-3">
+                  {request.photos.map((photo) => (
+                    <img
+                      key={photo.id}
+                      src={photo.photoUrl}
+                      alt="Foto do pedido"
+                      className="w-full h-32 object-cover rounded-lg border border-neutral-200"
+                    />
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
           )}
-        </CardBody>
-      </Card>
 
-      {/* Photos */}
-      {request.photos.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <h2 className="font-semibold text-neutral-900 text-sm">Fotos</h2>
-          </CardHeader>
-          <CardBody>
-            <div className="grid grid-cols-3 gap-3">
-              {request.photos.map((photo) => (
-                <img
-                  key={photo.id}
-                  src={photo.photoUrl}
-                  alt="Foto do pedido"
-                  className="w-full h-32 object-cover rounded-lg border border-neutral-200"
-                />
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* Execution Panel (>=AWARDED) */}
-      {showExecution && (
-        <ExecutionPanel
-          requestId={requestId}
-          requestStatus={request.status}
-          isProvider={isProvider}
-        />
-      )}
-
-      {/* Chat Panel (>=AWARDED, for both client and provider) */}
-      {showChat && <ChatPanel requestId={requestId} />}
-
-      {/* Confirmation Panel (AWAITING_CONFIRMATION, client only) */}
-      {showConfirmation && <ConfirmationPanel requestId={requestId} />}
-
-      {/* Review Form (COMPLETED/RATED, user hasn't reviewed yet) */}
-      {showReviewForm && <ReviewForm requestId={requestId} />}
-
-      {/* Reviews submitted for this request */}
-      {reviews && reviews.length > 0 && (
-        <Card className="mb-6">
-          <CardHeader>
-            <h2 className="font-semibold text-neutral-900 text-sm">
-              Avaliações ({reviews.length})
-            </h2>
-          </CardHeader>
-          <CardBody>
-            <div className="space-y-3">
-              {reviews.map((review) => (
-                <ReviewCard key={review.id} review={review} />
-              ))}
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      {/* Proposals */}
-      <Card>
-        <CardHeader>
-          <h2 className="font-semibold text-neutral-900 text-sm">
-            Propostas ({proposals?.length ?? 0})
-          </h2>
-        </CardHeader>
-        <CardBody>
-          {proposalsLoading ? (
-            <div className="flex justify-center py-6">
-              <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
-            </div>
-          ) : proposals && proposals.length > 0 ? (
-            <div className="space-y-3">
-              {proposals.map((proposal) => (
-                <ProposalCard
-                  key={proposal.id}
-                  proposal={proposal}
-                  isRequestOwner={isOwner ?? false}
-                  onAccept={(pid) => {
-                    setAcceptingId(pid);
-                    acceptMutation.mutate(pid);
-                  }}
-                  acceptLoading={acceptMutation.isPending && acceptingId === proposal.id}
-                />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-neutral-500 text-center py-6">
-              Ainda não existem propostas para este pedido.
-            </p>
+          {/* Execution Panel (>=AWARDED) */}
+          {showExecution && (
+            <ExecutionPanel
+              requestId={requestId}
+              requestStatus={request.status}
+              isProvider={isProvider}
+            />
           )}
-        </CardBody>
-      </Card>
+
+          {/* Chat Panel (>=AWARDED, for both client and provider) */}
+          {showChat && <ChatPanel requestId={requestId} />}
+
+          {/* Confirmation Panel (AWAITING_CONFIRMATION, client only) */}
+          {showConfirmation && <ConfirmationPanel requestId={requestId} />}
+
+          {/* Review Form (COMPLETED/RATED, user hasn't reviewed yet) */}
+          {showReviewForm && <ReviewForm requestId={requestId} />}
+
+          {/* Reviews submitted for this request */}
+          {reviews && reviews.length > 0 && (
+            <Card className="mb-6">
+              <CardHeader>
+                <h2 className="font-semibold text-neutral-900 text-sm">
+                  Avaliações ({reviews.length})
+                </h2>
+              </CardHeader>
+              <CardBody>
+                <div className="space-y-3">
+                  {reviews.map((review) => (
+                    <ReviewCard key={review.id} review={review} />
+                  ))}
+                </div>
+              </CardBody>
+            </Card>
+          )}
+
+          {/* Proposals */}
+          <Card>
+            <CardHeader>
+              <h2 className="font-semibold text-neutral-900 text-sm">
+                Propostas ({proposals?.length ?? 0})
+              </h2>
+            </CardHeader>
+            <CardBody>
+              {proposalsLoading ? (
+                <div className="space-y-3">
+                  {Array.from({ length: 3 }).map((_, i) => (
+                    <Skeleton.Card key={i} />
+                  ))}
+                </div>
+              ) : proposals && proposals.length > 0 ? (
+                <div className="space-y-3">
+                  {proposals.map((proposal) => (
+                    <ProposalCard
+                      key={proposal.id}
+                      proposal={proposal}
+                      isRequestOwner={isOwner ?? false}
+                      onAccept={(pid) => {
+                        setAcceptingId(pid);
+                        acceptMutation.mutate(pid);
+                      }}
+                      acceptLoading={acceptMutation.isPending && acceptingId === proposal.id}
+                    />
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-neutral-500 text-center py-6">
+                  Ainda não existem propostas para este pedido.
+                </p>
+              )}
+            </CardBody>
+          </Card>
+        </div>
+
+        {/* Right column — timeline sidebar */}
+        <div className="order-first lg:order-last">
+          <Card>
+            <CardHeader>
+              <h2 className="font-semibold text-neutral-900 text-sm">Progresso</h2>
+            </CardHeader>
+            <CardBody>
+              <StatusTimeline steps={buildTimelineSteps(request.status)} />
+            </CardBody>
+          </Card>
+        </div>
+      </div>
 
       {/* Create Proposal Modal */}
       <CreateProposalModal
@@ -283,6 +331,6 @@ export function RequestDetail() {
         }}
         loading={createProposalMutation.isPending}
       />
-    </div>
+    </AnimatedPage>
   );
 }

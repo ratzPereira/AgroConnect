@@ -1,8 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
-import { getAdminDashboard, listDisputes } from '@/api/admin';
-import { Card, CardBody, CardHeader } from '@/components/ui/Card';
-import { Loader2, Users, FileText, DollarSign, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { Users, FileText, DollarSign, Star } from 'lucide-react';
+import { getAdminDashboard, listDisputes } from '@/api/admin';
+import { AnimatedPage } from '@/components/AnimatedPage';
+import { DashboardStatCards } from '@/features/dashboard/components/DashboardStatCards';
+import { DataTable } from '@/components/ui/DataTable';
+import { Skeleton } from '@/components/ui/Skeleton';
+import type { AdminDispute } from '@/types/admin';
 
 export function AdminDashboard() {
   const navigate = useNavigate();
@@ -11,74 +15,87 @@ export function AdminDashboard() {
     queryFn: getAdminDashboard,
   });
 
-  const { data: disputes } = useQuery({
+  const { data: disputes, isLoading: disputesLoading } = useQuery({
     queryKey: ['admin-disputes'],
     queryFn: () => listDisputes(),
   });
 
   if (isLoading) {
-    return <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-neutral-400" /></div>;
+    return (
+      <AnimatedPage>
+        <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900 mb-6">
+          Administração
+        </h1>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton.Stat key={i} />
+            ))}
+          </div>
+          <Skeleton.Table />
+        </div>
+      </AnimatedPage>
+    );
   }
 
-  return (
-    <div className="animate-fade-in">
-      <h1 className="text-xl font-bold text-neutral-900 mb-6">Administração</h1>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatCard icon={Users} label="Utilizadores" value={dashboard?.totalUsers ?? 0} sub={`${dashboard?.totalClients ?? 0} clientes / ${dashboard?.totalProviders ?? 0} prestadores`} />
-        <StatCard icon={FileText} label="Pedidos" value={dashboard?.totalRequests ?? 0} sub={`${dashboard?.activeRequests ?? 0} ativos`} />
-        <StatCard icon={DollarSign} label="Volume total" value={`€${dashboard?.totalVolume?.toFixed(2) ?? '0.00'}`} sub={`€${dashboard?.totalCommissions?.toFixed(2) ?? '0.00'} comissões`} />
-        <StatCard icon={Star} label="Rating médio" value={dashboard?.avgPlatformRating?.toFixed(1) ?? '0.0'} sub={`${dashboard?.pendingDisputes ?? 0} disputas pendentes`} />
-      </div>
+  const stats = [
+    {
+      label: 'Utilizadores',
+      value: dashboard?.totalUsers ?? 0,
+      icon: <Users className="h-4 w-4 text-secondary-600" />,
+      iconBg: 'bg-secondary-50',
+    },
+    {
+      label: 'Pedidos',
+      value: dashboard?.totalRequests ?? 0,
+      icon: <FileText className="h-4 w-4 text-primary-600" />,
+      iconBg: 'bg-primary-50',
+    },
+    {
+      label: 'Volume total',
+      value: dashboard?.totalVolume ?? 0,
+      prefix: '€',
+      decimals: 2,
+      icon: <DollarSign className="h-4 w-4 text-leaf-600" />,
+      iconBg: 'bg-leaf-50',
+    },
+    {
+      label: 'Rating médio',
+      value: dashboard?.avgPlatformRating ?? 0,
+      decimals: 1,
+      icon: <Star className="h-4 w-4 text-warning-600" />,
+      iconBg: 'bg-warning-50',
+    },
+  ];
 
-      <Card>
-        <CardHeader><h2 className="font-semibold text-neutral-900 text-sm">Disputas pendentes</h2></CardHeader>
-        {disputes?.content && disputes.content.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead><tr className="border-b border-neutral-200 text-left text-neutral-500">
-                <th className="px-6 py-3 font-medium">Pedido</th>
-                <th className="px-6 py-3 font-medium">Cliente</th>
-                <th className="px-6 py-3 font-medium">Prestador</th>
-                <th className="px-6 py-3 font-medium">Valor</th>
-                <th className="px-6 py-3 font-medium">Data</th>
-              </tr></thead>
-              <tbody>
-                {disputes.content.map((d) => (
-                  <tr key={d.requestId} className="border-b border-neutral-100 cursor-pointer hover:bg-neutral-50" onClick={() => navigate(`/requests/${d.requestId}`)}>
-                    <td className="px-6 py-3 font-medium text-neutral-900">{d.requestTitle}</td>
-                    <td className="px-6 py-3 text-neutral-600">{d.clientName}</td>
-                    <td className="px-6 py-3 text-neutral-600">{d.providerName}</td>
-                    <td className="px-6 py-3 font-medium">€{d.amount.toFixed(2)}</td>
-                    <td className="px-6 py-3 text-neutral-500">{new Date(d.createdAt).toLocaleDateString('pt-PT')}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <CardBody><p className="text-sm text-neutral-500 text-center py-4">Sem disputas pendentes.</p></CardBody>
-        )}
-      </Card>
-    </div>
-  );
-}
+  const disputeColumns = [
+    { key: 'requestTitle', header: 'Pedido', render: (d: AdminDispute) => <span className="font-medium text-neutral-900">{d.requestTitle}</span>, sortable: true },
+    { key: 'clientName', header: 'Cliente', render: (d: AdminDispute) => d.clientName },
+    { key: 'providerName', header: 'Prestador', render: (d: AdminDispute) => d.providerName },
+    { key: 'amount', header: 'Valor', render: (d: AdminDispute) => `€${d.amount.toFixed(2)}`, sortable: true },
+    { key: 'createdAt', header: 'Data', render: (d: AdminDispute) => new Date(d.createdAt).toLocaleDateString('pt-PT'), sortable: true },
+  ];
 
-function StatCard({ icon: Icon, label, value, sub }: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: string | number;
-  sub?: string;
-}) {
   return (
-    <Card><CardBody>
-      <div className="flex items-center gap-3">
-        <div className="p-2 rounded-lg bg-neutral-100 text-neutral-700"><Icon className="h-5 w-5" /></div>
+    <AnimatedPage>
+      <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900 mb-6">
+        Administração
+      </h1>
+      <div className="space-y-6">
+        <DashboardStatCards stats={stats} />
         <div>
-          <p className="text-xs text-neutral-500">{label}</p>
-          <p className="text-lg font-bold text-neutral-900">{value}</p>
-          {sub && <p className="text-xs text-neutral-400">{sub}</p>}
+          <h2 className="text-sm font-semibold text-neutral-800 mb-3">Disputas pendentes</h2>
+          <DataTable
+            columns={disputeColumns}
+            data={disputes?.content ?? []}
+            keyExtractor={(d) => d.requestId}
+            loading={disputesLoading}
+            emptyTitle="Sem disputas pendentes"
+            emptyDescription="Não existem disputas por resolver."
+            onRowClick={(d) => navigate(`/requests/${d.requestId}`)}
+          />
         </div>
       </div>
-    </CardBody></Card>
+    </AnimatedPage>
   );
 }

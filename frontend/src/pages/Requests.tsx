@@ -1,11 +1,17 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { motion } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
 import { getMyRequests, getAvailableRequests } from '@/api/requests';
 import { RequestCard } from '@/features/requests/components/RequestCard';
+import { AnimatedPage } from '@/components/AnimatedPage';
+import { Skeleton } from '@/components/ui/Skeleton';
+import { EmptyState } from '@/components/ui/EmptyState';
+import { EmptyRequests } from '@/components/illustrations/EmptyRequests';
 import { Button } from '@/components/ui/Button';
-import { Plus, Loader2 } from 'lucide-react';
+import { useMotionConfig } from '@/hooks/useMotionConfig';
+import { Plus } from 'lucide-react';
 import type { RequestStatus } from '@/types/request';
 
 const STATUS_FILTERS: { label: string; value: RequestStatus | '' }[] = [
@@ -24,6 +30,7 @@ export function Requests() {
   const isClient = user?.role === 'CLIENT';
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(0);
+  const { listContainerVariants, listItemVariants } = useMotionConfig();
 
   const { data, isLoading } = useQuery({
     queryKey: isClient
@@ -36,7 +43,7 @@ export function Requests() {
   });
 
   return (
-    <div className="animate-fade-in">
+    <AnimatedPage>
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900">
@@ -64,7 +71,7 @@ export function Requests() {
               onClick={() => { setStatusFilter(f.value); setPage(0); }}
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
                 statusFilter === f.value
-                  ? 'bg-green-600 text-white'
+                  ? 'bg-primary-500 text-white'
                   : 'bg-neutral-100 text-neutral-600 hover:bg-neutral-200'
               }`}
             >
@@ -75,16 +82,25 @@ export function Requests() {
       )}
 
       {isLoading ? (
-        <div className="flex justify-center py-12">
-          <Loader2 className="h-6 w-6 animate-spin text-neutral-400" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Skeleton.Card key={i} />
+          ))}
         </div>
       ) : data && data.content.length > 0 ? (
         <>
-          <div className="space-y-3">
+          <motion.div
+            variants={listContainerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3"
+          >
             {data.content.map((request) => (
-              <RequestCard key={request.id} request={request} />
+              <motion.div variants={listItemVariants} key={request.id}>
+                <RequestCard request={request} />
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
           {data.totalPages > 1 && (
             <div className="flex justify-center gap-2 mt-6">
               <Button
@@ -109,21 +125,25 @@ export function Requests() {
             </div>
           )}
         </>
-      ) : (
-        <div className="text-center py-12">
-          <p className="text-sm text-neutral-500">
-            {isClient
-              ? 'Ainda não tem pedidos. Crie o seu primeiro pedido de serviço.'
-              : 'Não existem pedidos disponíveis na sua área.'}
-          </p>
-          {isClient && (
-            <Button className="mt-4" onClick={() => navigate('/requests/new')}>
+      ) : isClient ? (
+        <EmptyState
+          illustration={<EmptyRequests className="w-48 h-auto" />}
+          title="Ainda sem pedidos"
+          description="Crie o seu primeiro pedido de serviço e encontre o prestador ideal."
+          action={
+            <Button onClick={() => navigate('/requests/new')}>
               <Plus className="h-4 w-4" />
-              Criar Pedido
+              Novo Pedido
             </Button>
-          )}
-        </div>
+          }
+        />
+      ) : (
+        <EmptyState
+          illustration={<EmptyRequests className="w-48 h-auto" />}
+          title="Sem pedidos disponíveis"
+          description="Não existem pedidos de serviço na sua área neste momento."
+        />
       )}
-    </div>
+    </AnimatedPage>
   );
 }
