@@ -1,3 +1,4 @@
+import { lazy } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { RootLayout } from '@/components/RootLayout';
 import { SmartRedirect } from '@/components/SmartRedirect';
@@ -6,29 +7,32 @@ import { AuthLayout } from '@/layouts/AuthLayout';
 import { PublicLayout } from '@/layouts/PublicLayout';
 import { ProtectedRoute, PublicOnlyRoute } from '@/components/ProtectedRoute';
 import { RoleRoute } from '@/components/RoleRoute';
-import { Dashboard } from '@/pages/Dashboard';
-import { Login } from '@/pages/Login';
-import { Register } from '@/pages/Register';
-import { Requests } from '@/pages/Requests';
-import { CreateRequest } from '@/pages/CreateRequest';
-import { RequestDetail } from '@/pages/RequestDetail';
-import { Transactions } from '@/pages/Transactions';
-import { Notifications } from '@/pages/Notifications';
-import { Profile } from '@/pages/Profile';
-import { Landing } from '@/pages/Landing';
-import { Terms } from '@/pages/Terms';
-import { Privacy } from '@/pages/Privacy';
-import { ProviderDashboard } from '@/pages/provider/Dashboard';
-import { Team } from '@/pages/provider/Team';
-import { Machines } from '@/pages/provider/Machines';
-import { Inventory } from '@/pages/provider/Inventory';
-import { Finance } from '@/pages/provider/Finance';
-import { AdminDashboard } from '@/pages/admin/Dashboard';
-import { AdminUsers } from '@/pages/admin/Users';
-import { VerifyEmail } from '@/pages/VerifyEmail';
-import { ForgotPassword } from '@/pages/ForgotPassword';
-import { ResetPassword } from '@/pages/ResetPassword';
-import { NotFound } from '@/pages/NotFound';
+import { PageSuspense } from '@/components/PageSuspense';
+
+// Lazy-loaded pages (code-split into separate chunks)
+const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const Login = lazy(() => import('@/pages/Login').then(m => ({ default: m.Login })));
+const Register = lazy(() => import('@/pages/Register').then(m => ({ default: m.Register })));
+const Requests = lazy(() => import('@/pages/Requests').then(m => ({ default: m.Requests })));
+const CreateRequest = lazy(() => import('@/pages/CreateRequest').then(m => ({ default: m.CreateRequest })));
+const RequestDetail = lazy(() => import('@/pages/RequestDetail').then(m => ({ default: m.RequestDetail })));
+const Transactions = lazy(() => import('@/pages/Transactions').then(m => ({ default: m.Transactions })));
+const Notifications = lazy(() => import('@/pages/Notifications').then(m => ({ default: m.Notifications })));
+const Profile = lazy(() => import('@/pages/Profile').then(m => ({ default: m.Profile })));
+const Landing = lazy(() => import('@/pages/Landing').then(m => ({ default: m.Landing })));
+const Terms = lazy(() => import('@/pages/Terms').then(m => ({ default: m.Terms })));
+const Privacy = lazy(() => import('@/pages/Privacy').then(m => ({ default: m.Privacy })));
+const VerifyEmail = lazy(() => import('@/pages/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
+const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ResetPassword = lazy(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const NotFound = lazy(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })));
+const ProviderDashboard = lazy(() => import('@/pages/provider/Dashboard').then(m => ({ default: m.ProviderDashboard })));
+const Team = lazy(() => import('@/pages/provider/Team').then(m => ({ default: m.Team })));
+const Machines = lazy(() => import('@/pages/provider/Machines').then(m => ({ default: m.Machines })));
+const Inventory = lazy(() => import('@/pages/provider/Inventory').then(m => ({ default: m.Inventory })));
+const Finance = lazy(() => import('@/pages/provider/Finance').then(m => ({ default: m.Finance })));
+const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminUsers = lazy(() => import('@/pages/admin/Users').then(m => ({ default: m.AdminUsers })));
 
 export const router = createBrowserRouter([
   {
@@ -38,9 +42,9 @@ export const router = createBrowserRouter([
       {
         element: <PublicLayout />,
         children: [
-          { path: '/landing', element: <Landing /> },
-          { path: '/terms', element: <Terms /> },
-          { path: '/privacy', element: <Privacy /> },
+          { path: '/landing', element: <PageSuspense><Landing /></PageSuspense> },
+          { path: '/terms', element: <PageSuspense><Terms /></PageSuspense> },
+          { path: '/privacy', element: <PageSuspense><Privacy /></PageSuspense> },
         ],
       },
       // Protected pages
@@ -50,28 +54,28 @@ export const router = createBrowserRouter([
           {
             element: <MainLayout />,
             children: [
-              { path: '/dashboard', element: <Dashboard />, handle: { breadcrumb: 'Dashboard' } },
-              { path: '/requests', element: <Requests />, handle: { breadcrumb: 'Pedidos' } },
-              { path: '/requests/new', element: <CreateRequest />, handle: { breadcrumb: 'Novo Pedido' } },
-              { path: '/requests/:id', element: <RequestDetail />, handle: { breadcrumb: 'Detalhes' } },
-              { path: '/transactions', element: <Transactions />, handle: { breadcrumb: 'Transações' } },
-              { path: '/notifications', element: <Notifications />, handle: { breadcrumb: 'Notificações' } },
-              { path: '/profile', element: <Profile />, handle: { breadcrumb: 'Perfil' } },
+              { path: '/dashboard', element: <PageSuspense><Dashboard /></PageSuspense>, handle: { breadcrumb: 'Dashboard' } },
+              { path: '/requests', element: <PageSuspense><Requests /></PageSuspense>, handle: { breadcrumb: 'Pedidos' } },
+              { path: '/requests/new', element: <PageSuspense><CreateRequest /></PageSuspense>, handle: { breadcrumb: 'Novo Pedido' } },
+              { path: '/requests/:id', element: <PageSuspense><RequestDetail /></PageSuspense>, handle: { breadcrumb: 'Detalhes' } },
+              { path: '/transactions', element: <PageSuspense><Transactions /></PageSuspense>, handle: { breadcrumb: 'Transações' } },
+              { path: '/notifications', element: <PageSuspense><Notifications /></PageSuspense>, handle: { breadcrumb: 'Notificações' } },
+              { path: '/profile', element: <PageSuspense><Profile /></PageSuspense>, handle: { breadcrumb: 'Perfil' } },
               {
                 element: <RoleRoute allowedRoles={['PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR']} />,
                 children: [
-                  { path: '/provider/dashboard', element: <ProviderDashboard />, handle: { breadcrumb: 'Backoffice' } },
-                  { path: '/provider/team', element: <Team />, handle: { breadcrumb: 'Equipa' } },
-                  { path: '/provider/machines', element: <Machines />, handle: { breadcrumb: 'Máquinas' } },
-                  { path: '/provider/inventory', element: <Inventory />, handle: { breadcrumb: 'Inventário' } },
-                  { path: '/provider/finance', element: <Finance />, handle: { breadcrumb: 'Finanças' } },
+                  { path: '/provider/dashboard', element: <PageSuspense><ProviderDashboard /></PageSuspense>, handle: { breadcrumb: 'Backoffice' } },
+                  { path: '/provider/team', element: <PageSuspense><Team /></PageSuspense>, handle: { breadcrumb: 'Equipa' } },
+                  { path: '/provider/machines', element: <PageSuspense><Machines /></PageSuspense>, handle: { breadcrumb: 'Máquinas' } },
+                  { path: '/provider/inventory', element: <PageSuspense><Inventory /></PageSuspense>, handle: { breadcrumb: 'Inventário' } },
+                  { path: '/provider/finance', element: <PageSuspense><Finance /></PageSuspense>, handle: { breadcrumb: 'Finanças' } },
                 ],
               },
               {
                 element: <RoleRoute allowedRoles={['ADMIN']} />,
                 children: [
-                  { path: '/admin/dashboard', element: <AdminDashboard />, handle: { breadcrumb: 'Administração' } },
-                  { path: '/admin/users', element: <AdminUsers />, handle: { breadcrumb: 'Utilizadores' } },
+                  { path: '/admin/dashboard', element: <PageSuspense><AdminDashboard /></PageSuspense>, handle: { breadcrumb: 'Administração' } },
+                  { path: '/admin/users', element: <PageSuspense><AdminUsers /></PageSuspense>, handle: { breadcrumb: 'Utilizadores' } },
                 ],
               },
             ],
@@ -85,18 +89,18 @@ export const router = createBrowserRouter([
           {
             element: <AuthLayout />,
             children: [
-              { path: '/login', element: <Login /> },
-              { path: '/register', element: <Register /> },
+              { path: '/login', element: <PageSuspense><Login /></PageSuspense> },
+              { path: '/register', element: <PageSuspense><Register /></PageSuspense> },
             ],
           },
         ],
       },
       // Bare routes
       { path: '/', element: <SmartRedirect /> },
-      { path: '/verify-email', element: <VerifyEmail /> },
-      { path: '/forgot-password', element: <ForgotPassword /> },
-      { path: '/reset-password', element: <ResetPassword /> },
-      { path: '*', element: <NotFound /> },
+      { path: '/verify-email', element: <PageSuspense><VerifyEmail /></PageSuspense> },
+      { path: '/forgot-password', element: <PageSuspense><ForgotPassword /></PageSuspense> },
+      { path: '/reset-password', element: <PageSuspense><ResetPassword /></PageSuspense> },
+      { path: '*', element: <PageSuspense><NotFound /></PageSuspense> },
     ],
   },
 ]);

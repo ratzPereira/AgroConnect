@@ -14,7 +14,17 @@
       "Bash(cd /c/AgroConnect/frontend && npx vitest run 2>&1)",
       "Bash(cd \"C:\\\\AgroConnect\\\\frontend\" && npm run build 2>&1)",
       "Bash(cd /c/AgroConnect/backend && mvn test -Dtest=\"AccountServiceTest\" -pl . 2>&1)",
-      "Bash(cd C:\\\\AgroConnect\\\\backend && mvn compile -q 2>&1)"
+      "Bash(cd C:\\\\AgroConnect\\\\backend && mvn compile -q 2>&1)",
+      "WebSearch",
+      "Bash(cd C:/AgroConnect/frontend && npm install -D vite-plugin-pwa 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npm install -D vite-plugin-pwa --legacy-peer-deps 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npm ls vite-plugin-pwa 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npm ls @testing-library/react 2>&1)",
+      "Bash(cat C:/AgroConnect/frontend/node_modules/@testing-library/react/package.json | python3 -c \"import sys,json; d=json.load\\(sys.stdin\\); print\\(json.dumps\\({k:d.get\\(k\\) for k in ['main','module','types','exports']}, indent=2\\)\\)\" 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npm show recharts peerDependencies 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npm install react-is --legacy-peer-deps 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npm install @testing-library/dom 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npm install @testing-library/dom --legacy-peer-deps 2>&1)"
     ],
     "deny": [
       "Bash(git:*)"

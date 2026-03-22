@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" fill="none">
+  <!-- Background circle -->
+  <circle cx="256" cy="256" r="256" fill="#2D8A2D"/>
+  <!-- Tractor body -->
+  <rect x="160" y="220" width="160" height="80" rx="8" fill="#4CAF50"/>
+  <rect x="200" y="180" width="80" height="50" rx="6" fill="#66BB6A"/>
+  <!-- Exhaust pipe -->
+  <rect x="290" y="190" width="12" height="40" rx="4" fill="#388E3C"/>
+  <!-- Large rear wheel -->
+  <circle cx="200" cy="320" r="50" fill="#2E7D32"/>
+  <circle cx="200" cy="320" r="30" fill="#1B5E20"/>
+  <circle cx="200" cy="320" r="12" fill="#2E7D32"/>
+  <!-- Small front wheel -->
+  <circle cx="310" cy="320" r="30" fill="#2E7D32"/>
+  <circle cx="310" cy="320" r="18" fill="#1B5E20"/>
+  <circle cx="310" cy="320" r="8" fill="#2E7D32"/>
+  <!-- Leaf -->
+  <path d="M340 140 C360 100 400 90 420 100 C430 130 410 170 370 180 C380 160 370 140 340 140Z" fill="#81C784"/>
+  <path d="M370 180 C360 160 350 145 340 140" stroke="#4CAF50" stroke-width="3" fill="none"/>
+  <!-- WiFi signal arcs -->
+  <path d="M150 160 C170 140 190 140 210 160" stroke="white" stroke-width="6" stroke-linecap="round" fill="none" opacity="0.9"/>
+  <path d="M160 180 C172 168 188 168 200 180" stroke="white" stroke-width="5" stroke-linecap="round" fill="none" opacity="0.7"/>
+  <circle cx="180" cy="192" r="4" fill="white" opacity="0.9"/>
+</svg>

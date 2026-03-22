@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { SEOHead } from '@/components/SEOHead';
 import { motion, useInView, useReducedMotion } from 'framer-motion';
 import {
   FileText,
@@ -160,6 +161,19 @@ export function Landing() {
 
   return (
     <div>
+      <SEOHead
+        title="AgroConnect — Marketplace de Serviços Agrícolas nos Açores"
+        description="Encontre prestadores de serviços agrícolas nos Açores. Lavoura, pulverização, jardinagem e mais."
+        path="/landing"
+        jsonLd={{
+          '@context': 'https://schema.org',
+          '@type': 'Organization',
+          name: 'AgroConnect',
+          url: 'https://agroconnect.pt',
+          description: 'Marketplace de serviços agrícolas nos Açores',
+          logo: 'https://agroconnect.pt/pwa-512x512.png',
+        }}
+      />
       {/* ── Section 1: Hero ── */}
       <section className="bg-gradient-to-br from-green-950 via-green-900 to-green-800 min-h-[80vh] flex items-center">
         <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-16 lg:py-20">

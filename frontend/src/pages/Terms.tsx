@@ -1,4 +1,5 @@
 import { LegalPageLayout } from '@/components/LegalPageLayout';
+import { SEOHead } from '@/components/SEOHead';
 
 const TOC_ITEMS = [
   { id: 'identificacao', label: '1. Identificacao' },
@@ -843,11 +844,18 @@ const SECTIONS = [
 
 export function Terms() {
   return (
-    <LegalPageLayout
-      title="Termos e Condicoes de Utilizacao"
-      lastUpdated="Ultima atualizacao: 21 de marco de 2026"
-      toc={TOC_ITEMS}
-      sections={SECTIONS}
-    />
+    <>
+      <SEOHead
+        title="Termos de Serviço — AgroConnect"
+        description="Termos e condições de utilização da plataforma AgroConnect."
+        path="/terms"
+      />
+      <LegalPageLayout
+        title="Termos e Condicoes de Utilizacao"
+        lastUpdated="Ultima atualizacao: 21 de marco de 2026"
+        toc={TOC_ITEMS}
+        sections={SECTIONS}
+      />
+    </>
   );
 }

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { AnimatedPage } from '@/components/AnimatedPage';
+import { SEOHead } from '@/components/SEOHead';
 
 interface TocItem {
   id: string;
@@ -52,6 +53,11 @@ export function Privacy() {
 
   return (
     <AnimatedPage>
+      <SEOHead
+        title="Política de Privacidade — AgroConnect"
+        description="Política de privacidade e proteção de dados da AgroConnect, em conformidade com o RGPD."
+        path="/privacy"
+      />
       <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         <header className="mb-10">
           <h1 className="text-3xl font-bold text-neutral-900">
