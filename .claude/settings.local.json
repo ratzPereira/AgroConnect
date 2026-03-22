@@ -24,7 +24,20 @@
       "Bash(cd C:/AgroConnect/frontend && npm show recharts peerDependencies 2>&1)",
       "Bash(cd C:/AgroConnect/frontend && npm install react-is --legacy-peer-deps 2>&1)",
       "Bash(cd C:/AgroConnect/frontend && npm install @testing-library/dom 2>&1)",
-      "Bash(cd C:/AgroConnect/frontend && npm install @testing-library/dom --legacy-peer-deps 2>&1)"
+      "Bash(cd C:/AgroConnect/frontend && npm install @testing-library/dom --legacy-peer-deps 2>&1)",
+      "Bash(echo not found:*)",
+      "Bash(cd /c/AgroConnect/frontend && node -e \"const ue = require\\('@testing-library/user-event'\\); console.log\\('default:', typeof ue.default\\); console.log\\('userEvent:', typeof ue.userEvent\\); console.log\\('keys:', Object.keys\\(ue\\).slice\\(0,5\\)\\)\" 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npm install -D @vitest/coverage-v8 --legacy-peer-deps 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npx tsc --noEmit --project tsconfig.app.json 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest --version 2>&1 && node -e \"console.log\\(require\\('@testing-library/react/package.json'\\).version\\)\" 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest run src/components/ui/__tests__/Button.test.tsx 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest run src/components/ui/__tests__/ 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest run src/components/ui/__tests__/Select.test.tsx src/components/ui/__tests__/StatCard.test.tsx 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx tsc --noEmit 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest run --reporter=verbose 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest run src/pages/__tests__/ 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest run src/pages/__tests__/Landing.test.tsx 2>&1)",
+      "Bash(cd C:/AgroConnect/frontend && npx vitest run src/hooks/__tests__/useNotifications.test.ts src/stores/__tests__/authStore.test.ts src/stores/__tests__/cookieStore.test.ts 2>&1)"
     ],
     "deny": [
       "Bash(git:*)"
