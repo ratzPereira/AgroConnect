@@ -36,5 +36,17 @@ public record ProviderProfileResponse(
         Double latitude,
 
         @Schema(description = "Location longitude", example = "-27.2167")
-        Double longitude
+        Double longitude,
+
+        @Schema(description = "Island name", example = "Terceira")
+        String island,
+
+        @Schema(description = "Municipality name", example = "Angra do Heroísmo")
+        String municipality,
+
+        @Schema(description = "Parish name", example = "São Pedro")
+        String parish,
+
+        @Schema(description = "Whether the provider profile is complete (has location set)", example = "true")
+        Boolean profileComplete
 ) {}

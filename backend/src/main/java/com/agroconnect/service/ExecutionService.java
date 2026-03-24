@@ -75,6 +75,9 @@ public class ExecutionService {
     @Value("${agroconnect.minio.endpoint}")
     private String minioEndpoint;
 
+    @Value("${agroconnect.minio.public-endpoint}")
+    private String minioPublicEndpoint;
+
     @Transactional
     public ServiceExecution createForProposal(Proposal proposal) {
         ServiceExecution execution = ServiceExecution.builder()
@@ -184,7 +187,9 @@ public class ExecutionService {
                             .expiry(PRESIGNED_URL_EXPIRY_MINUTES, TimeUnit.MINUTES)
                             .build());
 
-            String publicUrl = minioEndpoint + "/" + minioBucket + "/" + objectKey;
+            // Replace internal Docker hostname with public endpoint (proxied through Nginx)
+            uploadUrl = uploadUrl.replace(minioEndpoint, minioPublicEndpoint);
+            String publicUrl = minioPublicEndpoint + "/" + minioBucket + "/" + objectKey;
             return new PresignedUrlResponse(uploadUrl, objectKey, publicUrl);
         } catch (Exception e) {
             log.error("Failed to generate presigned URL for execution {}", executionId, e);

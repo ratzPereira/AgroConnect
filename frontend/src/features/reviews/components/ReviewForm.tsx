@@ -43,6 +43,8 @@ export function ReviewForm({ requestId }: ReviewFormProps) {
     mutationFn: (data: CreateReviewRequest) => createReview(requestId, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
       reset();
     },
   });

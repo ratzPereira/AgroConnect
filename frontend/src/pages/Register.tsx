@@ -3,6 +3,13 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import {
+  ArrowLeft,
+  CheckCircle2,
+  Tractor,
+  Wheat,
+} from 'lucide-react';
 import { register as registerApi } from '@/api/auth';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
@@ -26,6 +33,14 @@ const registerSchema = z
   });
 
 type RegisterForm = z.infer<typeof registerSchema>;
+
+const glassCard = {
+  background: 'rgba(255, 255, 255, 0.45)',
+  backdropFilter: 'blur(20px) saturate(1.3)',
+  WebkitBackdropFilter: 'blur(20px) saturate(1.3)',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+  border: '1px solid rgba(255, 255, 255, 0.4)',
+} as const;
 
 export function Register() {
   const [error, setError] = useState<string | null>(null);
@@ -78,133 +93,235 @@ export function Register() {
 
   if (success) {
     return (
-      <div className="min-h-svh flex items-center justify-center bg-neutral-50 py-12">
-        <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-8 w-full max-w-md text-center">
-          <img src="/logotipo.png" alt="AgroConnect" className="h-16 mx-auto mb-6" />
-          <h1 className="text-xl font-semibold text-neutral-800 mb-4">Verifique o seu email</h1>
-          <p className="text-sm text-neutral-600 mb-6">
-            Enviámos um link de verificação para o seu email. Por favor verifique a sua caixa de correio para ativar a sua conta.
+      <div
+        className="min-h-svh flex items-center justify-center px-4 py-10"
+        style={{
+          backgroundImage: 'url(/background.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+        }}
+      >
+        <div
+          className="fixed inset-0 pointer-events-none"
+          style={{ background: 'rgba(0,20,5,0.25)' }}
+        />
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.35 }}
+          className="relative z-10 w-full rounded-3xl p-8 sm:p-10 text-center"
+          style={{ maxWidth: 440, ...glassCard }}
+        >
+          <div className="mx-auto mb-6 flex items-center justify-center w-20 h-20 rounded-full" style={{ background: 'rgba(240,253,244,0.8)' }}>
+            <CheckCircle2 className="w-10 h-10 text-green-600" />
+          </div>
+          <h1
+            className="font-display text-2xl font-bold mb-3 tracking-tight"
+            style={{ color: '#1a1a1a', textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}
+          >
+            Verifique o seu email
+          </h1>
+          <p className="text-sm mb-8 leading-relaxed max-w-xs mx-auto" style={{ color: '#404040' }}>
+            Enviámos um link de verificação para o seu email. Verifique a sua caixa de correio para ativar a conta.
           </p>
-          <Link to="/login" className="text-green-600 hover:text-green-700 font-medium text-sm">
-            Voltar ao login
+          <Link
+            to="/login"
+            className="inline-flex items-center gap-2 text-green-700 hover:text-green-800 font-semibold text-sm transition-colors"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Ir para o login
           </Link>
-        </div>
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-neutral-50 py-12">
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-8 w-full max-w-md">
-        <img
-          src="/logotipo.png"
-          alt="AgroConnect"
-          className="h-16 mx-auto mb-6"
-        />
-        <h1 className="text-xl font-semibold text-neutral-800 text-center mb-6">
-          Registar
+    <div
+      className="min-h-svh flex items-center justify-center px-4 py-10"
+      style={{
+        backgroundImage: 'url(/background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Light overlay */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{ background: 'rgba(0,20,5,0.25)' }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="relative z-10 w-full rounded-3xl p-8 sm:p-10"
+        style={{ maxWidth: 440, ...glassCard }}
+      >
+        {/* Back link */}
+        <div className="flex justify-end mb-6">
+          <Link
+            to="/landing"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors"
+            style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao início
+          </Link>
+        </div>
+
+        <h1
+          className="font-display text-3xl font-bold tracking-tight"
+          style={{ color: '#1a1a1a', textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}
+        >
+          Criar conta
         </h1>
+        <p className="text-base mt-2 mb-8" style={{ color: '#404040' }}>
+          Comece a usar o AgroConnect em poucos minutos.
+        </p>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <div
+            className="mb-6 rounded-xl px-4 py-3.5 text-sm leading-relaxed"
+            style={{ background: 'rgba(254, 242, 242, 0.9)', border: '1px solid rgba(254, 202, 202, 0.7)', color: '#b91c1c' }}
+          >
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-neutral-700">Tipo de conta</label>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Role selection */}
+          <div className="mb-5">
+            <label className="block text-sm font-medium mb-2.5" style={{ color: '#374151' }}>Tipo de conta</label>
             <div className="grid grid-cols-2 gap-3">
               <label
-                className={`flex items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
+                className="relative flex flex-col items-center gap-2.5 rounded-xl border-2 px-4 py-5 text-sm font-medium cursor-pointer transition-all"
+                style={
                   selectedRole === 'CLIENT'
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50'
-                }`}
+                    ? { borderColor: '#22c55e', background: 'rgba(240, 253, 244, 0.8)', color: '#15803d' }
+                    : { borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255, 255, 255, 0.35)', color: '#525252' }
+                }
               >
                 <input type="radio" value="CLIENT" className="sr-only" {...register('role')} />
+                <div
+                  className="p-2 rounded-lg"
+                  style={{ background: selectedRole === 'CLIENT' ? 'rgba(220, 252, 231, 0.9)' : 'rgba(255, 255, 255, 0.4)' }}
+                >
+                  <Wheat className="w-5 h-5" />
+                </div>
                 Agricultor
               </label>
               <label
-                className={`flex items-center justify-center rounded-lg border px-4 py-2.5 text-sm font-medium cursor-pointer transition-colors ${
+                className="relative flex flex-col items-center gap-2.5 rounded-xl border-2 px-4 py-5 text-sm font-medium cursor-pointer transition-all"
+                style={
                   selectedRole === 'PROVIDER_MANAGER'
-                    ? 'border-green-500 bg-green-50 text-green-700'
-                    : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50'
-                }`}
+                    ? { borderColor: '#22c55e', background: 'rgba(240, 253, 244, 0.8)', color: '#15803d' }
+                    : { borderColor: 'rgba(255,255,255,0.4)', background: 'rgba(255, 255, 255, 0.35)', color: '#525252' }
+                }
               >
                 <input type="radio" value="PROVIDER_MANAGER" className="sr-only" {...register('role')} />
+                <div
+                  className="p-2 rounded-lg"
+                  style={{ background: selectedRole === 'PROVIDER_MANAGER' ? 'rgba(220, 252, 231, 0.9)' : 'rgba(255, 255, 255, 0.4)' }}
+                >
+                  <Tractor className="w-5 h-5" />
+                </div>
                 Prestador
               </label>
             </div>
-            {errors.role && <p className="text-xs text-red-600">{errors.role.message}</p>}
+            {errors.role && <p className="text-xs text-red-600 mt-1">{errors.role.message}</p>}
           </div>
 
-          <Input
-            id="name"
-            label="Nome"
-            placeholder="João Silva"
-            error={errors.name?.message}
-            {...register('name')}
-          />
+          <div className="mb-5">
+            <Input
+              id="name"
+              label="Nome"
+              placeholder="João Silva"
+              error={errors.name?.message}
+              {...register('name')}
+            />
+          </div>
 
-          <Input
-            id="email"
-            label="Email"
-            type="email"
-            placeholder="joao@example.pt"
-            error={errors.email?.message}
-            {...register('email')}
-          />
+          <div className="mb-5">
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="joao@example.pt"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+          </div>
 
           {selectedRole === 'PROVIDER_MANAGER' && (
-            <>
-              <Input
-                id="companyName"
-                label="Nome da Empresa"
-                placeholder="AgroServiços Lda"
-                error={errors.companyName?.message}
-                {...register('companyName')}
-              />
-              <Input
-                id="nif"
-                label="NIF"
-                placeholder="123456789"
-                error={errors.nif?.message}
-                {...register('nif')}
-              />
-            </>
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <div className="mb-5">
+                <Input
+                  id="companyName"
+                  label="Nome da Empresa"
+                  placeholder="AgroServiços Lda"
+                  error={errors.companyName?.message}
+                  {...register('companyName')}
+                />
+              </div>
+              <div className="mb-5">
+                <Input
+                  id="nif"
+                  label="NIF"
+                  placeholder="123456789"
+                  error={errors.nif?.message}
+                  {...register('nif')}
+                />
+              </div>
+            </motion.div>
           )}
 
-          <Input
-            id="password"
-            label="Palavra-passe"
-            type="password"
-            placeholder="••••••••"
-            error={errors.password?.message}
-            {...register('password')}
-          />
+          <div className="mb-5">
+            <Input
+              id="password"
+              label="Palavra-passe"
+              type="password"
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+          </div>
 
-          <Input
-            id="confirmPassword"
-            label="Confirmar palavra-passe"
-            type="password"
-            placeholder="••••••••"
-            error={errors.confirmPassword?.message}
-            {...register('confirmPassword')}
-          />
+          <div className="mb-8">
+            <Input
+              id="confirmPassword"
+              label="Confirmar palavra-passe"
+              type="password"
+              placeholder="••••••••"
+              error={errors.confirmPassword?.message}
+              {...register('confirmPassword')}
+            />
+          </div>
 
-          <Button type="submit" className="w-full" loading={isSubmitting}>
-            Registar
+          <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
+            Criar conta
           </Button>
         </form>
 
-        <p className="text-sm text-neutral-500 text-center mt-6">
+        <p className="text-sm text-center mt-8" style={{ color: '#404040' }}>
           Já tem conta?{' '}
-          <Link to="/login" className="text-green-600 hover:text-green-700 font-medium">
+          <Link to="/login" className="text-green-700 hover:text-green-800 font-semibold transition-colors">
             Entrar
           </Link>
         </p>
-      </div>
+
+        <p className="text-xs text-center mt-5 leading-relaxed" style={{ color: '#737373' }}>
+          Ao registar-se, concorda com os{' '}
+          <Link to="/terms" className="underline hover:text-neutral-600 transition-colors">Termos de Serviço</Link>
+          {' '}e a{' '}
+          <Link to="/privacy" className="underline hover:text-neutral-600 transition-colors">Política de Privacidade</Link>.
+        </p>
+      </motion.div>
     </div>
   );
 }

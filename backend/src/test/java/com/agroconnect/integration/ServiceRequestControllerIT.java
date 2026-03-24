@@ -166,7 +166,7 @@ class ServiceRequestControllerIT extends TestContainersConfig {
         // Create a new request to cancel
         CreateServiceRequestDto dto = new CreateServiceRequestDto(
                 1L, "Para cancelar", "Este será cancelado",
-                38.6667, -27.2167, null, null, null,
+                38.6667, -27.2167, "São Sebastião", "Angra do Heroísmo", "Terceira",
                 null, null, null, null, null, null);
 
         MvcResult result = mockMvc.perform(post("/v1/requests")

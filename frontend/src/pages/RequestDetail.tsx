@@ -13,6 +13,7 @@ import { ConfirmationPanel } from '@/features/requests/components/ConfirmationPa
 import { ReviewForm } from '@/features/reviews/components/ReviewForm';
 import { ReviewCard } from '@/features/reviews/components/ReviewCard';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
+import { PhotoUpload } from '@/features/requests/components/PhotoUpload';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { StatusTimeline } from '@/components/ui/StatusTimeline';
@@ -87,7 +88,11 @@ export function RequestDetail() {
 
   const cancelMutation = useMutation({
     mutationFn: () => cancelRequest(requestId),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['request', requestId] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+    },
   });
 
   const createProposalMutation = useMutation({
@@ -104,14 +109,18 @@ export function RequestDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['proposals', requestId] });
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
       setAcceptingId(null);
     },
   });
 
   const isProvider = user?.role === 'PROVIDER_MANAGER' || user?.role === 'PROVIDER_LEAD' || user?.role === 'PROVIDER_OPERATOR';
   const isOwner = request && request.clientId === user?.id;
-  const canPropose = isProvider && request && (request.status === 'PUBLISHED' || request.status === 'WITH_PROPOSALS');
+  const alreadyProposed = isProvider && proposals && proposals.length > 0;
+  const canPropose = isProvider && !alreadyProposed && request && (request.status === 'PUBLISHED' || request.status === 'WITH_PROPOSALS');
   const canCancel = isOwner && request && !['RATED', 'EXPIRED', 'CANCELLED'].includes(request.status);
+  const canUploadPhotos = request && ['DRAFT', 'PUBLISHED', 'WITH_PROPOSALS'].includes(request.status);
 
   const showExecution = request && EXECUTION_STATUSES.has(request.status);
   const showChat = request && CHAT_STATUSES.has(request.status);
@@ -214,23 +223,27 @@ export function RequestDetail() {
             </CardBody>
           </Card>
 
-          {/* Photos */}
-          {request.photos.length > 0 && (
+          {/* Photos — owner can upload when request is open */}
+          {(request.photos.length > 0 || (isOwner && canUploadPhotos)) && (
             <Card className="mb-6">
               <CardHeader>
                 <h2 className="font-semibold text-neutral-900 text-sm">Fotos</h2>
               </CardHeader>
               <CardBody>
-                <div className="grid grid-cols-3 gap-3">
-                  {request.photos.map((photo) => (
-                    <img
-                      key={photo.id}
-                      src={photo.photoUrl}
-                      alt="Foto do pedido"
-                      className="w-full h-32 object-cover rounded-lg border border-neutral-200"
-                    />
-                  ))}
-                </div>
+                {isOwner && canUploadPhotos ? (
+                  <PhotoUpload requestId={requestId} photos={request.photos} />
+                ) : (
+                  <div className="grid grid-cols-3 gap-3">
+                    {request.photos.map((photo) => (
+                      <img
+                        key={photo.id}
+                        src={photo.photoUrl}
+                        alt="Foto do pedido"
+                        className="w-full h-32 object-cover rounded-lg border border-neutral-200"
+                      />
+                    ))}
+                  </div>
+                )}
               </CardBody>
             </Card>
           )}

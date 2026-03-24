@@ -57,6 +57,18 @@ public class NotificationService {
     }
 
     @Transactional
+    public void markAsRead(Long notificationId, Long userId) {
+        Notification notification = notificationRepository.findById(notificationId)
+                .orElseThrow(() -> new ResourceNotFoundException("Notificação não encontrada."));
+        if (!notification.getUser().getId().equals(userId)) {
+            throw new ResourceNotFoundException("Notificação não encontrada.");
+        }
+        notification.setRead(true);
+        notificationRepository.save(notification);
+        log.debug("Notification {} marked as read for user {}", notificationId, userId);
+    }
+
+    @Transactional
     public void markAllAsRead(Long userId) {
         notificationRepository.markAllAsReadByUserId(userId);
         log.debug("All notifications marked as read for user {}", userId);

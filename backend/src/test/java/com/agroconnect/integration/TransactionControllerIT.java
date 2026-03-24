@@ -76,7 +76,7 @@ class TransactionControllerIT extends TestContainersConfig {
                         .header("Authorization", "Bearer " + providerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateProviderProfileRequest(
-                                null, null, null, null, null, 38.6667, -27.2167))))
+                                null, null, null, null, null, 38.6667, -27.2167, "Terceira", "Angra do Heroísmo", null))))
                 .andExpect(status().isOk());
 
         // Create + publish request

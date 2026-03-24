@@ -69,8 +69,8 @@ export interface CreateServiceRequestDto {
   latitude: number;
   longitude: number;
   parish?: string;
-  municipality?: string;
-  island?: string;
+  municipality: string;
+  island: string;
   area?: number;
   areaUnit?: string;
   urgency?: Urgency;

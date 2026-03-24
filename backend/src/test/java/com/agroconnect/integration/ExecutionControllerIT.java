@@ -79,7 +79,7 @@ class ExecutionControllerIT extends TestContainersConfig {
 
         // Set provider location
         UpdateProviderProfileRequest profileUpdate = new UpdateProviderProfileRequest(
-                null, null, null, null, null, 38.6667, -27.2167);
+                null, null, null, null, null, 38.6667, -27.2167, "Terceira", "Angra do Heroísmo", null);
         mockMvc.perform(put("/v1/profile/me/provider")
                         .header("Authorization", "Bearer " + providerToken)
                         .contentType(MediaType.APPLICATION_JSON)

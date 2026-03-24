@@ -2,6 +2,8 @@ package com.agroconnect.dto.request;
 
 import com.agroconnect.model.enums.Urgency;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -26,19 +28,25 @@ public record CreateServiceRequestDto(
         String description,
 
         @NotNull(message = "A latitude é obrigatória")
-        @Schema(description = "Location latitude", example = "38.7167")
+        @DecimalMin(value = "36.9", message = "A latitude deve estar dentro dos Açores")
+        @DecimalMax(value = "39.8", message = "A latitude deve estar dentro dos Açores")
+        @Schema(description = "Location latitude (Azores: 36.9–39.8)", example = "38.7167")
         Double latitude,
 
         @NotNull(message = "A longitude é obrigatória")
-        @Schema(description = "Location longitude", example = "-27.2167")
+        @DecimalMin(value = "-31.3", message = "A longitude deve estar dentro dos Açores")
+        @DecimalMax(value = "-24.7", message = "A longitude deve estar dentro dos Açores")
+        @Schema(description = "Location longitude (Azores: -31.3 to -24.7)", example = "-27.2167")
         Double longitude,
 
         @Schema(description = "Parish name", example = "São Sebastião")
         String parish,
 
+        @NotBlank(message = "O município é obrigatório")
         @Schema(description = "Municipality name", example = "Angra do Heroísmo")
         String municipality,
 
+        @NotBlank(message = "A ilha é obrigatória")
         @Schema(description = "Island name", example = "Terceira")
         String island,
 

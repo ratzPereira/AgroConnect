@@ -72,7 +72,7 @@ describe('Login', () => {
 
   it('renders link to register page', () => {
     renderLogin();
-    const registerLink = screen.getByRole('link', { name: /registar/i });
+    const registerLink = screen.getByRole('link', { name: /criar conta/i });
     expect(registerLink).toBeInTheDocument();
     expect(registerLink).toHaveAttribute('href', '/register');
   });

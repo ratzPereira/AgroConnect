@@ -14,6 +14,10 @@ export async function getUnreadCount(): Promise<UnreadCount> {
   return response.data;
 }
 
+export async function markAsRead(id: number): Promise<void> {
+  await apiClient.post(`/notifications/${id}/read`);
+}
+
 export async function markAllAsRead(): Promise<void> {
   await apiClient.post('/notifications/mark-read');
 }

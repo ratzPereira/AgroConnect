@@ -29,9 +29,9 @@ describe('Register', () => {
     expect(screen.getByText('Prestador')).toBeInTheDocument();
   });
 
-  it('renders submit button with text Registar', () => {
+  it('renders submit button with text Criar conta', () => {
     renderRegister();
-    const submitButton = screen.getByRole('button', { name: /registar/i });
+    const submitButton = screen.getByRole('button', { name: /criar conta/i });
     expect(submitButton).toBeInTheDocument();
   });
 
@@ -39,8 +39,7 @@ describe('Register', () => {
     const user = userEvent.setup();
     renderRegister();
 
-    // Clear default name field which is empty but required
-    const submitButton = screen.getByRole('button', { name: /registar/i });
+    const submitButton = screen.getByRole('button', { name: /criar conta/i });
     await user.click(submitButton);
 
     await waitFor(() => {

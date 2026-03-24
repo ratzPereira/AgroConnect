@@ -3,6 +3,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Link, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
+import { ArrowLeft } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { login } from '@/api/auth';
 import { Button } from '@/components/ui/Button';
@@ -59,59 +61,110 @@ export function Login() {
   }
 
   return (
-    <div className="min-h-svh flex items-center justify-center bg-neutral-50">
-      <div className="bg-white rounded-xl border border-neutral-200 shadow-sm p-8 w-full max-w-md">
-        <img
-          src="/logotipo.png"
-          alt="AgroConnect"
-          className="h-16 mx-auto mb-6"
-        />
-        <h1 className="text-xl font-semibold text-neutral-800 text-center mb-6">
-          Entrar
+    <div
+      className="min-h-svh flex items-center justify-center px-4 py-10"
+      style={{
+        backgroundImage: 'url(/background.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }}
+    >
+      {/* Light overlay — keeps it subtle so glass card can show through */}
+      <div
+        className="fixed inset-0 pointer-events-none"
+        style={{ background: 'rgba(0,20,5,0.25)' }}
+      />
+
+      <motion.div
+        initial={{ opacity: 0, y: 14 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.35 }}
+        className="relative z-10 w-full rounded-3xl p-8 sm:p-10"
+        style={{
+          maxWidth: 440,
+          background: 'rgba(255, 255, 255, 0.45)',
+          backdropFilter: 'blur(20px) saturate(1.3)',
+          WebkitBackdropFilter: 'blur(20px) saturate(1.3)',
+          boxShadow: '0 8px 32px rgba(0,0,0,0.2), inset 0 1px 0 rgba(255,255,255,0.5)',
+          border: '1px solid rgba(255, 255, 255, 0.4)',
+        }}
+      >
+        {/* Back link */}
+        <div className="flex justify-end mb-6">
+          <Link
+            to="/landing"
+            className="inline-flex items-center gap-1.5 text-sm font-semibold transition-colors"
+            style={{ color: 'rgba(255,255,255,0.9)', textShadow: '0 1px 4px rgba(0,0,0,0.3)' }}
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Voltar ao início
+          </Link>
+        </div>
+
+        <h1
+          className="font-display text-3xl font-bold tracking-tight"
+          style={{ color: '#1a1a1a', textShadow: '0 1px 2px rgba(255,255,255,0.4)' }}
+        >
+          Bem-vindo de volta
         </h1>
+        <p className="text-base mt-2 mb-8" style={{ color: '#404040' }}>
+          Introduza as suas credenciais para continuar.
+        </p>
 
         {error && (
-          <div className="mb-4 rounded-lg bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700">
+          <div
+            className="mb-6 rounded-xl px-4 py-3.5 text-sm leading-relaxed"
+            style={{ background: 'rgba(254, 242, 242, 0.9)', border: '1px solid rgba(254, 202, 202, 0.7)', color: '#b91c1c' }}
+          >
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <Input
-            id="email"
-            label="Email"
-            type="email"
-            placeholder="joao@example.pt"
-            error={errors.email?.message}
-            {...register('email')}
-          />
-          <Input
-            id="password"
-            label="Palavra-passe"
-            type="password"
-            placeholder="••••••••"
-            error={errors.password?.message}
-            {...register('password')}
-          />
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <div className="mb-5">
+            <Input
+              id="email"
+              label="Email"
+              type="email"
+              placeholder="joao@example.pt"
+              error={errors.email?.message}
+              {...register('email')}
+            />
+          </div>
 
-          <Button type="submit" className="w-full" loading={isSubmitting}>
+          <div className="mb-4">
+            <Input
+              id="password"
+              label="Palavra-passe"
+              type="password"
+              placeholder="••••••••"
+              error={errors.password?.message}
+              {...register('password')}
+            />
+          </div>
+
+          <div className="flex justify-end mb-6">
+            <Link
+              to="/forgot-password"
+              className="text-sm transition-colors"
+              style={{ color: '#525252' }}
+            >
+              Esqueceu a palavra-passe?
+            </Link>
+          </div>
+
+          <Button type="submit" className="w-full" size="lg" loading={isSubmitting}>
             Entrar
           </Button>
         </form>
 
-        <p className="text-sm text-center mt-4">
-          <Link to="/forgot-password" className="text-neutral-500 hover:text-neutral-700">
-            Esqueceu a palavra-passe?
-          </Link>
-        </p>
-
-        <p className="text-sm text-neutral-500 text-center mt-6">
+        <p className="text-sm text-center mt-8" style={{ color: '#404040' }}>
           Não tem conta?{' '}
-          <Link to="/register" className="text-green-600 hover:text-green-700 font-medium">
-            Registar
+          <Link to="/register" className="text-green-700 hover:text-green-800 font-semibold transition-colors">
+            Criar conta
           </Link>
         </p>
-      </div>
+      </motion.div>
     </div>
   );
 }

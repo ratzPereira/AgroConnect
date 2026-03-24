@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { getMyNotifications, markAllAsRead } from '@/api/notifications';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { getMyNotifications, markAsRead, markAllAsRead } from '@/api/notifications';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { Bell } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -11,7 +11,16 @@ export function NotificationBell() {
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const queryClient = useQueryClient();
   const { unreadCount, resetUnread } = useNotificationStore();
+
+  const markOneMutation = useMutation({
+    mutationFn: (id: number) => markAsRead(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications-preview'] });
+      queryClient.invalidateQueries({ queryKey: ['my-notifications'] });
+    },
+  });
 
   const { data: notifications } = useQuery({
     queryKey: ['notifications-preview'],
@@ -76,21 +85,29 @@ export function NotificationBell() {
           <div className="max-h-80 overflow-y-auto">
             {notifications && notifications.content.length > 0 ? (
               notifications.content.map((notification) => (
-                <div
+                <button
                   key={notification.id}
+                  type="button"
+                  onClick={() => {
+                    if (!notification.read) {
+                      markOneMutation.mutate(notification.id);
+                    }
+                  }}
                   className={cn(
-                    'px-4 py-3 border-b border-neutral-50 last:border-0',
-                    !notification.read && 'bg-green-50/50',
+                    'w-full text-left px-4 py-3 border-b border-neutral-50 last:border-0 transition-colors',
+                    !notification.read
+                      ? 'bg-green-50/50 hover:bg-green-50'
+                      : 'hover:bg-neutral-50',
                   )}
                 >
-                  <p className="text-sm font-medium text-neutral-900">{notification.title}</p>
+                  <p className={cn('text-sm', !notification.read ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-700')}>{notification.title}</p>
                   <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">
                     {notification.body}
                   </p>
                   <p className="text-[10px] text-neutral-400 mt-1">
                     {format(new Date(notification.createdAt), 'dd/MM/yyyy HH:mm')}
                   </p>
-                </div>
+                </button>
               ))
             ) : (
               <div className="px-4 py-8 text-center">

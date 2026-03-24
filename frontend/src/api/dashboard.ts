@@ -25,9 +25,10 @@ export interface ProviderDashboardData {
 }
 
 export async function getClientDashboardStats(): Promise<ClientDashboardData> {
-  const [requestsPage, completedPage, notifPage] = await Promise.all([
+  const [requestsPage, completedPage, ratedPage, notifPage] = await Promise.all([
     getMyRequests(0, 100),
     getMyRequests(0, 1, 'COMPLETED'),
+    getMyRequests(0, 1, 'RATED'),
     getMyNotifications(0, 8),
   ]);
 
@@ -38,7 +39,7 @@ export async function getClientDashboardStats(): Promise<ClientDashboardData> {
   return {
     activeRequests,
     totalRequests: requestsPage.totalElements,
-    completedCount: completedPage.totalElements,
+    completedCount: completedPage.totalElements + ratedPage.totalElements,
     recentNotifications: notifPage.content,
   };
 }

@@ -5,11 +5,15 @@ import type { Transaction } from '@/types/transaction';
 
 interface TransactionCardProps {
   transaction: Transaction;
+  onClick?: () => void;
 }
 
-export function TransactionCard({ transaction }: TransactionCardProps) {
+export function TransactionCard({ transaction, onClick }: TransactionCardProps) {
   return (
-    <Card>
+    <Card
+      className={onClick ? 'cursor-pointer hover:border-primary-200 transition-colors' : undefined}
+      onClick={onClick}
+    >
       <CardBody>
         <div className="flex items-start justify-between gap-4">
           <div className="min-w-0 flex-1">
@@ -44,18 +48,6 @@ export function TransactionCard({ transaction }: TransactionCardProps) {
                   {format(new Date(transaction.createdAt), 'dd/MM/yyyy')}
                 </p>
               </div>
-            </div>
-            {/* Dates row */}
-            <div className="flex flex-wrap gap-4 mt-2 text-xs text-neutral-400">
-              {transaction.heldAt && (
-                <span>Retido: {format(new Date(transaction.heldAt), 'dd/MM/yyyy HH:mm')}</span>
-              )}
-              {transaction.releasedAt && (
-                <span>Libertado: {format(new Date(transaction.releasedAt), 'dd/MM/yyyy HH:mm')}</span>
-              )}
-              {transaction.refundedAt && (
-                <span>Reembolsado: {format(new Date(transaction.refundedAt), 'dd/MM/yyyy HH:mm')}</span>
-              )}
             </div>
           </div>
         </div>

@@ -30,7 +30,9 @@ export default defineConfig({
       workbox: {
         navigateFallback: '/offline.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/swagger/, /^\/ws\//, /^\/v3\//],
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+        globIgnores: ['**/background.png'],
+        maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         runtimeCaching: [
           {
             urlPattern: /^https:\/\/fonts\.googleapis\.com\/.*/i,

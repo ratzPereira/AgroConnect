@@ -20,6 +20,8 @@ export function CheckinButton({ executionId, requestId }: CheckinButtonProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['execution', requestId] });
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
     },
   });
 

@@ -14,7 +14,6 @@ import {
   Navigation,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
-import { LandingHero } from '@/components/illustrations/LandingHero';
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
 
 /* ── Animation variants ── */
@@ -120,7 +119,6 @@ const STATS: StatConfig[] = [
   { value: 9, label: 'Ilhas Cobertas' },
   { value: 15, suffix: '+', label: 'Categorias de Serviço' },
   { value: 100, suffix: '%', label: 'Pagamento Seguro' },
-  { value: 5, suffix: '\u2605', label: 'Avaliações Verificadas' },
 ];
 
 /* ── Stat counter component ── */
@@ -175,55 +173,62 @@ export function Landing() {
         }}
       />
       {/* ── Section 1: Hero ── */}
-      <section className="bg-gradient-to-br from-green-950 via-green-900 to-green-800 min-h-[80vh] flex items-center">
-        <div className="mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-16 lg:py-20">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            {/* Text column */}
-            <motion.div
-              variants={container}
-              initial="hidden"
-              animate="visible"
-              className="flex flex-col gap-6"
-            >
-              <motion.h1
-                variants={item}
-                className="text-4xl lg:text-6xl font-display font-bold text-white leading-tight"
-              >
-                Serviços agrícolas ao alcance de um clique
-              </motion.h1>
-              <motion.p
-                variants={item}
-                className="text-lg text-green-200 max-w-xl"
-              >
-                Ligue-se aos melhores prestadores de serviços agrícolas nos Açores.
-                Publique o seu pedido, receba propostas e acompanhe tudo numa única plataforma.
-              </motion.p>
-              <motion.div variants={item} className="flex flex-wrap gap-4 mt-2">
-                <Link
-                  to="/register"
-                  className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-base font-medium text-green-700 transition-colors hover:bg-green-50"
-                >
-                  Criar Conta
-                </Link>
-                <a
-                  href="#como-funciona"
-                  className="inline-flex items-center justify-center rounded-lg border border-white/40 px-6 py-3 text-base font-medium text-white transition-colors hover:bg-white/10"
-                >
-                  Saber Mais
-                </a>
-              </motion.div>
-            </motion.div>
+      <section
+        className="relative flex items-center overflow-hidden"
+        style={{
+          minHeight: '80vh',
+          backgroundImage: 'url(/background.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center 40%',
+        }}
+      >
+        {/* Dark gradient overlay for text readability */}
+        <div
+          className="absolute inset-0 pointer-events-none"
+          style={{
+            background: 'linear-gradient(135deg, rgba(0,20,5,0.75) 0%, rgba(0,20,5,0.55) 50%, rgba(0,20,5,0.3) 100%)',
+          }}
+        />
 
-            {/* Illustration column (hidden on mobile) */}
-            <motion.div
-              initial={shouldAnimate ? { opacity: 0, scale: 0.95 } : { opacity: 1 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ type: 'tween', ease: 'easeOut', duration: 0.3, delay: 0.15 }}
-              className="hidden lg:flex justify-center"
+        <div className="relative z-10 mx-auto max-w-7xl w-full px-4 sm:px-6 lg:px-8 py-16 lg:py-24">
+          <motion.div
+            variants={container}
+            initial="hidden"
+            animate="visible"
+            className="flex flex-col gap-6"
+            style={{ maxWidth: 640 }}
+          >
+            <motion.h1
+              variants={item}
+              className="text-4xl lg:text-6xl font-display font-bold text-white leading-tight"
+              style={{ textShadow: '0 2px 12px rgba(0,0,0,0.3)' }}
             >
-              <LandingHero className="w-full max-w-md drop-shadow-2xl" />
+              Serviços agrícolas ao alcance de um clique
+            </motion.h1>
+            <motion.p
+              variants={item}
+              className="text-lg text-white font-medium"
+              style={{ maxWidth: 520, textShadow: '0 1px 8px rgba(0,0,0,0.6), 0 0 20px rgba(0,0,0,0.3)' }}
+            >
+              Ligue-se aos melhores prestadores de serviços agrícolas nos Açores.
+              Publique o seu pedido, receba propostas e acompanhe tudo numa única plataforma.
+            </motion.p>
+            <motion.div variants={item} className="flex flex-wrap gap-4 mt-2">
+              <Link
+                to="/register"
+                className="inline-flex items-center justify-center rounded-lg bg-white px-6 py-3 text-base font-semibold text-green-700 transition-colors hover:bg-green-50"
+                style={{ boxShadow: '0 4px 14px rgba(0,0,0,0.15)' }}
+              >
+                Criar Conta
+              </Link>
+              <a
+                href="#como-funciona"
+                className="inline-flex items-center justify-center rounded-lg border-2 border-white/50 px-6 py-3 text-base font-semibold text-white transition-colors hover:bg-white/15"
+              >
+                Saber Mais
+              </a>
             </motion.div>
-          </div>
+          </motion.div>
         </div>
       </section>
 

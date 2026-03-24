@@ -19,6 +19,8 @@ export function ConfirmationPanel({ requestId }: ConfirmationPanelProps) {
     mutationFn: () => confirmRequest(requestId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
     },
   });
 
@@ -26,6 +28,8 @@ export function ConfirmationPanel({ requestId }: ConfirmationPanelProps) {
     mutationFn: (reason: string) => disputeRequest(requestId, { reason }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
       setShowDisputeForm(false);
     },
   });

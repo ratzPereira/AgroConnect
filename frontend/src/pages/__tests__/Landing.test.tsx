@@ -63,6 +63,5 @@ describe('Landing', () => {
     expect(screen.getByText('Ilhas Cobertas')).toBeInTheDocument();
     expect(screen.getByText('Categorias de Serviço')).toBeInTheDocument();
     expect(screen.getByText('Pagamento Seguro')).toBeInTheDocument();
-    expect(screen.getByText('Avaliações Verificadas')).toBeInTheDocument();
   });
 });

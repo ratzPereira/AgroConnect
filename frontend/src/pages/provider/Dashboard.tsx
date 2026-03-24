@@ -8,18 +8,27 @@ import { JobStatusChart } from '@/features/dashboard/components/JobStatusChart';
 import { ProviderAlerts } from '@/features/dashboard/components/ProviderAlerts';
 import { Skeleton } from '@/components/ui/Skeleton';
 
-export function ProviderDashboard() {
+interface ProviderDashboardProps {
+  inline?: boolean;
+}
+
+export function ProviderDashboard({ inline }: ProviderDashboardProps) {
   const { data, isLoading } = useQuery({
     queryKey: ['provider-dashboard'],
     queryFn: getProviderDashboardStats,
+    refetchOnMount: 'always',
   });
+
+  const Wrapper = inline ? 'div' : AnimatedPage;
 
   if (isLoading || !data) {
     return (
-      <AnimatedPage>
-        <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900 mb-6">
-          Painel do Prestador
-        </h1>
+      <Wrapper>
+        {!inline && (
+          <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900 mb-6">
+            Painel do Prestador
+          </h1>
+        )}
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
             {Array.from({ length: 4 }).map((_, i) => (
@@ -31,7 +40,7 @@ export function ProviderDashboard() {
             <Skeleton.Rect className="h-[200px]" />
           </div>
         </div>
-      </AnimatedPage>
+      </Wrapper>
     );
   }
 
@@ -44,8 +53,6 @@ export function ProviderDashboard() {
     { label: 'Manutenção pendente', value: maintenanceDueMachines.length, icon: <Wrench className="h-4 w-4 text-danger-600" />, iconBg: 'bg-danger-50' },
   ];
 
-  // Generate placeholder revenue data from the finance summary
-  // In a real implementation, this would come from a time-series API endpoint
   const revenueData = finance.thisMonthEarnings > 0
     ? [
         { label: 'Anterior', value: Math.round(finance.totalEarnings - finance.thisMonthEarnings) },
@@ -61,10 +68,12 @@ export function ProviderDashboard() {
   const jobStatusTotal = jobStatusData.reduce((sum, d) => sum + d.value, 0);
 
   return (
-    <AnimatedPage>
-      <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900 mb-6">
-        Painel do Prestador
-      </h1>
+    <Wrapper>
+      {!inline && (
+        <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900 mb-6">
+          Painel do Prestador
+        </h1>
+      )}
       <div className="space-y-6">
         <ProviderAlerts lowStockItems={lowStockItems} maintenanceDueMachines={maintenanceDueMachines} />
         <DashboardStatCards stats={stats} />
@@ -79,6 +88,6 @@ export function ProviderDashboard() {
           </div>
         </div>
       </div>
-    </AnimatedPage>
+    </Wrapper>
   );
 }

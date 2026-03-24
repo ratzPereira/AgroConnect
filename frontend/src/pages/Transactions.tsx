@@ -3,15 +3,18 @@ import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { getMyTransactions } from '@/api/transactions';
 import { TransactionCard } from '@/features/transactions/components/TransactionCard';
+import { TransactionDetailModal } from '@/features/transactions/components/TransactionDetailModal';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EmptyTransactions } from '@/components/illustrations/EmptyTransactions';
 import { Button } from '@/components/ui/Button';
 import { useMotionConfig } from '@/hooks/useMotionConfig';
+import type { Transaction } from '@/types/transaction';
 
 export function Transactions() {
   const [page, setPage] = useState(0);
+  const [selectedTx, setSelectedTx] = useState<Transaction | null>(null);
   const { listContainerVariants, listItemVariants } = useMotionConfig();
 
   const { data, isLoading } = useQuery({
@@ -42,7 +45,7 @@ export function Transactions() {
           >
             {data.content.map((transaction) => (
               <motion.div variants={listItemVariants} key={transaction.id}>
-                <TransactionCard transaction={transaction} />
+                <TransactionCard transaction={transaction} onClick={() => setSelectedTx(transaction)} />
               </motion.div>
             ))}
           </motion.div>
@@ -77,6 +80,12 @@ export function Transactions() {
           description="As suas transações aparecerão aqui assim que concluir o seu primeiro serviço."
         />
       )}
+
+      <TransactionDetailModal
+        transaction={selectedTx}
+        open={selectedTx !== null}
+        onClose={() => setSelectedTx(null)}
+      />
     </AnimatedPage>
   );
 }

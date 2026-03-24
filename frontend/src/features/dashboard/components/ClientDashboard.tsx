@@ -11,6 +11,7 @@ export function ClientDashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ['client-dashboard'],
     queryFn: getClientDashboardStats,
+    refetchOnMount: 'always',
   });
 
   if (isLoading || !data) {

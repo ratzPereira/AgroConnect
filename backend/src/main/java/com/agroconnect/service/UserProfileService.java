@@ -101,6 +101,15 @@ public class UserProfileService {
         if (request.latitude() != null && request.longitude() != null) {
             profile.setLocation(createPoint(request.longitude(), request.latitude()));
         }
+        if (request.island() != null) {
+            profile.setIsland(request.island());
+        }
+        if (request.municipality() != null) {
+            profile.setMunicipality(request.municipality());
+        }
+        if (request.parish() != null) {
+            profile.setParish(request.parish());
+        }
 
         profile = providerProfileRepository.save(profile);
         return ProviderProfileMapper.toResponse(profile);

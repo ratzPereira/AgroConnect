@@ -30,5 +30,17 @@ public record UpdateProviderProfileRequest(
         Double latitude,
 
         @Schema(description = "Location longitude (WGS84)", example = "-27.2167")
-        Double longitude
+        Double longitude,
+
+        @Size(max = 100, message = "A ilha deve ter no máximo 100 caracteres")
+        @Schema(description = "Island name", example = "Terceira")
+        String island,
+
+        @Size(max = 255, message = "O município deve ter no máximo 255 caracteres")
+        @Schema(description = "Municipality name", example = "Angra do Heroísmo")
+        String municipality,
+
+        @Size(max = 255, message = "A freguesia deve ter no máximo 255 caracteres")
+        @Schema(description = "Parish name", example = "São Pedro")
+        String parish
 ) {}

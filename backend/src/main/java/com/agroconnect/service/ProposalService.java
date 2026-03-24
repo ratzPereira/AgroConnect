@@ -205,12 +205,26 @@ public class ProposalService {
     }
 
     public List<ProposalResponse> listByRequest(Long requestId, Long userId) {
-        requestRepository.findById(requestId)
+        ServiceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido de serviço não encontrado."));
 
-        return proposalRepository.findByRequestId(requestId).stream()
-                .map(ProposalMapper::toResponse)
-                .toList();
+        // Client who owns the request sees all proposals
+        if (request.getClient().getId().equals(userId)) {
+            return proposalRepository.findByRequestId(requestId).stream()
+                    .map(ProposalMapper::toResponse)
+                    .toList();
+        }
+
+        // Provider sees only their own proposal
+        ProviderProfile provider = providerProfileRepository.findByUserId(userId).orElse(null);
+        if (provider != null) {
+            return proposalRepository.findByRequestId(requestId).stream()
+                    .filter(p -> p.getProvider().getId().equals(provider.getId()))
+                    .map(ProposalMapper::toResponse)
+                    .toList();
+        }
+
+        throw new ForbiddenException("Não tem permissão para ver as propostas deste pedido.");
     }
 
     public Page<ProposalResponse> listMyProposals(Long userId, Pageable pageable) {

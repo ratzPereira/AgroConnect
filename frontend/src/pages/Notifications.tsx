@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
-import { getMyNotifications, markAllAsRead } from '@/api/notifications';
+import { getMyNotifications, markAsRead, markAllAsRead } from '@/api/notifications';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -29,6 +29,14 @@ export function Notifications() {
     mutationFn: markAllAsRead,
     onSuccess: () => {
       resetUnread();
+      queryClient.invalidateQueries({ queryKey: ['my-notifications'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications-preview'] });
+    },
+  });
+
+  const markOneMutation = useMutation({
+    mutationFn: (id: number) => markAsRead(id),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-notifications'] });
       queryClient.invalidateQueries({ queryKey: ['notifications-preview'] });
     },
@@ -72,7 +80,14 @@ export function Notifications() {
           >
             {data.content.map((notification) => (
               <motion.div variants={listItemVariants} key={notification.id}>
-                <Card>
+                <Card
+                  className={cn(!notification.read && 'cursor-pointer hover:border-primary-200 transition-colors')}
+                  onClick={() => {
+                    if (!notification.read) {
+                      markOneMutation.mutate(notification.id);
+                    }
+                  }}
+                >
                   <CardBody>
                     <div
                       className={cn(
@@ -100,11 +115,6 @@ export function Notifications() {
                           </span>
                         </div>
                         <p className="text-sm text-neutral-500 mt-1">{notification.body}</p>
-                        {notification.type && (
-                          <span className="inline-block mt-2 text-[10px] font-medium text-neutral-400 bg-neutral-100 px-2 py-0.5 rounded">
-                            {notification.type}
-                          </span>
-                        )}
                       </div>
                     </div>
                   </CardBody>

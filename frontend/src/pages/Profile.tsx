@@ -1,49 +1,25 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { Button } from '@/components/ui/Button';
+import { Input } from '@/components/ui/Input';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useBreadcrumbs } from '@/hooks/useBreadcrumbs';
 import { useAuthStore } from '@/stores/authStore';
-import { apiClient } from '@/api/client';
+import {
+  getMyProfile,
+  updateClientProfile,
+  updateProviderProfile,
+  isProviderProfile,
+} from '@/api/profile';
+import type { ProfileData, ClientProfileData, ProviderProfileData } from '@/api/profile';
 import { deleteAccount, exportMyData } from '@/api/account';
-import { Download, Trash2, User, Mail, Phone, MapPin, Building2, Shield } from 'lucide-react';
+import { Download, Trash2, User, Mail, Phone, MapPin, Building2, Shield, Pencil, X } from 'lucide-react';
 import axios from 'axios';
-
-interface ClientProfileData {
-  id: number;
-  name: string;
-  phone: string | null;
-  parish: string | null;
-  municipality: string | null;
-  island: string | null;
-  latitude: number | null;
-  longitude: number | null;
-}
-
-interface ProviderProfileData {
-  id: number;
-  companyName: string;
-  nif: string | null;
-  phone: string | null;
-  description: string | null;
-  serviceRadiusKm: number | null;
-  avgRating: number | null;
-  totalReviews: number | null;
-  verified: boolean;
-  latitude: number | null;
-  longitude: number | null;
-}
-
-type ProfileData = ClientProfileData | ProviderProfileData;
-
-function isProviderProfile(profile: ProfileData): profile is ProviderProfileData {
-  return 'companyName' in profile;
-}
 
 function formatLocation(parish: string | null, municipality: string | null, island: string | null): string {
   const parts = [parish, municipality, island].filter(Boolean);
@@ -53,8 +29,10 @@ function formatLocation(parish: string | null, municipality: string | null, isla
 export function Profile() {
   const navigate = useNavigate();
   const breadcrumbs = useBreadcrumbs();
+  const queryClient = useQueryClient();
   const user = useAuthStore((s) => s.user);
 
+  const [isEditing, setIsEditing] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
   const [deleteError, setDeleteError] = useState('');
@@ -63,10 +41,7 @@ export function Profile() {
 
   const { data: profile, isLoading } = useQuery<ProfileData>({
     queryKey: ['my-profile'],
-    queryFn: async () => {
-      const response = await apiClient.get<ProfileData>('/profile/me');
-      return response.data;
-    },
+    queryFn: getMyProfile,
   });
 
   async function handleExport() {
@@ -128,11 +103,17 @@ export function Profile() {
 
       {/* Section 1: Profile Info */}
       <div className="bg-white rounded-xl border border-neutral-200 p-6 mb-6">
-        <div className="flex items-center gap-2 mb-5">
-          <User className="h-5 w-5 text-green-600" />
-          <h2 className="text-lg font-semibold text-neutral-800">
-            Informacao do Perfil
-          </h2>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-2">
+            <User className="h-5 w-5 text-green-600" />
+            <h2 className="text-lg font-semibold text-neutral-800">Informacao do Perfil</h2>
+          </div>
+          {profile && !isEditing && (
+            <Button variant="outline" size="sm" onClick={() => setIsEditing(true)}>
+              <Pencil className="h-3.5 w-3.5" />
+              Editar
+            </Button>
+          )}
         </div>
 
         {isLoading ? (
@@ -147,68 +128,97 @@ export function Profile() {
             </div>
           </div>
         ) : profile ? (
-          <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
-              {isProviderProfile(profile) ? (
-                <>
-                  <ProfileField
-                    icon={<Building2 className="h-4 w-4 text-neutral-400" />}
-                    label="Empresa"
-                    value={profile.companyName}
-                  />
-                  <ProfileField
-                    icon={<Shield className="h-4 w-4 text-neutral-400" />}
-                    label="NIF"
-                    value={profile.nif ?? '--'}
-                  />
-                  <ProfileField
-                    icon={<Mail className="h-4 w-4 text-neutral-400" />}
-                    label="Email"
-                    value={user?.email ?? '--'}
-                  />
-                  <ProfileField
-                    icon={<Phone className="h-4 w-4 text-neutral-400" />}
-                    label="Telefone"
-                    value={profile.phone ?? '--'}
-                  />
-                </>
-              ) : (
-                <>
-                  <ProfileField
-                    icon={<User className="h-4 w-4 text-neutral-400" />}
-                    label="Nome"
-                    value={profile.name}
-                  />
-                  <ProfileField
-                    icon={<Mail className="h-4 w-4 text-neutral-400" />}
-                    label="Email"
-                    value={user?.email ?? '--'}
-                  />
-                  <ProfileField
-                    icon={<Phone className="h-4 w-4 text-neutral-400" />}
-                    label="Telefone"
-                    value={profile.phone ?? '--'}
-                  />
-                  <ProfileField
-                    icon={<MapPin className="h-4 w-4 text-neutral-400" />}
-                    label="Localizacao"
-                    value={formatLocation(profile.parish, profile.municipality, profile.island)}
-                  />
-                </>
-              )}
-            </div>
-
-            {isProviderProfile(profile) && profile.description && (
-              <div className="mt-5 pt-5 border-t border-neutral-100">
-                <p className="text-sm font-medium text-neutral-500 mb-1">Descricao</p>
-                <p className="text-sm text-neutral-700">{profile.description}</p>
+          isEditing ? (
+            isProviderProfile(profile) ? (
+              <ProviderEditForm
+                profile={profile}
+                email={user?.email ?? ''}
+                onCancel={() => setIsEditing(false)}
+                onSaved={() => {
+                  setIsEditing(false);
+                  queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+                }}
+              />
+            ) : (
+              <ClientEditForm
+                profile={profile as ClientProfileData}
+                email={user?.email ?? ''}
+                onCancel={() => setIsEditing(false)}
+                onSaved={() => {
+                  setIsEditing(false);
+                  queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+                }}
+              />
+            )
+          ) : (
+            <>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
+                {isProviderProfile(profile) ? (
+                  <>
+                    <ProfileField
+                      icon={<Building2 className="h-4 w-4 text-neutral-400" />}
+                      label="Empresa"
+                      value={profile.companyName}
+                    />
+                    <ProfileField
+                      icon={<Shield className="h-4 w-4 text-neutral-400" />}
+                      label="NIF"
+                      value={profile.nif ?? '--'}
+                    />
+                    <ProfileField
+                      icon={<Mail className="h-4 w-4 text-neutral-400" />}
+                      label="Email"
+                      value={user?.email ?? '--'}
+                    />
+                    <ProfileField
+                      icon={<Phone className="h-4 w-4 text-neutral-400" />}
+                      label="Telefone"
+                      value={profile.phone ?? '--'}
+                    />
+                    <ProfileField
+                      icon={<MapPin className="h-4 w-4 text-neutral-400" />}
+                      label="Localizacao"
+                      value={formatLocation(profile.parish ?? null, profile.municipality ?? null, profile.island ?? null)}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <ProfileField
+                      icon={<User className="h-4 w-4 text-neutral-400" />}
+                      label="Nome"
+                      value={(profile as ClientProfileData).name}
+                    />
+                    <ProfileField
+                      icon={<Mail className="h-4 w-4 text-neutral-400" />}
+                      label="Email"
+                      value={user?.email ?? '--'}
+                    />
+                    <ProfileField
+                      icon={<Phone className="h-4 w-4 text-neutral-400" />}
+                      label="Telefone"
+                      value={(profile as ClientProfileData).phone ?? '--'}
+                    />
+                    <ProfileField
+                      icon={<MapPin className="h-4 w-4 text-neutral-400" />}
+                      label="Localizacao"
+                      value={formatLocation(
+                        (profile as ClientProfileData).parish,
+                        (profile as ClientProfileData).municipality,
+                        (profile as ClientProfileData).island,
+                      )}
+                    />
+                  </>
+                )}
               </div>
-            )}
 
-            <p className="text-xs text-neutral-400 mt-5">
-              Para editar o seu perfil, contacte o suporte.
-            </p>
-          </>
+              {isProviderProfile(profile) && profile.description && (
+                <div className="mt-5 pt-5 border-t border-neutral-100">
+                  <p className="text-sm font-medium text-neutral-500 mb-1">Descricao</p>
+                  <p className="text-sm text-neutral-700">{profile.description}</p>
+                </div>
+              )}
+            </>
+          )
         ) : (
           <p className="text-sm text-neutral-500">
             Nao foi possivel carregar os dados do perfil.
@@ -296,6 +306,159 @@ export function Profile() {
     </AnimatedPage>
   );
 }
+
+// --- Edit Forms ---
+
+interface ClientEditFormProps {
+  profile: ClientProfileData;
+  email: string;
+  onCancel: () => void;
+  onSaved: () => void;
+}
+
+function ClientEditForm({ profile, email, onCancel, onSaved }: ClientEditFormProps) {
+  const [name, setName] = useState(profile.name ?? '');
+  const [phone, setPhone] = useState(profile.phone ?? '');
+
+  const mutation = useMutation({
+    mutationFn: () => updateClientProfile({ name: name || undefined, phone: phone || undefined }),
+    onSuccess: () => {
+      toast.success('Perfil atualizado com sucesso.');
+      onSaved();
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar o perfil.');
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          label="Nome"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+          <p className="text-sm text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-200">
+            {email}
+          </p>
+        </div>
+        <Input
+          label="Telefone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+351 912 345 678"
+        />
+      </div>
+      <div className="flex gap-3 pt-2">
+        <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
+          Guardar
+        </Button>
+        <Button variant="ghost" onClick={onCancel}>
+          <X className="h-4 w-4" />
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+interface ProviderEditFormProps {
+  profile: ProviderProfileData;
+  email: string;
+  onCancel: () => void;
+  onSaved: () => void;
+}
+
+function ProviderEditForm({ profile, email, onCancel, onSaved }: ProviderEditFormProps) {
+  const [companyName, setCompanyName] = useState(profile.companyName ?? '');
+  const [nif, setNif] = useState(profile.nif ?? '');
+  const [phone, setPhone] = useState(profile.phone ?? '');
+  const [description, setDescription] = useState(profile.description ?? '');
+  const [serviceRadiusKm, setServiceRadiusKm] = useState(profile.serviceRadiusKm?.toString() ?? '');
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      updateProviderProfile({
+        companyName: companyName || undefined,
+        nif: nif || undefined,
+        phone: phone || undefined,
+        description: description || undefined,
+        serviceRadiusKm: serviceRadiusKm ? Number(serviceRadiusKm) : undefined,
+      }),
+    onSuccess: () => {
+      toast.success('Perfil atualizado com sucesso.');
+      onSaved();
+    },
+    onError: () => {
+      toast.error('Erro ao atualizar o perfil.');
+    },
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          label="Empresa"
+          value={companyName}
+          onChange={(e) => setCompanyName(e.target.value)}
+        />
+        <Input
+          label="NIF"
+          value={nif}
+          onChange={(e) => setNif(e.target.value)}
+        />
+        <div>
+          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+          <p className="text-sm text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-200">
+            {email}
+          </p>
+        </div>
+        <Input
+          label="Telefone"
+          type="tel"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          placeholder="+351 912 345 678"
+        />
+        <Input
+          label="Raio de servico (km)"
+          type="number"
+          value={serviceRadiusKm}
+          onChange={(e) => setServiceRadiusKm(e.target.value)}
+          placeholder="30"
+        />
+      </div>
+      <div>
+        <label htmlFor="edit-description" className="block text-sm font-medium text-neutral-700 mb-1.5">
+          Descricao
+        </label>
+        <textarea
+          id="edit-description"
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+          placeholder="Descreva brevemente os servicos que oferece..."
+        />
+      </div>
+      <div className="flex gap-3 pt-2">
+        <Button onClick={() => mutation.mutate()} loading={mutation.isPending}>
+          Guardar
+        </Button>
+        <Button variant="ghost" onClick={onCancel}>
+          <X className="h-4 w-4" />
+          Cancelar
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// --- Display Components ---
 
 interface ProfileFieldProps {
   icon: React.ReactNode;

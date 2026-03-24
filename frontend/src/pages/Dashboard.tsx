@@ -1,6 +1,8 @@
+import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { ClientDashboard } from '@/features/dashboard/components/ClientDashboard';
+import { ProviderDashboard } from '@/pages/provider/Dashboard';
 
 function getGreeting(): string {
   const hour = new Date().getHours();
@@ -12,6 +14,13 @@ function getGreeting(): string {
 export function Dashboard() {
   const user = useAuthStore((s) => s.user);
   const firstName = user?.name?.split(' ')[0] ?? 'utilizador';
+  const role = user?.role;
+
+  const isProvider = role === 'PROVIDER_MANAGER' || role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR';
+
+  if (role === 'ADMIN') {
+    return <Navigate to="/admin/dashboard" replace />;
+  }
 
   return (
     <AnimatedPage>
@@ -23,7 +32,7 @@ export function Dashboard() {
           Aqui está um resumo da sua atividade.
         </p>
       </div>
-      <ClientDashboard />
+      {isProvider ? <ProviderDashboard inline /> : <ClientDashboard />}
     </AnimatedPage>
   );
 }

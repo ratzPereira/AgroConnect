@@ -72,6 +72,8 @@ export function ExecutionPanel({ requestId, requestStatus, isProvider }: Executi
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['execution', requestId] });
       queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
       setShowCompleteForm(false);
     },
   });

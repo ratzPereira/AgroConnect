@@ -6,6 +6,7 @@ import { MainLayout } from '@/layouts/MainLayout';
 import { AuthLayout } from '@/layouts/AuthLayout';
 import { PublicLayout } from '@/layouts/PublicLayout';
 import { ProtectedRoute, PublicOnlyRoute } from '@/components/ProtectedRoute';
+import { OnboardingGuard } from '@/components/OnboardingGuard';
 import { RoleRoute } from '@/components/RoleRoute';
 import { PageSuspense } from '@/components/PageSuspense';
 
@@ -25,6 +26,7 @@ const Privacy = lazy(() => import('@/pages/Privacy').then(m => ({ default: m.Pri
 const VerifyEmail = lazy(() => import('@/pages/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
 const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
 const ResetPassword = lazy(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const ProviderOnboarding = lazy(() => import('@/pages/ProviderOnboarding').then(m => ({ default: m.ProviderOnboarding })));
 const NotFound = lazy(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })));
 const ProviderDashboard = lazy(() => import('@/pages/provider/Dashboard').then(m => ({ default: m.ProviderDashboard })));
 const Team = lazy(() => import('@/pages/provider/Team').then(m => ({ default: m.Team })));
@@ -51,9 +53,14 @@ export const router = createBrowserRouter([
       {
         element: <ProtectedRoute />,
         children: [
+          // Onboarding (no sidebar, standalone page)
+          { path: '/onboarding', element: <PageSuspense><ProviderOnboarding /></PageSuspense> },
           {
-            element: <MainLayout />,
+            element: <OnboardingGuard />,
             children: [
+              {
+                element: <MainLayout />,
+                children: [
               { path: '/dashboard', element: <PageSuspense><Dashboard /></PageSuspense>, handle: { breadcrumb: 'Dashboard' } },
               { path: '/requests', element: <PageSuspense><Requests /></PageSuspense>, handle: { breadcrumb: 'Pedidos' } },
               { path: '/requests/new', element: <PageSuspense><CreateRequest /></PageSuspense>, handle: { breadcrumb: 'Novo Pedido' } },
@@ -77,6 +84,8 @@ export const router = createBrowserRouter([
                   { path: '/admin/dashboard', element: <PageSuspense><AdminDashboard /></PageSuspense>, handle: { breadcrumb: 'Administração' } },
                   { path: '/admin/users', element: <PageSuspense><AdminUsers /></PageSuspense>, handle: { breadcrumb: 'Utilizadores' } },
                 ],
+              },
+            ],
               },
             ],
           },

@@ -12,15 +12,18 @@ export function useAnimatedCounter(
 ): number {
   const { duration = 1000, decimals = 0 } = options;
   const prefersReducedMotion = useReducedMotion();
-  const [current, setCurrent] = useState(0);
+  const [current, setCurrent] = useState(target);
   const rafRef = useRef<number>(0);
   const startTimeRef = useRef<number>(0);
-  const previousTargetRef = useRef<number>(0);
+  const previousTargetRef = useRef<number>(target);
+  const isFirstRender = useRef(true);
 
   useEffect(() => {
-    if (prefersReducedMotion) {
+    if (prefersReducedMotion || isFirstRender.current) {
+      isFirstRender.current = false;
       const factor = Math.pow(10, decimals);
       setCurrent(Math.round(target * factor) / factor);
+      previousTargetRef.current = target;
       return;
     }
     const startValue = previousTargetRef.current;

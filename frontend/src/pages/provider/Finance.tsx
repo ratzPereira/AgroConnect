@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { getFinanceSummary, getFinanceTransactions } from '@/api/finance';
 import { Card, CardHeader } from '@/components/ui/Card';
@@ -6,8 +7,11 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EmptyTransactions } from '@/components/illustrations/EmptyTransactions';
+import { TransactionDetailModal } from '@/features/transactions/components/TransactionDetailModal';
 import { TrendingUp, DollarSign, Clock, CheckCircle } from 'lucide-react';
 import { cn } from '@/utils/cn';
+import type { TransactionStatus } from '@/types/transaction';
+import type { TransactionItem } from '@/api/finance';
 
 const statusLabels: Record<string, string> = { PENDING: 'Pendente', HELD: 'Retido', RELEASED: 'Libertado', REFUNDED: 'Reembolsado' };
 const statusColors: Record<string, string> = {
@@ -18,6 +22,7 @@ const statusColors: Record<string, string> = {
 };
 
 export function Finance() {
+  const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['finance-summary'],
     queryFn: getFinanceSummary,
@@ -91,7 +96,7 @@ export function Finance() {
                 </tr></thead>
                 <tbody>
                   {transactions?.content?.map((tx) => (
-                    <tr key={tx.id} className="border-b border-neutral-100">
+                    <tr key={tx.id} className="border-b border-neutral-100 cursor-pointer hover:bg-neutral-50 transition-colors" onClick={() => setSelectedTx(tx)}>
                       <td className="px-6 py-3 text-neutral-600">#{tx.id}</td>
                       <td className="px-6 py-3 font-medium">€{tx.amount.toFixed(2)}</td>
                       <td className="px-6 py-3 text-neutral-500">€{tx.commissionAmount.toFixed(2)}</td>
@@ -113,6 +118,12 @@ export function Finance() {
           </Card>
         </>
       )}
+
+      <TransactionDetailModal
+        transaction={selectedTx ? { ...selectedTx, status: selectedTx.status as TransactionStatus } : null}
+        open={selectedTx !== null}
+        onClose={() => setSelectedTx(null)}
+      />
     </AnimatedPage>
   );
 }

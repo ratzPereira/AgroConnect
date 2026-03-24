@@ -72,9 +72,10 @@ export function MainLayout() {
     <div className="min-h-svh flex">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200">
-        <div className="p-6">
-          <img src="/logotipo.png" alt="AgroConnect" className="h-10" />
+        <div className="flex flex-col items-center px-5 pt-7 pb-5">
+          <img src="/logotipo.png" alt="AgroConnect" className="w-36" />
         </div>
+        <div className="mx-5 border-t border-neutral-700/60 mb-4" />
         <nav className="flex-1 px-3 space-y-1">
           {navItems.map((item) => (
             <NavLink
