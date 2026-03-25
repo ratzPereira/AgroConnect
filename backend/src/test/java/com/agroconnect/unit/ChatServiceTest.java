@@ -103,7 +103,7 @@ class ChatServiceTest {
 
         assertNotNull(response);
         verify(messagingTemplate).convertAndSend(eq("/topic/request/1/chat"), any(ChatMessageResponse.class));
-        verify(notificationService).create(anyLong(), anyString(), anyString(), anyString());
+        verify(notificationService).create(anyLong(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test

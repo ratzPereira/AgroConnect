@@ -44,12 +44,27 @@ export async function getMyRequests(
   return response.data;
 }
 
+export interface AvailableRequestsParams {
+  page?: number;
+  size?: number;
+  search?: string;
+  categoryId?: number;
+  urgency?: string;
+  island?: string;
+}
+
 export async function getAvailableRequests(
-  page = 0,
-  size = 20,
+  params: AvailableRequestsParams = {},
 ): Promise<Page<ServiceRequestSummary>> {
+  const { page = 0, size = 20, ...filters } = params;
+  const queryParams: Record<string, string | number> = { page, size };
+  if (filters.search) queryParams.search = filters.search;
+  if (filters.categoryId) queryParams.categoryId = filters.categoryId;
+  if (filters.urgency) queryParams.urgency = filters.urgency;
+  if (filters.island) queryParams.island = filters.island;
+
   const response = await apiClient.get<Page<ServiceRequestSummary>>('/requests/available', {
-    params: { page, size },
+    params: queryParams,
   });
   return response.data;
 }

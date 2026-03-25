@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { getMyNotifications, markAsRead, markAllAsRead } from '@/api/notifications';
@@ -13,12 +14,23 @@ import { useMotionConfig } from '@/hooks/useMotionConfig';
 import { CheckCheck } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { format } from 'date-fns';
+import type { Notification } from '@/types/notification';
 
 export function Notifications() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [page, setPage] = useState(0);
   const { resetUnread } = useNotificationStore();
   const { listContainerVariants, listItemVariants } = useMotionConfig();
+
+  function handleNotificationClick(notification: Notification) {
+    if (!notification.read) {
+      markOneMutation.mutate(notification.id);
+    }
+    if (notification.link) {
+      navigate(notification.link);
+    }
+  }
 
   const { data, isLoading } = useQuery({
     queryKey: ['my-notifications', page],
@@ -81,12 +93,10 @@ export function Notifications() {
             {data.content.map((notification) => (
               <motion.div variants={listItemVariants} key={notification.id}>
                 <Card
-                  className={cn(!notification.read && 'cursor-pointer hover:border-primary-200 transition-colors')}
-                  onClick={() => {
-                    if (!notification.read) {
-                      markOneMutation.mutate(notification.id);
-                    }
-                  }}
+                  className={cn(
+                    (!notification.read || notification.link) && 'cursor-pointer hover:border-primary-200 transition-colors',
+                  )}
+                  onClick={() => handleNotificationClick(notification)}
                 >
                   <CardBody>
                     <div

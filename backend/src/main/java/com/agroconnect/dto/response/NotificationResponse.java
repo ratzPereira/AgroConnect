@@ -13,5 +13,6 @@ public record NotificationResponse(
         @Schema(description = "Body") String body,
         @Schema(description = "Extra data (JSON)") String data,
         @Schema(description = "Read status") boolean read,
-        @Schema(description = "Created at") Instant createdAt
+        @Schema(description = "Created at") Instant createdAt,
+        @Schema(description = "Navigation link derived from data") String link
 ) {}

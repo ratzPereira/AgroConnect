@@ -111,7 +111,8 @@ public class ReviewService {
                 target.getId(),
                 "NEW_REVIEW",
                 "Nova avaliação recebida",
-                authorName + " deixou uma avaliação para o serviço \"" + request.getTitle() + "\"."
+                authorName + " deixou uma avaliação para o serviço \"" + request.getTitle() + "\".",
+                "{\"requestId\":" + requestId + "}"
         );
 
         String targetName = getDisplayName(target.getId());

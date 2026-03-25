@@ -100,7 +100,8 @@ public class ChatService {
                     recipientId,
                     "NEW_MESSAGE",
                     "Nova mensagem",
-                    senderName + " enviou uma mensagem no pedido \"" + request.getTitle() + "\"."
+                    senderName + " enviou uma mensagem no pedido \"" + request.getTitle() + "\".",
+                    "{\"requestId\":" + requestId + "}"
             );
         }
 

@@ -253,7 +253,8 @@ public class ExecutionService {
                 request.getClient().getId(),
                 "EXECUTION_COMPLETED",
                 "Serviço concluído",
-                "O prestador concluiu o serviço \"" + request.getTitle() + "\". Por favor confirme a conclusão."
+                "O prestador concluiu o serviço \"" + request.getTitle() + "\". Por favor confirme a conclusão.",
+                "{\"requestId\":" + request.getId() + "}"
         );
 
         log.info("Execution {} completed for request {}", executionId, request.getId());

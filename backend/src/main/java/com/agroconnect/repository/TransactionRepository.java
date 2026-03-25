@@ -88,4 +88,11 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("SELECT COALESCE(SUM(t.commissionAmount), 0) FROM Transaction t")
     BigDecimal sumTotalCommissions();
+
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t
+            WHERE t.request.client.id = :clientId
+            AND t.status = com.agroconnect.model.enums.TransactionStatus.RELEASED
+            """)
+    BigDecimal sumReleasedAmountByClientId(@Param("clientId") Long clientId);
 }

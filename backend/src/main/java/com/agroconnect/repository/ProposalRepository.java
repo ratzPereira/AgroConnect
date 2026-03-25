@@ -27,4 +27,16 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
     List<Proposal> findExpiredPending(@Param("now") Instant now);
 
     long countByProviderUserId(Long userId);
+
+    @Query("""
+            SELECT COUNT(p) FROM Proposal p
+            WHERE p.request.client.id = :clientId
+            AND p.request.status NOT IN (
+                com.agroconnect.model.enums.RequestStatus.RATED,
+                com.agroconnect.model.enums.RequestStatus.EXPIRED,
+                com.agroconnect.model.enums.RequestStatus.CANCELLED,
+                com.agroconnect.model.enums.RequestStatus.DRAFT
+            )
+            """)
+    long countActiveProposalsByClientId(@Param("clientId") Long clientId);
 }

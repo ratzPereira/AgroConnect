@@ -5,6 +5,8 @@ import com.agroconnect.dto.request.DisputeRequestDto;
 import com.agroconnect.dto.request.ResolveDisputeDto;
 import com.agroconnect.dto.request.UpdateServiceRequestDto;
 import com.agroconnect.dto.response.PresignedUrlResponse;
+import com.agroconnect.dto.response.ActiveJobResponse;
+import com.agroconnect.dto.response.RequestPinResponse;
 import com.agroconnect.dto.response.ServiceRequestResponse;
 import com.agroconnect.dto.response.ServiceRequestSummaryResponse;
 import com.agroconnect.exception.ForbiddenException;
@@ -22,6 +24,8 @@ import com.agroconnect.model.enums.ProposalStatus;
 import com.agroconnect.model.enums.RequestStatus;
 import com.agroconnect.model.enums.Urgency;
 import com.agroconnect.repository.ClientProfileRepository;
+import com.agroconnect.repository.ExecutionAssignmentRepository;
+import com.agroconnect.repository.ServiceExecutionRepository;
 import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.RequestPhotoRepository;
@@ -45,6 +49,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.EnumSet;
@@ -90,6 +95,8 @@ public class ServiceRequestService {
     private final TransactionRepository transactionRepository;
     private final TransactionService transactionService;
     private final NotificationService notificationService;
+    private final ServiceExecutionRepository executionRepository;
+    private final ExecutionAssignmentRepository assignmentRepository;
     private final MinioClient minioClient;
 
     @Value("${agroconnect.minio.bucket}")
@@ -251,7 +258,8 @@ public class ServiceRequestService {
                 acceptedProposal.getProvider().getUser().getId(),
                 "SERVICE_CONFIRMED",
                 "Serviço confirmado",
-                "O cliente confirmou a conclusão do serviço \"" + request.getTitle() + "\". O pagamento foi liberado."
+                "O cliente confirmou a conclusão do serviço \"" + request.getTitle() + "\". O pagamento foi liberado.",
+                "{\"requestId\":" + id + "}"
         );
 
         String clientName = getClientName(userId);
@@ -275,7 +283,8 @@ public class ServiceRequestService {
                 acceptedProposal.getProvider().getUser().getId(),
                 "SERVICE_DISPUTED",
                 "Serviço disputado",
-                "O cliente abriu uma disputa para o serviço \"" + request.getTitle() + "\": " + dto.reason()
+                "O cliente abriu uma disputa para o serviço \"" + request.getTitle() + "\": " + dto.reason(),
+                "{\"requestId\":" + id + "}"
         );
 
         String clientName = getClientName(userId);
@@ -301,13 +310,15 @@ public class ServiceRequestService {
                     request.getClient().getId(),
                     "DISPUTE_RESOLVED",
                     "Disputa resolvida",
-                    "A disputa foi resolvida a favor do prestador. O pagamento foi liberado."
+                    "A disputa foi resolvida a favor do prestador. O pagamento foi liberado.",
+                    "{\"requestId\":" + id + "}"
             );
             notificationService.create(
                     acceptedProposal.getProvider().getUser().getId(),
                     "DISPUTE_RESOLVED",
                     "Disputa resolvida",
-                    "A disputa foi resolvida a seu favor. O pagamento foi liberado."
+                    "A disputa foi resolvida a seu favor. O pagamento foi liberado.",
+                    "{\"requestId\":" + id + "}"
             );
         } else {
             request.setStatus(RequestStatus.CANCELLED);
@@ -317,13 +328,15 @@ public class ServiceRequestService {
                     request.getClient().getId(),
                     "DISPUTE_RESOLVED",
                     "Disputa resolvida",
-                    "A disputa foi resolvida a seu favor. O reembolso foi processado."
+                    "A disputa foi resolvida a seu favor. O reembolso foi processado.",
+                    "{\"requestId\":" + id + "}"
             );
             notificationService.create(
                     acceptedProposal.getProvider().getUser().getId(),
                     "DISPUTE_RESOLVED",
                     "Disputa resolvida",
-                    "A disputa foi resolvida a favor do cliente. O pagamento foi reembolsado."
+                    "A disputa foi resolvida a favor do cliente. O pagamento foi reembolsado.",
+                    "{\"requestId\":" + id + "}"
             );
         }
 
@@ -365,6 +378,100 @@ public class ServiceRequestService {
         double radiusMeters = providerProfile.getServiceRadiusKm() * 1000;
         Page<ServiceRequest> page = requestRepository.findAvailableForProvider(
                 providerProfile.getLocation(), radiusMeters, pageable);
+
+        return page.map(sr -> {
+            int count = proposalRepository.findByRequestId(sr.getId()).size();
+            return ServiceRequestMapper.toSummaryResponse(sr, count);
+        });
+    }
+
+    public List<RequestPinResponse> getPinsForProvider(Long userId) {
+        var provider = providerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+
+        if (provider.getLocation() == null) {
+            return List.of();
+        }
+
+        double radiusMeters = provider.getServiceRadiusKm() * 1000;
+        List<ServiceRequest> requests = requestRepository.findPinsForProvider(
+                provider.getLocation(), radiusMeters);
+
+        return requests.stream()
+                .map(sr -> new RequestPinResponse(
+                        sr.getId(),
+                        sr.getLocation().getY(),
+                        sr.getLocation().getX(),
+                        sr.getStatus(),
+                        sr.getTitle(),
+                        sr.getCategory().getName(),
+                        sr.getUrgency(),
+                        sr.getIsland()))
+                .toList();
+    }
+
+    public List<RequestPinResponse> getPinsForClient(Long userId) {
+        List<RequestStatus> excluded = List.of(
+                RequestStatus.RATED, RequestStatus.EXPIRED,
+                RequestStatus.CANCELLED, RequestStatus.DRAFT);
+
+        List<ServiceRequest> requests = requestRepository.findByClientIdAndStatusNotIn(userId, excluded);
+
+        return requests.stream()
+                .map(sr -> new RequestPinResponse(
+                        sr.getId(),
+                        sr.getLocation().getY(),
+                        sr.getLocation().getX(),
+                        sr.getStatus(),
+                        sr.getTitle(),
+                        sr.getCategory().getName(),
+                        sr.getUrgency(),
+                        sr.getIsland()))
+                .toList();
+    }
+
+    public List<ActiveJobResponse> getActiveJobsForProvider(Long userId) {
+        var provider = providerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+
+        var executions = executionRepository.findActiveByProviderId(provider.getId());
+
+        return executions.stream()
+                .limit(5)
+                .map(e -> {
+                    boolean hasAssignment = !assignmentRepository.findByExecutionId(e.getId()).isEmpty();
+                    boolean hasCheckin = e.getCheckinTime() != null;
+                    var request = e.getProposal().getRequest();
+                    return new ActiveJobResponse(
+                            e.getId(),
+                            request.getId(),
+                            request.getTitle(),
+                            request.getCategory().getName(),
+                            request.getIsland(),
+                            request.getStatus(),
+                            hasAssignment,
+                            hasCheckin);
+                })
+                .toList();
+    }
+
+    public Page<ServiceRequestSummaryResponse> listAvailableForProviderFiltered(
+            Long userId, String search, Long categoryId, String urgency,
+            String island, Pageable pageable) {
+
+        var providerProfile = providerProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+
+        if (providerProfile.getLocation() == null) {
+            throw new ValidationException("Deve definir a sua localização no perfil antes de ver pedidos disponíveis.");
+        }
+
+        double radiusMeters = providerProfile.getServiceRadiusKm() * 1000;
+
+        Page<ServiceRequest> page = requestRepository.findAvailableForProviderFiltered(
+                providerProfile.getLocation(), radiusMeters,
+                search != null && !search.isBlank() ? search : null,
+                categoryId, urgency, island, pageable);
 
         return page.map(sr -> {
             int count = proposalRepository.findByRequestId(sr.getId()).size();

@@ -14,6 +14,7 @@ import { ReviewForm } from '@/features/reviews/components/ReviewForm';
 import { ReviewCard } from '@/features/reviews/components/ReviewCard';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
 import { PhotoUpload } from '@/features/requests/components/PhotoUpload';
+import { PhotoLightbox } from '@/components/ui/PhotoLightbox';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { Breadcrumbs } from '@/components/ui/Breadcrumbs';
 import { StatusTimeline } from '@/components/ui/StatusTimeline';
@@ -65,6 +66,7 @@ export function RequestDetail() {
   const { user } = useAuthStore();
   const [showProposalModal, setShowProposalModal] = useState(false);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const requestId = Number(id);
 
@@ -234,12 +236,13 @@ export function RequestDetail() {
                   <PhotoUpload requestId={requestId} photos={request.photos} />
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
-                    {request.photos.map((photo) => (
+                    {request.photos.map((photo, i) => (
                       <img
                         key={photo.id}
                         src={photo.photoUrl}
                         alt="Foto do pedido"
-                        className="w-full h-32 object-cover rounded-lg border border-neutral-200"
+                        className="w-full h-32 object-cover rounded-lg border border-neutral-200 cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={() => setLightboxIndex(i)}
                       />
                     ))}
                   </div>
@@ -254,6 +257,8 @@ export function RequestDetail() {
               requestId={requestId}
               requestStatus={request.status}
               isProvider={isProvider}
+              targetLat={request.latitude}
+              targetLon={request.longitude}
             />
           )}
 
@@ -344,6 +349,16 @@ export function RequestDetail() {
         }}
         loading={createProposalMutation.isPending}
       />
+
+      {/* Photo Lightbox */}
+      {lightboxIndex !== null && (
+        <PhotoLightbox
+          photos={request.photos.map((p) => p.photoUrl)}
+          currentIndex={lightboxIndex}
+          onClose={() => setLightboxIndex(null)}
+          onNavigate={setLightboxIndex}
+        />
+      )}
     </AnimatedPage>
   );
 }

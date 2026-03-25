@@ -203,6 +203,7 @@ export const mockNotification: Notification = {
   data: '{"requestId": 2, "proposalId": 1}',
   read: false,
   createdAt: '2026-03-06T09:00:00Z',
+  link: '/requests/2',
 };
 
 export const mockNotifications: Notification[] = [
@@ -215,6 +216,7 @@ export const mockNotifications: Notification[] = [
     data: '{"requestId": 4}',
     read: true,
     createdAt: '2026-02-20T15:00:00Z',
+    link: '/requests/4',
   },
 ];
 

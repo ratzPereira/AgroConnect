@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { pt } from 'date-fns/locale/pt';
 import { Bell } from 'lucide-react';
@@ -11,6 +11,8 @@ interface ActivityTimelineProps {
 }
 
 export function ActivityTimeline({ notifications, className }: ActivityTimelineProps) {
+  const navigate = useNavigate();
+
   if (notifications.length === 0) {
     return (
       <div className={cn('text-center py-8', className)}>
@@ -33,7 +35,9 @@ export function ActivityTimeline({ notifications, className }: ActivityTimelineP
           className={cn(
             'flex items-start gap-3 rounded-lg px-3 py-2.5 transition-colors duration-150',
             !notif.read && 'bg-primary-50/50',
+            notif.link && 'cursor-pointer hover:bg-neutral-50',
           )}
+          onClick={() => notif.link && navigate(notif.link)}
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100">
             <Bell className="h-4 w-4 text-neutral-500" />

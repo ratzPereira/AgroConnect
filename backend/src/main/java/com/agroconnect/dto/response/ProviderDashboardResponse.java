@@ -7,7 +7,7 @@ import java.math.BigDecimal;
 @Schema(description = "Provider dashboard overview")
 public record ProviderDashboardResponse(
 
-        @Schema(description = "Number of active jobs (AWARDED or IN_PROGRESS)") long activeJobs,
+        @Schema(description = "Number of active jobs (AWARDED, IN_PROGRESS, or AWAITING_CONFIRMATION)") long activeJobs,
         @Schema(description = "Number of completed jobs") long completedJobs,
         @Schema(description = "Amount pending in escrow") BigDecimal pendingPayouts,
         @Schema(description = "Average provider rating") double avgRating,

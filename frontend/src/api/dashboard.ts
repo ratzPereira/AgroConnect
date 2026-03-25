@@ -1,5 +1,4 @@
-import { getMyRequests } from '@/api/requests';
-import { getMyNotifications } from '@/api/notifications';
+import { apiClient } from '@/api/client';
 import { getFinanceSummary } from '@/api/finance';
 import { getLowStockItems } from '@/api/inventory';
 import { listMachines } from '@/api/machines';
@@ -8,13 +7,14 @@ import type { Notification } from '@/types/notification';
 import type { FinanceSummary } from '@/api/finance';
 import type { InventoryItem } from '@/types/inventory';
 import type { Machine } from '@/types/machine';
-
-const TERMINAL_STATUSES = new Set(['RATED', 'EXPIRED', 'CANCELLED']);
+import type { ActiveJob } from '@/types/pin';
 
 export interface ClientDashboardData {
-  activeRequests: ServiceRequestSummary[];
-  totalRequests: number;
-  completedCount: number;
+  activeRequests: number;
+  totalProposals: number;
+  completedRequests: number;
+  totalSpent: number;
+  recentRequests: ServiceRequestSummary[];
   recentNotifications: Notification[];
 }
 
@@ -25,23 +25,13 @@ export interface ProviderDashboardData {
 }
 
 export async function getClientDashboardStats(): Promise<ClientDashboardData> {
-  const [requestsPage, completedPage, ratedPage, notifPage] = await Promise.all([
-    getMyRequests(0, 100),
-    getMyRequests(0, 1, 'COMPLETED'),
-    getMyRequests(0, 1, 'RATED'),
-    getMyNotifications(0, 8),
-  ]);
+  const { data } = await apiClient.get<ClientDashboardData>('/dashboard/client');
+  return data;
+}
 
-  const activeRequests = requestsPage.content.filter(
-    (r) => !TERMINAL_STATUSES.has(r.status),
-  );
-
-  return {
-    activeRequests,
-    totalRequests: requestsPage.totalElements,
-    completedCount: completedPage.totalElements + ratedPage.totalElements,
-    recentNotifications: notifPage.content,
-  };
+export async function getProviderActiveJobs(): Promise<ActiveJob[]> {
+  const { data } = await apiClient.get<ActiveJob[]>('/providers/me/finance/active-jobs');
+  return data;
 }
 
 export async function getProviderDashboardStats(): Promise<ProviderDashboardData> {

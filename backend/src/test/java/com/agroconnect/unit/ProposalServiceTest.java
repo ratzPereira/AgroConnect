@@ -98,7 +98,7 @@ class ProposalServiceTest {
         assertNotNull(response);
         assertEquals(new BigDecimal("250.00"), response.price());
         verify(requestRepository).save(any(ServiceRequest.class));
-        verify(notificationService).create(anyLong(), anyString(), anyString(), anyString());
+        verify(notificationService).create(anyLong(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test

@@ -5,6 +5,7 @@ import com.agroconnect.dto.request.DisputeRequestDto;
 import com.agroconnect.dto.request.ResolveDisputeDto;
 import com.agroconnect.dto.request.UpdateServiceRequestDto;
 import com.agroconnect.dto.response.PresignedUrlResponse;
+import com.agroconnect.dto.response.RequestPinResponse;
 import com.agroconnect.dto.response.ServiceRequestResponse;
 import com.agroconnect.dto.response.ServiceRequestSummaryResponse;
 import com.agroconnect.exception.GlobalExceptionHandler.ErrorResponse;
@@ -37,6 +38,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -159,7 +161,8 @@ public class ServiceRequestController {
 
     @GetMapping("/available")
     @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
-    @Operation(summary = "List available requests for provider", description = "Returns paginated list of PUBLISHED/WITH_PROPOSALS requests within the provider's service radius.")
+    @Operation(summary = "List available requests for provider",
+            description = "Returns paginated list of PUBLISHED/WITH_PROPOSALS requests within the provider's service radius, with optional filters.")
     @ApiResponse(responseCode = "200", description = "Page of available service requests")
     @ApiResponse(responseCode = "401", description = "Not authenticated",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -168,10 +171,36 @@ public class ServiceRequestController {
     public ResponseEntity<Page<ServiceRequestSummaryResponse>> listAvailable(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size,
+            @Parameter(description = "Search text (title + description)") @RequestParam(required = false) String search,
+            @Parameter(description = "Filter by category ID") @RequestParam(required = false) Long categoryId,
+            @Parameter(description = "Filter by urgency (LOW, MEDIUM, HIGH)") @RequestParam(required = false) String urgency,
+            @Parameter(description = "Filter by island") @RequestParam(required = false) String island,
             @AuthenticationPrincipal UserPrincipal principal) {
-        var pageable = PageRequest.of(page, size);
-        var result = requestService.listAvailableForProvider(principal.getId(), pageable);
+        var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        Page<ServiceRequestSummaryResponse> result;
+        if (search != null || categoryId != null || urgency != null || island != null) {
+            result = requestService.listAvailableForProviderFiltered(
+                    principal.getId(), search, categoryId, urgency, island, pageable);
+        } else {
+            result = requestService.listAvailableForProvider(principal.getId(), pageable);
+        }
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/pins")
+    @Operation(summary = "Get request map pins",
+            description = "Returns lightweight request data for map rendering. Providers see requests within radius. Clients see their own.")
+    @ApiResponse(responseCode = "200", description = "List of map pins")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<List<RequestPinResponse>> getPins(
+            @AuthenticationPrincipal UserPrincipal principal) {
+        boolean isProvider = principal.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().startsWith("ROLE_PROVIDER"));
+        List<RequestPinResponse> pins = isProvider
+                ? requestService.getPinsForProvider(principal.getId())
+                : requestService.getPinsForClient(principal.getId());
+        return ResponseEntity.ok(pins);
     }
 
     @PostMapping("/{id}/photos/upload")

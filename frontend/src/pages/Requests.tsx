@@ -1,17 +1,20 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useCallback } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '@/stores/authStore';
 import { getMyRequests, getAvailableRequests } from '@/api/requests';
 import { RequestCard } from '@/features/requests/components/RequestCard';
+import { RequestFilters, type FilterState } from '@/features/requests/components/RequestFilters';
+import { RequestMapView } from '@/features/requests/components/RequestMapView';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EmptyRequests } from '@/components/illustrations/EmptyRequests';
 import { Button } from '@/components/ui/Button';
 import { useMotionConfig } from '@/hooks/useMotionConfig';
-import { Plus } from 'lucide-react';
+import { Plus, List, Map } from 'lucide-react';
+import { cn } from '@/utils/cn';
 import type { RequestStatus } from '@/types/request';
 
 const STATUS_FILTERS: { label: string; value: RequestStatus | '' }[] = [
@@ -26,21 +29,44 @@ const STATUS_FILTERS: { label: string; value: RequestStatus | '' }[] = [
 
 export function Requests() {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user } = useAuthStore();
   const isClient = user?.role === 'CLIENT';
+  const isProvider = user?.role?.startsWith('PROVIDER');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [page, setPage] = useState(0);
   const { listContainerVariants, listItemVariants } = useMotionConfig();
 
+  const view = searchParams.get('view') || 'list';
+  const [filters, setFilters] = useState<FilterState>({ search: '', urgency: '', island: '' });
+
+  const handleFilterChange = useCallback((newFilters: FilterState) => {
+    setFilters(newFilters);
+    setPage(0);
+  }, []);
+
   const { data, isLoading } = useQuery({
     queryKey: isClient
       ? ['my-requests', page, statusFilter]
-      : ['available-requests', page],
+      : ['available-requests', page, filters.search, filters.urgency, filters.island],
     queryFn: () =>
       isClient
         ? getMyRequests(page, 20, statusFilter || undefined)
-        : getAvailableRequests(page, 20),
+        : getAvailableRequests({
+            page,
+            size: 20,
+            search: filters.search || undefined,
+            urgency: filters.urgency || undefined,
+            island: filters.island || undefined,
+          }),
   });
+
+  function setView(v: string) {
+    setSearchParams((prev) => {
+      prev.set('view', v);
+      return prev;
+    });
+  }
 
   return (
     <AnimatedPage>
@@ -55,12 +81,38 @@ export function Requests() {
               : 'Pedidos de serviço na sua área'}
           </p>
         </div>
-        {isClient && (
-          <Button onClick={() => navigate('/requests/new')}>
-            <Plus className="h-4 w-4" />
-            Novo Pedido
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          {isProvider && (
+            <div className="flex rounded-lg border border-neutral-300 overflow-hidden">
+              <button
+                onClick={() => setView('list')}
+                className={cn(
+                  'px-3 py-1.5 text-sm flex items-center gap-1 transition-colors',
+                  view === 'list' ? 'bg-primary-500 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50',
+                )}
+              >
+                <List className="h-4 w-4" />
+                <span className="hidden sm:inline">Lista</span>
+              </button>
+              <button
+                onClick={() => setView('map')}
+                className={cn(
+                  'px-3 py-1.5 text-sm flex items-center gap-1 transition-colors',
+                  view === 'map' ? 'bg-primary-500 text-white' : 'bg-white text-neutral-600 hover:bg-neutral-50',
+                )}
+              >
+                <Map className="h-4 w-4" />
+                <span className="hidden sm:inline">Mapa</span>
+              </button>
+            </div>
+          )}
+          {isClient && (
+            <Button onClick={() => navigate('/requests/new')}>
+              <Plus className="h-4 w-4" />
+              Novo Pedido
+            </Button>
+          )}
+        </div>
       </div>
 
       {isClient && (
@@ -81,7 +133,15 @@ export function Requests() {
         </div>
       )}
 
-      {isLoading ? (
+      {isProvider && (
+        <div className="mb-4">
+          <RequestFilters filters={filters} onFilterChange={handleFilterChange} />
+        </div>
+      )}
+
+      {isProvider && view === 'map' ? (
+        <RequestMapView filters={filters} />
+      ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {Array.from({ length: 6 }).map((_, i) => (
             <Skeleton.Card key={i} />

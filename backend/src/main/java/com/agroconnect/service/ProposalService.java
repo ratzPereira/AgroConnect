@@ -98,7 +98,8 @@ public class ProposalService {
                 request.getClient().getId(),
                 "NEW_PROPOSAL",
                 "Nova proposta recebida",
-                "Recebeu uma nova proposta de " + provider.getCompanyName() + " para o pedido \"" + request.getTitle() + "\"."
+                "Recebeu uma nova proposta de " + provider.getCompanyName() + " para o pedido \"" + request.getTitle() + "\".",
+                "{\"requestId\":" + request.getId() + "}"
         );
 
         log.info("Proposal created: {} for request {} by provider {}", proposal.getId(), requestId, provider.getId());
@@ -161,7 +162,8 @@ public class ProposalService {
                 proposal.getProvider().getUser().getId(),
                 "PROPOSAL_ACCEPTED",
                 "Proposta aceite",
-                "A sua proposta para o pedido \"" + request.getTitle() + "\" foi aceite!"
+                "A sua proposta para o pedido \"" + request.getTitle() + "\" foi aceite!",
+                "{\"requestId\":" + request.getId() + "}"
         );
 
         // Notify rejected providers
@@ -173,7 +175,8 @@ public class ProposalService {
                     r.getProvider().getUser().getId(),
                     "PROPOSAL_REJECTED",
                     "Proposta não selecionada",
-                    "A sua proposta para o pedido \"" + request.getTitle() + "\" não foi selecionada."
+                    "A sua proposta para o pedido \"" + request.getTitle() + "\" não foi selecionada.",
+                    "{\"requestId\":" + request.getId() + "}"
             );
         }
 

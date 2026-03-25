@@ -1,10 +1,10 @@
 import { useQuery } from '@tanstack/react-query';
-import { FileText, CheckCircle2, Clock, TrendingUp } from 'lucide-react';
+import { FileText, MessageSquare, CheckCircle2, DollarSign } from 'lucide-react';
 import { getClientDashboardStats } from '@/api/dashboard';
 import { DashboardStatCards } from './DashboardStatCards';
-import { ActiveRequestsMap } from './ActiveRequestsMap';
 import { ActivityTimeline } from './ActivityTimeline';
-import { RecentRequests } from './RecentRequests';
+import { ActiveRequestCards } from './ActiveRequestCards';
+import { NextActionsPanel } from './NextActionsPanel';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 export function ClientDashboard() {
@@ -22,7 +22,7 @@ export function ClientDashboard() {
             <Skeleton.Stat key={i} />
           ))}
         </div>
-        <Skeleton.Rect className="h-[300px] md:h-[60vh]" />
+        <Skeleton.Rect className="h-24" />
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           <Skeleton.Rect className="h-64" />
           <Skeleton.Rect className="h-64" />
@@ -31,27 +31,27 @@ export function ClientDashboard() {
     );
   }
 
-  const activeCount = data.activeRequests.length;
-  const awaitingCount = data.activeRequests.filter((r) => r.status === 'AWAITING_CONFIRMATION').length;
-
   const stats = [
-    { label: 'Total de pedidos', value: data.totalRequests, icon: <FileText className="h-4 w-4 text-primary-600" />, iconBg: 'bg-primary-50' },
-    { label: 'Pedidos ativos', value: activeCount, icon: <Clock className="h-4 w-4 text-secondary-600" />, iconBg: 'bg-secondary-50' },
-    { label: 'Concluídos', value: data.completedCount, icon: <CheckCircle2 className="h-4 w-4 text-leaf-600" />, iconBg: 'bg-leaf-50' },
-    { label: 'A confirmar', value: awaitingCount, icon: <TrendingUp className="h-4 w-4 text-warning-600" />, iconBg: 'bg-warning-50' },
+    { label: 'Pedidos Ativos', value: data.activeRequests, icon: <FileText className="h-4 w-4 text-primary-600" />, iconBg: 'bg-primary-50' },
+    { label: 'Propostas', value: data.totalProposals, icon: <MessageSquare className="h-4 w-4 text-secondary-600" />, iconBg: 'bg-secondary-50' },
+    { label: 'Concluídos', value: data.completedRequests, icon: <CheckCircle2 className="h-4 w-4 text-leaf-600" />, iconBg: 'bg-leaf-50' },
+    { label: 'Total Gasto', value: data.totalSpent ?? 0, prefix: '€', decimals: 2, icon: <DollarSign className="h-4 w-4 text-warning-600" />, iconBg: 'bg-warning-50' },
   ];
 
   return (
     <div className="space-y-6">
       <DashboardStatCards stats={stats} />
-      <ActiveRequestsMap activeCount={activeCount} />
+
+      <div>
+        <h3 className="text-sm font-semibold text-neutral-900 mb-3">Pedidos Ativos</h3>
+        <ActiveRequestCards requests={data.recentRequests} />
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="rounded-xl border border-neutral-200 bg-white p-5">
           <ActivityTimeline notifications={data.recentNotifications} />
         </div>
-        <div className="rounded-xl border border-neutral-200 bg-white p-5">
-          <RecentRequests requests={data.activeRequests} />
-        </div>
+        <NextActionsPanel requests={data.recentRequests} />
       </div>
     </div>
   );

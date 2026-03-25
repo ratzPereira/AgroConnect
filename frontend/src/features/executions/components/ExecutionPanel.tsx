@@ -6,6 +6,8 @@ import { Button } from '@/components/ui/Button';
 import { AssignmentForm } from './AssignmentForm';
 import { CheckinButton } from './CheckinButton';
 import { ExecutionPhotoUpload } from './ExecutionPhotoUpload';
+import { DistanceIndicator } from './DistanceIndicator';
+import { CheckinMap } from './CheckinMap';
 import { Loader2, Users, MapPinCheck, Camera, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { format } from 'date-fns';
@@ -15,9 +17,11 @@ interface ExecutionPanelProps {
   requestId: number;
   requestStatus: RequestStatus;
   isProvider: boolean;
+  targetLat?: number;
+  targetLon?: number;
 }
 
-export function ExecutionPanel({ requestId, requestStatus, isProvider }: ExecutionPanelProps) {
+export function ExecutionPanel({ requestId, requestStatus, isProvider, targetLat, targetLon }: ExecutionPanelProps) {
   const showExecution =
     requestStatus === 'AWARDED' ||
     requestStatus === 'IN_PROGRESS' ||
@@ -151,6 +155,17 @@ export function ExecutionPanel({ requestId, requestStatus, isProvider }: Executi
           <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
             Check-in
           </h3>
+          {targetLat != null && targetLon != null && (
+            <div className="mb-3">
+              <CheckinMap
+                targetLat={targetLat}
+                targetLon={targetLon}
+                checkedIn={isCheckedIn}
+                checkinLat={execution.checkinLatitude ?? undefined}
+                checkinLon={execution.checkinLongitude ?? undefined}
+              />
+            </div>
+          )}
           {isCheckedIn ? (
             <div className="text-sm text-neutral-700 bg-green-50 rounded-lg px-3 py-2">
               <p>
@@ -167,7 +182,12 @@ export function ExecutionPanel({ requestId, requestStatus, isProvider }: Executi
               )}
             </div>
           ) : isProvider && (requestStatus === 'AWARDED' || requestStatus === 'IN_PROGRESS') ? (
-            <CheckinButton executionId={execution.id} requestId={requestId} />
+            <div className="space-y-2">
+              {targetLat != null && targetLon != null && (
+                <DistanceIndicator targetLat={targetLat} targetLon={targetLon} />
+              )}
+              <CheckinButton executionId={execution.id} requestId={requestId} />
+            </div>
           ) : (
             <p className="text-sm text-neutral-500">Check-in ainda não realizado.</p>
           )}

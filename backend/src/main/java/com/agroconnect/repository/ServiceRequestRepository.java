@@ -57,4 +57,44 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     long countByClientId(Long clientId);
 
     List<ServiceRequest> findByClientId(Long clientId);
+
+    @Query(value = """
+            SELECT sr.* FROM service_requests sr
+            WHERE sr.status NOT IN ('RATED', 'EXPIRED', 'CANCELLED', 'DRAFT')
+            AND ST_DWithin(CAST(sr.location AS geography), CAST(:point AS geography), :radiusMeters)
+            """,
+            nativeQuery = true)
+    List<ServiceRequest> findPinsForProvider(@Param("point") Point point,
+                                             @Param("radiusMeters") double radiusMeters);
+
+    List<ServiceRequest> findByClientIdAndStatusNotIn(Long clientId, List<RequestStatus> statuses);
+
+    @Query(value = """
+            SELECT sr.* FROM service_requests sr
+            WHERE sr.status IN ('PUBLISHED', 'WITH_PROPOSALS')
+            AND ST_DWithin(CAST(sr.location AS geography), CAST(:point AS geography), :radiusMeters)
+            AND (:search IS NULL OR sr.title ILIKE CONCAT('%%', :search, '%%') OR sr.description ILIKE CONCAT('%%', :search, '%%'))
+            AND (CAST(:categoryId AS bigint) IS NULL OR sr.category_id = :categoryId)
+            AND (:urgency IS NULL OR sr.urgency = :urgency)
+            AND (:island IS NULL OR sr.island = :island)
+            ORDER BY sr.created_at DESC
+            """,
+            countQuery = """
+            SELECT COUNT(*) FROM service_requests sr
+            WHERE sr.status IN ('PUBLISHED', 'WITH_PROPOSALS')
+            AND ST_DWithin(CAST(sr.location AS geography), CAST(:point AS geography), :radiusMeters)
+            AND (:search IS NULL OR sr.title ILIKE CONCAT('%%', :search, '%%') OR sr.description ILIKE CONCAT('%%', :search, '%%'))
+            AND (CAST(:categoryId AS bigint) IS NULL OR sr.category_id = :categoryId)
+            AND (:urgency IS NULL OR sr.urgency = :urgency)
+            AND (:island IS NULL OR sr.island = :island)
+            """,
+            nativeQuery = true)
+    Page<ServiceRequest> findAvailableForProviderFiltered(
+            @Param("point") Point point,
+            @Param("radiusMeters") double radiusMeters,
+            @Param("search") String search,
+            @Param("categoryId") Long categoryId,
+            @Param("urgency") String urgency,
+            @Param("island") String island,
+            Pageable pageable);
 }

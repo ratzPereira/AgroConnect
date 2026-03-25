@@ -105,7 +105,7 @@ class ReviewServiceTest {
         assertNotNull(response);
         assertEquals(5, response.rating());
         verify(reviewRepository).save(any(Review.class));
-        verify(notificationService).create(anyLong(), anyString(), anyString(), anyString());
+        verify(notificationService).create(anyLong(), anyString(), anyString(), anyString(), anyString());
     }
 
     @Test

@@ -2,20 +2,39 @@ import { useEffect, useRef } from 'react';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { getUnreadCount } from '@/api/notifications';
 import { useAuthStore } from '@/stores/authStore';
+import { useStompSubscription } from '@/hooks/useStompClient';
+import { toast } from 'sonner';
 
-const POLL_INTERVAL_MS = 30_000;
+const POLL_INTERVAL_MS = 60_000;
 
 /**
- * Fetches unread notification count on mount and polls periodically.
- *
- * WebSocket support (SockJS + @stomp/stompjs) can be enabled once those
- * packages are installed. For now, polling is used as the fallback strategy.
+ * Subscribes to real-time notifications via WebSocket (STOMP/SockJS)
+ * and polls unread count as a fallback every 60 seconds.
  */
 export function useNotifications() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const { setUnreadCount } = useNotificationStore();
+  const { setUnreadCount, incrementUnread } = useNotificationStore();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const userId = useAuthStore((s) => s.user?.id);
 
+  // WebSocket subscription for real-time notifications
+  useStompSubscription(
+    `/user/${userId}/queue/notifications`,
+    (msg) => {
+      try {
+        const notification = JSON.parse(msg.body);
+        incrementUnread();
+        toast(notification.title, {
+          description: notification.body,
+        });
+      } catch {
+        incrementUnread();
+      }
+    },
+    isAuthenticated && userId != null,
+  );
+
+  // Polling fallback for unread count
   useEffect(() => {
     if (!isAuthenticated) return;
 
@@ -23,7 +42,7 @@ export function useNotifications() {
       getUnreadCount()
         .then((data) => setUnreadCount(data.count))
         .catch(() => {
-          // Silently ignore — the user may not have notifications enabled yet
+          // Silently ignore — network errors are expected when offline
         });
     }
 

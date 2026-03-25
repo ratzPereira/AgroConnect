@@ -18,6 +18,8 @@ import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.RequestPhotoRepository;
 import com.agroconnect.repository.ServiceCategoryRepository;
+import com.agroconnect.repository.ExecutionAssignmentRepository;
+import com.agroconnect.repository.ServiceExecutionRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.repository.UserRepository;
@@ -54,6 +56,8 @@ class ServiceRequestServiceTest {
     @Mock private TransactionRepository transactionRepository;
     @Mock private TransactionService transactionService;
     @Mock private NotificationService notificationService;
+    @Mock private ServiceExecutionRepository executionRepository;
+    @Mock private ExecutionAssignmentRepository assignmentRepository;
     @Mock private MinioClient minioClient;
 
     private ServiceRequestService service;
@@ -68,7 +72,8 @@ class ServiceRequestServiceTest {
                 requestRepository, categoryRepository, userRepository,
                 clientProfileRepository, providerProfileRepository,
                 photoRepository, proposalRepository, transactionRepository,
-                transactionService, notificationService, minioClient);
+                transactionService, notificationService,
+                executionRepository, assignmentRepository, minioClient);
 
         clientUser = UserFixture.aClientUser().build();
         clientProfile = UserFixture.aClientProfile().user(clientUser).build();

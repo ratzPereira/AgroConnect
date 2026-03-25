@@ -34,4 +34,19 @@ public interface ServiceExecutionRepository extends JpaRepository<ServiceExecuti
     List<ServiceExecution> findByProviderAndDateRange(@Param("providerId") Long providerId,
                                                       @Param("from") Instant from,
                                                       @Param("to") Instant to);
+
+    @Query("""
+            SELECT se FROM ServiceExecution se
+            JOIN FETCH se.proposal p
+            JOIN FETCH p.request sr
+            JOIN FETCH sr.category
+            WHERE p.provider.id = :providerId
+            AND sr.status IN (
+                com.agroconnect.model.enums.RequestStatus.AWARDED,
+                com.agroconnect.model.enums.RequestStatus.IN_PROGRESS,
+                com.agroconnect.model.enums.RequestStatus.AWAITING_CONFIRMATION
+            )
+            ORDER BY sr.updatedAt DESC
+            """)
+    List<ServiceExecution> findActiveByProviderId(@Param("providerId") Long providerId);
 }

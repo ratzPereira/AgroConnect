@@ -6,6 +6,7 @@ export interface Notification {
   data: string | null;
   read: boolean;
   createdAt: string;
+  link: string | null;
 }
 
 export interface UnreadCount {

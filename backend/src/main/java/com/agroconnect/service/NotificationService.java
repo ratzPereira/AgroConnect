@@ -28,6 +28,11 @@ public class NotificationService {
 
     @Transactional
     public void create(Long userId, String type, String title, String body) {
+        create(userId, type, title, body, null);
+    }
+
+    @Transactional
+    public void create(Long userId, String type, String title, String body, String data) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado."));
 
@@ -36,11 +41,11 @@ public class NotificationService {
                 .type(type)
                 .title(title)
                 .body(body)
+                .data(data)
                 .build();
 
         notification = notificationRepository.save(notification);
 
-        // Send real-time notification via WebSocket
         NotificationResponse response = NotificationMapper.toResponse(notification);
         notificationPublisher.sendToUser(userId, response);
 

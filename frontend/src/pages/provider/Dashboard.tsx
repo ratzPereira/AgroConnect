@@ -1,21 +1,38 @@
 import { useQuery } from '@tanstack/react-query';
 import { Briefcase, TrendingUp, AlertTriangle, Wrench } from 'lucide-react';
-import { getProviderDashboardStats } from '@/api/dashboard';
+import { getProviderDashboardStats, getProviderActiveJobs } from '@/api/dashboard';
+import { getRequestPins } from '@/api/pins';
 import { AnimatedPage } from '@/components/AnimatedPage';
+import { AzoresMap } from '@/components/AzoresMap';
 import { DashboardStatCards } from '@/features/dashboard/components/DashboardStatCards';
 import { RevenueChart } from '@/features/dashboard/components/RevenueChart';
-import { JobStatusChart } from '@/features/dashboard/components/JobStatusChart';
 import { ProviderAlerts } from '@/features/dashboard/components/ProviderAlerts';
+import { ProviderJobsList } from '@/features/dashboard/components/ProviderJobsList';
 import { Skeleton } from '@/components/ui/Skeleton';
+import { useGeolocation } from '@/hooks/useGeolocation';
 
 interface ProviderDashboardProps {
   inline?: boolean;
 }
 
 export function ProviderDashboard({ inline }: ProviderDashboardProps) {
+  const geo = useGeolocation(true);
+
   const { data, isLoading } = useQuery({
     queryKey: ['provider-dashboard'],
     queryFn: getProviderDashboardStats,
+    refetchOnMount: 'always',
+  });
+
+  const { data: pins } = useQuery({
+    queryKey: ['request-pins'],
+    queryFn: getRequestPins,
+    refetchOnMount: 'always',
+  });
+
+  const { data: activeJobs } = useQuery({
+    queryKey: ['provider-active-jobs'],
+    queryFn: getProviderActiveJobs,
     refetchOnMount: 'always',
   });
 
@@ -35,10 +52,8 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
               <Skeleton.Stat key={i} />
             ))}
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Skeleton.Rect className="h-[200px]" />
-            <Skeleton.Rect className="h-[200px]" />
-          </div>
+          <Skeleton.Rect className="h-[400px]" />
+          <Skeleton.Rect className="h-[200px]" />
         </div>
       </Wrapper>
     );
@@ -47,8 +62,8 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
   const { finance, lowStockItems, maintenanceDueMachines } = data;
 
   const stats = [
-    { label: 'Trabalhos concluídos', value: finance.completedJobs, icon: <Briefcase className="h-4 w-4 text-primary-600" />, iconBg: 'bg-primary-50' },
-    { label: 'Ganhos totais', value: finance.totalEarnings, prefix: '€', decimals: 2, icon: <TrendingUp className="h-4 w-4 text-leaf-600" />, iconBg: 'bg-leaf-50' },
+    { label: 'Trabalhos Ativos', value: activeJobs?.length ?? 0, icon: <Briefcase className="h-4 w-4 text-primary-600" />, iconBg: 'bg-primary-50' },
+    { label: 'Ganhos este mês', value: finance.thisMonthEarnings, prefix: '€', decimals: 2, icon: <TrendingUp className="h-4 w-4 text-leaf-600" />, iconBg: 'bg-leaf-50' },
     { label: 'Stock baixo', value: lowStockItems.length, icon: <AlertTriangle className="h-4 w-4 text-warning-600" />, iconBg: 'bg-warning-50' },
     { label: 'Manutenção pendente', value: maintenanceDueMachines.length, icon: <Wrench className="h-4 w-4 text-danger-600" />, iconBg: 'bg-danger-50' },
   ];
@@ -60,12 +75,9 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
       ]
     : [];
 
-  const jobStatusData = [
-    { name: 'Em progresso', value: finance.completedJobs > 0 ? Math.max(1, Math.round(finance.completedJobs * 0.15)) : 0, color: '#2D8A2D' },
-    { name: 'Concluídos', value: finance.completedJobs, color: '#3FA517' },
-    { name: 'Em disputa', value: 0, color: '#E24B4A' },
-  ];
-  const jobStatusTotal = jobStatusData.reduce((sum, d) => sum + d.value, 0);
+  const providerLocation = geo.latitude && geo.longitude
+    ? { latitude: geo.latitude, longitude: geo.longitude, radiusKm: 50 }
+    : undefined;
 
   return (
     <Wrapper>
@@ -77,15 +89,25 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
       <div className="space-y-6">
         <ProviderAlerts lowStockItems={lowStockItems} maintenanceDueMachines={maintenanceDueMachines} />
         <DashboardStatCards stats={stats} />
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="rounded-xl border border-neutral-200 bg-white p-5">
-            <h3 className="text-sm font-semibold text-neutral-800 mb-3">Receitas</h3>
-            <RevenueChart data={revenueData} />
+
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
+          <div>
+            <h3 className="text-sm font-semibold text-neutral-800 mb-3">Pedidos na Zona</h3>
+            <AzoresMap
+              pins={pins ?? []}
+              providerLocation={providerLocation}
+              height="400px"
+              colorBy="status"
+            />
           </div>
-          <div className="rounded-xl border border-neutral-200 bg-white p-5">
-            <h3 className="text-sm font-semibold text-neutral-800 mb-3">Estado dos trabalhos</h3>
-            <JobStatusChart data={jobStatusData} total={jobStatusTotal} />
+          <div className="space-y-4">
+            <ProviderJobsList jobs={activeJobs ?? []} />
           </div>
+        </div>
+
+        <div className="rounded-xl border border-neutral-200 bg-white p-5">
+          <h3 className="text-sm font-semibold text-neutral-800 mb-3">Receitas</h3>
+          <RevenueChart data={revenueData} />
         </div>
       </div>
     </Wrapper>
