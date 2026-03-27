@@ -61,7 +61,10 @@
       "Bash(docker ps:*)",
       "Bash(docker exec:*)",
       "Bash(printf {\"email\":\"verdeacores@email.com\",\"password\":\"Aa123456!\"}:*)",
-      "Bash(docker compose:*)"
+      "Bash(docker compose:*)",
+      "Bash(find:*)",
+      "Bash(cd /c/AgroConnect/frontend && npm install --save-dev @types/sockjs-client 2>&1)",
+      "Bash(cd /c/AgroConnect/frontend && npx vitest run src/hooks/__tests__/useAnimatedCounter.test.ts src/features/transactions/components/__tests__/TransactionCard.test.tsx 2>&1)"
     ],
     "deny": [
       "Bash(git:*)"

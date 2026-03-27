@@ -59,8 +59,14 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  // sockjs-client uses Node.js 'global' — polyfill for browser
+  define: {
+    global: 'globalThis',
+  },
   server: {
     port: 3000,
+    // Allow nginx (Docker) to proxy via hostname 'frontend'
+    allowedHosts: true,
   },
   test: {
     environment: 'jsdom',

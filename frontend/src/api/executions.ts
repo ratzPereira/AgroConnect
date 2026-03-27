@@ -1,10 +1,18 @@
 import { apiClient } from './client';
+import axios from 'axios';
 import type { ServiceExecution } from '@/types/execution';
 import type { PresignedUrlResponse } from '@/types/request';
 
-export async function getExecutionByRequest(requestId: number): Promise<ServiceExecution> {
-  const response = await apiClient.get<ServiceExecution>(`/executions/request/${requestId}`);
-  return response.data;
+export async function getExecutionByRequest(requestId: number): Promise<ServiceExecution | null> {
+  try {
+    const response = await apiClient.get<ServiceExecution>(`/executions/request/${requestId}`);
+    return response.data;
+  } catch (error) {
+    if (axios.isAxiosError(error) && error.response?.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 }
 
 export async function assignExecution(

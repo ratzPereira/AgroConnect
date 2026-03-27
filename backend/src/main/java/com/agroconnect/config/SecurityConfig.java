@@ -12,6 +12,7 @@ import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -81,6 +82,12 @@ public class SecurityConfig {
                         }))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        // Authenticated listing endpoints must come before the wildcard
+                        .requestMatchers(HttpMethod.GET, "/v1/listings/me", "/v1/listings/me/stats",
+                                "/v1/listings/favorites", "/v1/listings/conversations").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/v1/listings/conversations/*").authenticated()
+                        // Public listing endpoints (search + detail by numeric ID)
+                        .requestMatchers(HttpMethod.GET, "/v1/listings", "/v1/listings/*").permitAll()
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)

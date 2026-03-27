@@ -176,7 +176,8 @@ public class ServiceRequestController {
             @Parameter(description = "Filter by urgency (LOW, MEDIUM, HIGH)") @RequestParam(required = false) String urgency,
             @Parameter(description = "Filter by island") @RequestParam(required = false) String island,
             @AuthenticationPrincipal UserPrincipal principal) {
-        var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
+        // Native queries already have ORDER BY sr.created_at DESC
+        var pageable = PageRequest.of(page, size);
         Page<ServiceRequestSummaryResponse> result;
         if (search != null || categoryId != null || urgency != null || island != null) {
             result = requestService.listAvailableForProviderFiltered(

@@ -80,10 +80,16 @@ public class ExecutionService {
 
     @Transactional
     public ServiceExecution createForProposal(Proposal proposal) {
-        ServiceExecution execution = ServiceExecution.builder()
-                .proposal(proposal)
-                .build();
+        var builder = ServiceExecution.builder()
+                .proposal(proposal);
 
+        // Auto-set scheduling dates from proposal's estimated date
+        if (proposal.getEstimatedDate() != null) {
+            builder.scheduledDate(proposal.getEstimatedDate());
+            builder.scheduledEndDate(proposal.getEstimatedDate());
+        }
+
+        ServiceExecution execution = builder.build();
         execution = executionRepository.save(execution);
         log.info("Execution created: {} for proposal {}", execution.getId(), proposal.getId());
         return execution;

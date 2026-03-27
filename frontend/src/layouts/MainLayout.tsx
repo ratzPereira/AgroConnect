@@ -9,7 +9,7 @@ import { cn } from '@/utils/cn';
 import {
   LayoutDashboard, FileText, CreditCard, Bell, LogOut,
   Users, Wrench, Package, DollarSign, Shield, UserCog,
-  User as UserIcon,
+  User as UserIcon, CalendarRange, Store,
 } from 'lucide-react';
 import type { Role } from '@/types/auth';
 
@@ -23,6 +23,7 @@ function buildNavItems(role?: Role): NavItem[] {
   const common: NavItem[] = [
     { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { to: '/requests', label: 'Pedidos', icon: FileText },
+    { to: '/marketplace', label: 'Marketplace', icon: Store },
     { to: '/transactions', label: 'Transações', icon: CreditCard },
     { to: '/notifications', label: 'Notificações', icon: Bell },
     { to: '/profile', label: 'Perfil', icon: UserIcon },
@@ -33,6 +34,7 @@ function buildNavItems(role?: Role): NavItem[] {
     { to: '/provider/team', label: 'Equipa', icon: Users },
     { to: '/provider/machines', label: 'Máquinas', icon: Wrench },
     { to: '/provider/inventory', label: 'Inventário', icon: Package },
+    { to: '/provider/calendar', label: 'Calendário', icon: CalendarRange },
     { to: '/provider/finance', label: 'Finanças', icon: DollarSign },
   ];
 

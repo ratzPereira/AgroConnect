@@ -23,6 +23,7 @@ import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -60,6 +61,12 @@ public class ServiceExecution {
     @Column(name = "materials_used", columnDefinition = "jsonb")
     @JdbcTypeCode(SqlTypes.JSON)
     private String materialsUsed;
+
+    @Column(name = "scheduled_date")
+    private LocalDate scheduledDate;
+
+    @Column(name = "scheduled_end_date")
+    private LocalDate scheduledEndDate;
 
     @Column(name = "completed_at")
     private Instant completedAt;

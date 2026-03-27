@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -49,4 +50,30 @@ public interface ServiceExecutionRepository extends JpaRepository<ServiceExecuti
             ORDER BY sr.updatedAt DESC
             """)
     List<ServiceExecution> findActiveByProviderId(@Param("providerId") Long providerId);
+
+    @Query("""
+            SELECT se FROM ServiceExecution se
+            JOIN FETCH se.proposal p
+            JOIN FETCH p.request sr
+            JOIN FETCH sr.category
+            LEFT JOIN FETCH se.assignments a
+            LEFT JOIN FETCH a.teamMember
+            LEFT JOIN FETCH a.machine
+            WHERE p.provider.id = :providerId
+            AND se.scheduledDate IS NOT NULL
+            AND se.scheduledEndDate >= :from
+            AND se.scheduledDate <= :to
+            AND sr.status IN (
+                com.agroconnect.model.enums.RequestStatus.AWARDED,
+                com.agroconnect.model.enums.RequestStatus.IN_PROGRESS,
+                com.agroconnect.model.enums.RequestStatus.AWAITING_CONFIRMATION,
+                com.agroconnect.model.enums.RequestStatus.COMPLETED,
+                com.agroconnect.model.enums.RequestStatus.RATED
+            )
+            ORDER BY se.scheduledDate ASC
+            """)
+    List<ServiceExecution> findByProviderAndScheduledRange(
+            @Param("providerId") Long providerId,
+            @Param("from") LocalDate from,
+            @Param("to") LocalDate to);
 }

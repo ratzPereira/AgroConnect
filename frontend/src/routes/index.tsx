@@ -33,8 +33,13 @@ const Team = lazy(() => import('@/pages/provider/Team').then(m => ({ default: m.
 const Machines = lazy(() => import('@/pages/provider/Machines').then(m => ({ default: m.Machines })));
 const Inventory = lazy(() => import('@/pages/provider/Inventory').then(m => ({ default: m.Inventory })));
 const Finance = lazy(() => import('@/pages/provider/Finance').then(m => ({ default: m.Finance })));
+const ProviderCalendar = lazy(() => import('@/pages/provider/Calendar').then(m => ({ default: m.ProviderCalendar })));
 const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard').then(m => ({ default: m.AdminDashboard })));
 const AdminUsers = lazy(() => import('@/pages/admin/Users').then(m => ({ default: m.AdminUsers })));
+const Marketplace = lazy(() => import('@/pages/Marketplace').then(m => ({ default: m.Marketplace })));
+const ListingDetail = lazy(() => import('@/pages/ListingDetail').then(m => ({ default: m.ListingDetail })));
+const CreateListing = lazy(() => import('@/pages/CreateListing').then(m => ({ default: m.CreateListing })));
+const MyListings = lazy(() => import('@/pages/MyListings').then(m => ({ default: m.MyListings })));
 
 export const router = createBrowserRouter([
   {
@@ -66,6 +71,10 @@ export const router = createBrowserRouter([
               { path: '/requests/new', element: <PageSuspense><CreateRequest /></PageSuspense>, handle: { breadcrumb: 'Novo Pedido' } },
               { path: '/requests/:id', element: <PageSuspense><RequestDetail /></PageSuspense>, handle: { breadcrumb: 'Detalhes' } },
               { path: '/transactions', element: <PageSuspense><Transactions /></PageSuspense>, handle: { breadcrumb: 'Transações' } },
+              { path: '/marketplace', element: <PageSuspense><Marketplace /></PageSuspense>, handle: { breadcrumb: 'Marketplace' } },
+              { path: '/marketplace/new', element: <PageSuspense><CreateListing /></PageSuspense>, handle: { breadcrumb: 'Novo Anúncio' } },
+              { path: '/marketplace/me', element: <PageSuspense><MyListings /></PageSuspense>, handle: { breadcrumb: 'Os Meus Anúncios' } },
+              { path: '/marketplace/:id', element: <PageSuspense><ListingDetail /></PageSuspense>, handle: { breadcrumb: 'Detalhes' } },
               { path: '/notifications', element: <PageSuspense><Notifications /></PageSuspense>, handle: { breadcrumb: 'Notificações' } },
               { path: '/profile', element: <PageSuspense><Profile /></PageSuspense>, handle: { breadcrumb: 'Perfil' } },
               {
@@ -76,6 +85,7 @@ export const router = createBrowserRouter([
                   { path: '/provider/machines', element: <PageSuspense><Machines /></PageSuspense>, handle: { breadcrumb: 'Máquinas' } },
                   { path: '/provider/inventory', element: <PageSuspense><Inventory /></PageSuspense>, handle: { breadcrumb: 'Inventário' } },
                   { path: '/provider/finance', element: <PageSuspense><Finance /></PageSuspense>, handle: { breadcrumb: 'Finanças' } },
+                  { path: '/provider/calendar', element: <PageSuspense><ProviderCalendar /></PageSuspense>, handle: { breadcrumb: 'Calendário' } },
                 ],
               },
               {

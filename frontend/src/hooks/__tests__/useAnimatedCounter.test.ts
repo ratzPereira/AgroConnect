@@ -8,9 +8,9 @@ describe('useAnimatedCounter', () => {
   beforeEach(() => { vi.useFakeTimers(); });
   afterEach(() => { vi.useRealTimers(); });
 
-  it('should start at 0', () => {
+  it('should show target immediately on first render', () => {
     const { result } = renderHook(() => useAnimatedCounter(100));
-    expect(result.current).toBe(0);
+    expect(result.current).toBe(100);
   });
 
   it('should return target immediately when reduced motion is preferred', async () => {

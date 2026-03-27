@@ -2,6 +2,8 @@ export interface ServiceExecution {
   id: number;
   proposalId: number;
   requestId: number;
+  scheduledDate: string | null;
+  scheduledEndDate: string | null;
   checkinLatitude: number | null;
   checkinLongitude: number | null;
   checkinTime: string | null;

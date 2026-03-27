@@ -49,6 +49,19 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
                 </p>
               </div>
             </div>
+            {(transaction.heldAt || transaction.releasedAt || transaction.refundedAt) && (
+              <div className="flex flex-wrap gap-3 mt-2 text-xs text-neutral-500">
+                {transaction.heldAt && (
+                  <span>Retido: {format(new Date(transaction.heldAt), 'dd/MM/yyyy')}</span>
+                )}
+                {transaction.releasedAt && (
+                  <span>Libertado: {format(new Date(transaction.releasedAt), 'dd/MM/yyyy')}</span>
+                )}
+                {transaction.refundedAt && (
+                  <span>Reembolsado: {format(new Date(transaction.refundedAt), 'dd/MM/yyyy')}</span>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </CardBody>

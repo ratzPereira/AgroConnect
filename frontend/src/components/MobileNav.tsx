@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, Bell, User, Briefcase, Shield } from 'lucide-react';
+import { LayoutDashboard, FileText, Bell, User, Briefcase, Shield, Store } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { cn } from '@/utils/cn';
@@ -17,6 +17,7 @@ function buildMobileNavItems(role: Role | undefined, unreadCount: number): Mobil
   const base: MobileNavItem[] = [
     { to: '/dashboard', label: 'Início', icon: LayoutDashboard },
     { to: '/requests', label: 'Pedidos', icon: FileText },
+    { to: '/marketplace', label: 'Marketplace', icon: Store },
   ];
 
   const isProvider = role === 'PROVIDER_MANAGER' || role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR';

@@ -8,6 +8,7 @@ import { DashboardStatCards } from '@/features/dashboard/components/DashboardSta
 import { RevenueChart } from '@/features/dashboard/components/RevenueChart';
 import { ProviderAlerts } from '@/features/dashboard/components/ProviderAlerts';
 import { ProviderJobsList } from '@/features/dashboard/components/ProviderJobsList';
+import { UpcomingJobsMini } from '@/features/calendar/components/UpcomingJobsMini';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
@@ -102,6 +103,7 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
           </div>
           <div className="space-y-4">
             <ProviderJobsList jobs={activeJobs ?? []} />
+            <UpcomingJobsMini />
           </div>
         </div>
 

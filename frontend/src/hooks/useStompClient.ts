@@ -10,7 +10,7 @@ function getOrCreateClient(token: string): Client {
   if (stompClient && stompClient.connected) return stompClient;
 
   stompClient = new Client({
-    webSocketFactory: () => new SockJS('/ws/websocket') as WebSocket,
+    webSocketFactory: () => new SockJS('/ws') as WebSocket,
     connectHeaders: { Authorization: `Bearer ${token}` },
     reconnectDelay: 5000,
     heartbeatIncoming: 10000,

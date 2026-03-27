@@ -33,6 +33,8 @@ public final class ExecutionMapper {
                 exec.getId(),
                 exec.getProposal().getId(),
                 exec.getProposal().getRequest().getId(),
+                exec.getScheduledDate(),
+                exec.getScheduledEndDate(),
                 checkinLat,
                 checkinLng,
                 exec.getCheckinTime(),

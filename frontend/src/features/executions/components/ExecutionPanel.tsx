@@ -21,6 +21,10 @@ interface ExecutionPanelProps {
   targetLon?: number;
 }
 
+/**
+ * Wrapper: renders nothing unless the request is in execution-eligible status.
+ * This avoids hook-count changes — the inner component is only mounted when needed.
+ */
 export function ExecutionPanel({ requestId, requestStatus, isProvider, targetLat, targetLon }: ExecutionPanelProps) {
   const showExecution =
     requestStatus === 'AWARDED' ||
@@ -30,13 +34,46 @@ export function ExecutionPanel({ requestId, requestStatus, isProvider, targetLat
     requestStatus === 'RATED' ||
     requestStatus === 'DISPUTED';
 
+  if (!showExecution) return null;
+
+  return (
+    <ExecutionPanelContent
+      requestId={requestId}
+      requestStatus={requestStatus}
+      isProvider={isProvider}
+      targetLat={targetLat}
+      targetLon={targetLon}
+    />
+  );
+}
+
+function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat, targetLon }: ExecutionPanelProps) {
+  const queryClient = useQueryClient();
+  const [completeNotes, setCompleteNotes] = useState('');
+  const [completeMaterials, setCompleteMaterials] = useState('');
+  const [showCompleteForm, setShowCompleteForm] = useState(false);
+
   const { data: execution, isLoading } = useQuery({
     queryKey: ['execution', requestId],
     queryFn: () => getExecutionByRequest(requestId),
-    enabled: showExecution,
   });
 
-  if (!showExecution) return null;
+  const completeMutation = useMutation({
+    mutationFn: () => {
+      if (!execution) throw new Error('No execution');
+      return completeExecution(execution.id, {
+        notes: completeNotes || undefined,
+        materialsUsed: completeMaterials || undefined,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['execution', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+      setShowCompleteForm(false);
+    },
+  });
 
   if (isLoading) {
     return (
@@ -51,36 +88,8 @@ export function ExecutionPanel({ requestId, requestStatus, isProvider, targetLat
   }
 
   if (!execution) {
-    return (
-      <Card className="mb-6">
-        <CardBody>
-          <p className="text-sm text-neutral-500 text-center py-4">
-            Informação de execução indisponível.
-          </p>
-        </CardBody>
-      </Card>
-    );
+    return null;
   }
-
-  const queryClient = useQueryClient();
-  const [completeNotes, setCompleteNotes] = useState('');
-  const [completeMaterials, setCompleteMaterials] = useState('');
-  const [showCompleteForm, setShowCompleteForm] = useState(false);
-
-  const completeMutation = useMutation({
-    mutationFn: () =>
-      completeExecution(execution.id, {
-        notes: completeNotes || undefined,
-        materialsUsed: completeMaterials || undefined,
-      }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['execution', requestId] });
-      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
-      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
-      setShowCompleteForm(false);
-    },
-  });
 
   const isCheckedIn = execution.checkinTime !== null;
   const isCompleted = execution.completedAt !== null;

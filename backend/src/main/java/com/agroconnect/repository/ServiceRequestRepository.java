@@ -73,20 +73,20 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
             SELECT sr.* FROM service_requests sr
             WHERE sr.status IN ('PUBLISHED', 'WITH_PROPOSALS')
             AND ST_DWithin(CAST(sr.location AS geography), CAST(:point AS geography), :radiusMeters)
-            AND (:search IS NULL OR sr.title ILIKE CONCAT('%%', :search, '%%') OR sr.description ILIKE CONCAT('%%', :search, '%%'))
-            AND (CAST(:categoryId AS bigint) IS NULL OR sr.category_id = :categoryId)
-            AND (:urgency IS NULL OR sr.urgency = :urgency)
-            AND (:island IS NULL OR sr.island = :island)
+            AND (:search IS NULL OR sr.title ILIKE CONCAT('%%', CAST(:search AS text), '%%') OR sr.description ILIKE CONCAT('%%', CAST(:search AS text), '%%'))
+            AND (:categoryId IS NULL OR sr.category_id = CAST(:categoryId AS bigint))
+            AND (:urgency IS NULL OR sr.urgency = CAST(:urgency AS text))
+            AND (:island IS NULL OR sr.island = CAST(:island AS text))
             ORDER BY sr.created_at DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM service_requests sr
             WHERE sr.status IN ('PUBLISHED', 'WITH_PROPOSALS')
             AND ST_DWithin(CAST(sr.location AS geography), CAST(:point AS geography), :radiusMeters)
-            AND (:search IS NULL OR sr.title ILIKE CONCAT('%%', :search, '%%') OR sr.description ILIKE CONCAT('%%', :search, '%%'))
-            AND (CAST(:categoryId AS bigint) IS NULL OR sr.category_id = :categoryId)
-            AND (:urgency IS NULL OR sr.urgency = :urgency)
-            AND (:island IS NULL OR sr.island = :island)
+            AND (:search IS NULL OR sr.title ILIKE CONCAT('%%', CAST(:search AS text), '%%') OR sr.description ILIKE CONCAT('%%', CAST(:search AS text), '%%'))
+            AND (:categoryId IS NULL OR sr.category_id = CAST(:categoryId AS bigint))
+            AND (:urgency IS NULL OR sr.urgency = CAST(:urgency AS text))
+            AND (:island IS NULL OR sr.island = CAST(:island AS text))
             """,
             nativeQuery = true)
     Page<ServiceRequest> findAvailableForProviderFiltered(
