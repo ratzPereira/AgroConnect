@@ -97,6 +97,7 @@ public class ServiceRequestService {
     private final NotificationService notificationService;
     private final ServiceExecutionRepository executionRepository;
     private final ExecutionAssignmentRepository assignmentRepository;
+    private final AuditService auditService;
     private final MinioClient minioClient;
 
     @Value("${agroconnect.minio.bucket}")
@@ -212,6 +213,7 @@ public class ServiceRequestService {
 
         String clientName = getClientName(userId);
         log.info("Service request published: {}", id);
+        auditService.log(userId, "PUBLISHED", "ServiceRequest", id, Map.of("oldStatus", "DRAFT"), Map.of("newStatus", "PUBLISHED"));
         return ServiceRequestMapper.toResponse(request, clientName, 0);
     }
 
@@ -220,8 +222,13 @@ public class ServiceRequestService {
         ServiceRequest request = findByIdOrThrow(id);
         validateOwnership(request, userId);
 
-        if (TERMINAL_STATES.contains(request.getStatus())) {
-            throw new InvalidStateException("Não é possível cancelar um pedido no estado " + request.getStatus() + ".");
+        // Only allow cancellation from states that have CANCELLED as a valid transition
+        Set<RequestStatus> CANCELLABLE_STATES = Set.of(
+            RequestStatus.DRAFT, RequestStatus.PUBLISHED, RequestStatus.WITH_PROPOSALS,
+            RequestStatus.AWARDED, RequestStatus.IN_PROGRESS, RequestStatus.AWAITING_CONFIRMATION
+        );
+        if (!CANCELLABLE_STATES.contains(request.getStatus())) {
+            throw new InvalidStateException("Não é possível cancelar um pedido no estado " + request.getStatus());
         }
 
         // If there's a held transaction, refund it
@@ -237,6 +244,7 @@ public class ServiceRequestService {
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request cancelled: {}", id);
+        auditService.log(userId, "CANCELLED", "ServiceRequest", id, null, Map.of("newStatus", "CANCELLED"));
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
     }
 
@@ -265,6 +273,7 @@ public class ServiceRequestService {
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request confirmed: {}", id);
+        auditService.log(userId, "COMPLETED", "ServiceRequest", id, Map.of("oldStatus", "AWAITING_CONFIRMATION"), Map.of("newStatus", "COMPLETED"));
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
     }
 
@@ -275,6 +284,7 @@ public class ServiceRequestService {
         validateTransition(request.getStatus(), RequestStatus.DISPUTED);
 
         request.setStatus(RequestStatus.DISPUTED);
+        request.setDisputeReason(dto.reason());
         request = requestRepository.save(request);
 
         // Notify the provider
@@ -290,6 +300,7 @@ public class ServiceRequestService {
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request disputed: {} - reason: {}", id, dto.reason());
+        auditService.log(userId, "DISPUTED", "ServiceRequest", id, null, Map.of("newStatus", "DISPUTED", "reason", dto.reason()));
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
     }
 
@@ -349,6 +360,12 @@ public class ServiceRequestService {
 
     public ServiceRequestResponse getById(Long id, Long userId) {
         ServiceRequest request = findByIdOrThrow(id);
+
+        // DRAFT requests are private to the owner
+        if (request.getStatus() == RequestStatus.DRAFT) {
+            validateOwnership(request, userId);
+        }
+
         String clientName = getClientName(request.getClient().getId());
         int proposalCount = proposalRepository.findByRequestId(id).size();
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
@@ -480,15 +497,29 @@ public class ServiceRequestService {
     }
 
     public PresignedUrlResponse generateUploadUrl(Long requestId, Long userId) {
+        return generateUploadUrl(requestId, userId, "image/jpeg");
+    }
+
+    public PresignedUrlResponse generateUploadUrl(Long requestId, Long userId, String contentType) {
         ServiceRequest request = findByIdOrThrow(requestId);
         validateOwnership(request, userId);
+
+        Set<RequestStatus> PHOTO_ALLOWED = Set.of(RequestStatus.DRAFT, RequestStatus.PUBLISHED);
+        if (!PHOTO_ALLOWED.contains(request.getStatus())) {
+            throw new InvalidStateException("Não é possível adicionar fotos neste estado.");
+        }
 
         int currentCount = photoRepository.countByRequestId(requestId);
         if (currentCount >= MAX_PHOTOS) {
             throw new ValidationException("Número máximo de fotos atingido (" + MAX_PHOTOS + ").");
         }
 
-        String objectKey = "requests/" + requestId + "/" + UUID.randomUUID() + ".jpg";
+        String extension = switch (contentType) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> ".jpg";
+        };
+        String objectKey = "requests/" + requestId + "/" + UUID.randomUUID() + extension;
 
         try {
             String uploadUrl = minioClient.getPresignedObjectUrl(
@@ -513,6 +544,20 @@ public class ServiceRequestService {
     public ServiceRequestResponse confirmPhotoUpload(Long requestId, String photoUrl, Long userId) {
         ServiceRequest request = findByIdOrThrow(requestId);
         validateOwnership(request, userId);
+
+        Set<RequestStatus> PHOTO_ALLOWED = Set.of(RequestStatus.DRAFT, RequestStatus.PUBLISHED);
+        if (!PHOTO_ALLOWED.contains(request.getStatus())) {
+            throw new InvalidStateException("Não é possível adicionar fotos neste estado.");
+        }
+
+        // Idempotent: if this photoUrl was already confirmed, return the current state
+        boolean alreadyExists = request.getPhotos().stream()
+                .anyMatch(p -> photoUrl.equals(p.getPhotoUrl()));
+        if (alreadyExists) {
+            String clientName = getClientName(userId);
+            int proposalCount = proposalRepository.findByRequestId(requestId).size();
+            return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
+        }
 
         int sortOrder = photoRepository.countByRequestId(requestId);
 

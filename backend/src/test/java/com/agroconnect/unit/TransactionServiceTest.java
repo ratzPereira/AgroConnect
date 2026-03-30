@@ -15,6 +15,7 @@ import com.agroconnect.model.User;
 import com.agroconnect.model.enums.RequestStatus;
 import com.agroconnect.model.enums.TransactionStatus;
 import com.agroconnect.repository.TransactionRepository;
+import com.agroconnect.service.AuditService;
 import com.agroconnect.service.TransactionService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -28,6 +29,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -36,6 +38,9 @@ class TransactionServiceTest {
 
     @Mock
     private TransactionRepository transactionRepository;
+
+    @Mock
+    private AuditService auditService;
 
     private TransactionService service;
 
@@ -48,7 +53,7 @@ class TransactionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TransactionService(transactionRepository);
+        service = new TransactionService(transactionRepository, auditService);
 
         clientUser = UserFixture.aClientUser().build();
         providerUser = UserFixture.aProviderUser().build();
@@ -115,5 +120,72 @@ class TransactionServiceTest {
         when(transactionRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.getById(999L, 1L));
+    }
+
+    @Test
+    void getById_givenProvider_shouldReturnTransaction() {
+        when(transactionRepository.findById(1L)).thenReturn(Optional.of(heldTransaction));
+
+        TransactionResponse response = service.getById(1L, providerUser.getId());
+
+        assertNotNull(response);
+        assertEquals(TransactionStatus.HELD, response.status());
+    }
+
+    @Test
+    void listMyTransactions_shouldReturnPage() {
+        when(transactionRepository.findByUserIdOrderByCreatedAtDesc(eq(1L), any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        var result = service.listMyTransactions(1L, org.springframework.data.domain.PageRequest.of(0, 20));
+
+        assertNotNull(result);
+    }
+
+    @Test
+    void refund_givenNonHeldTransaction_shouldThrowInvalidState() {
+        Transaction releasedTx = ProposalFixture.aTransaction()
+                .status(TransactionStatus.RELEASED)
+                .request(request).proposal(proposal).build();
+
+        when(transactionRepository.findByRequestId(1L)).thenReturn(Optional.of(releasedTx));
+
+        assertThrows(InvalidStateException.class, () -> service.refund(1L));
+    }
+
+    @Test
+    void release_givenNonExistentRequest_shouldThrowNotFound() {
+        when(transactionRepository.findByRequestId(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.release(999L));
+    }
+
+    @Test
+    void refund_givenNonExistentRequest_shouldThrowNotFound() {
+        when(transactionRepository.findByRequestId(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.refund(999L));
+    }
+
+    @Test
+    void release_shouldSetReleasedAtTimestamp() {
+        when(transactionRepository.findByRequestId(1L)).thenReturn(Optional.of(heldTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(heldTransaction);
+
+        service.release(1L);
+
+        assertEquals(TransactionStatus.RELEASED, heldTransaction.getStatus());
+        assertNotNull(heldTransaction.getReleasedAt());
+    }
+
+    @Test
+    void refund_shouldSetRefundedAtTimestamp() {
+        when(transactionRepository.findByRequestId(1L)).thenReturn(Optional.of(heldTransaction));
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(heldTransaction);
+
+        service.refund(1L);
+
+        assertEquals(TransactionStatus.REFUNDED, heldTransaction.getStatus());
+        assertNotNull(heldTransaction.getRefundedAt());
     }
 }

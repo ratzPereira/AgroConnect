@@ -20,6 +20,8 @@ public record ListingSummaryResponse(
         @Schema(description = "Island name") String island,
         @Schema(description = "Human-readable location name") String locationName,
         @Schema(description = "First photo URL (null if no photos)") String firstPhotoUrl,
+        @Schema(description = "Latitude") Double latitude,
+        @Schema(description = "Longitude") Double longitude,
         @Schema(description = "When the listing was created") Instant createdAt,
         @Schema(description = "Listing status") ListingStatus status,
         @Schema(description = "Number of views") int viewsCount

@@ -61,6 +61,13 @@ public final class ListingMapper {
     }
 
     public static ListingSummaryResponse toSummaryResponse(Listing listing, String firstPhotoUrl) {
+        Double lat = null;
+        Double lng = null;
+        if (listing.getLocation() != null) {
+            lat = listing.getLocation().getY();
+            lng = listing.getLocation().getX();
+        }
+
         return new ListingSummaryResponse(
                 listing.getId(),
                 listing.getTitle(),
@@ -71,6 +78,8 @@ public final class ListingMapper {
                 listing.getIsland(),
                 listing.getLocationName(),
                 firstPhotoUrl,
+                lat,
+                lng,
                 listing.getCreatedAt(),
                 listing.getStatus(),
                 listing.getViewsCount()

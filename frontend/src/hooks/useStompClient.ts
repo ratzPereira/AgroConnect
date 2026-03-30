@@ -1,13 +1,16 @@
 import { useEffect, useRef, useCallback } from 'react';
-import { Client, type IMessage } from '@stomp/stompjs';
+import { Client, type IMessage, type StompSubscription } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuthStore } from '@/stores/authStore';
 
 let stompClient: Client | null = null;
 let subscriberCount = 0;
 
+// Registry of subscribe functions to re-run on every connect/reconnect
+const pendingSubscriptions = new Set<() => void>();
+
 function getOrCreateClient(token: string): Client {
-  if (stompClient && stompClient.connected) return stompClient;
+  if (stompClient && stompClient.active) return stompClient;
 
   stompClient = new Client({
     webSocketFactory: () => new SockJS('/ws') as WebSocket,
@@ -15,6 +18,10 @@ function getOrCreateClient(token: string): Client {
     reconnectDelay: 5000,
     heartbeatIncoming: 10000,
     heartbeatOutgoing: 10000,
+    onConnect: () => {
+      // On every connect/reconnect, resubscribe all registered subscribers
+      pendingSubscriptions.forEach((fn) => fn());
+    },
   });
 
   stompClient.activate();
@@ -36,26 +43,30 @@ export function useStompSubscription(
     const client = getOrCreateClient(token);
     subscriberCount++;
 
-    let subId: { unsubscribe: () => void } | null = null;
+    let sub: StompSubscription | null = null;
 
     const subscribe = () => {
-      subId = client.subscribe(destination, (msg) => {
+      // Unsubscribe previous if reconnecting to avoid duplicates
+      if (sub) {
+        try { sub.unsubscribe(); } catch { /* already closed */ }
+      }
+      sub = client.subscribe(destination, (msg) => {
         callbackRef.current(msg);
       });
     };
 
     if (client.connected) {
       subscribe();
-    } else {
-      const originalOnConnect = client.onConnect;
-      client.onConnect = (frame) => {
-        originalOnConnect?.(frame);
-        subscribe();
-      };
     }
 
+    // Register for reconnection
+    pendingSubscriptions.add(subscribe);
+
     return () => {
-      subId?.unsubscribe();
+      pendingSubscriptions.delete(subscribe);
+      if (sub) {
+        try { sub.unsubscribe(); } catch { /* already closed */ }
+      }
       subscriberCount--;
       if (subscriberCount <= 0 && stompClient) {
         stompClient.deactivate();

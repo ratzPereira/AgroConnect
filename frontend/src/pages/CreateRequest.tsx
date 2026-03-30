@@ -1,16 +1,20 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { createRequest, publishRequest } from '@/api/requests';
+import { createRequest, publishRequest, getUploadUrl, confirmPhoto } from '@/api/requests';
 import { apiClient } from '@/api/client';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
-import { ArrowLeft, ArrowRight, Send } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Send, Camera } from 'lucide-react';
+import { toast } from 'sonner';
 import { LocationPicker } from '@/features/requests/components/LocationPicker';
+import { DynamicForm } from '@/features/requests/components/DynamicForm';
+import { WizardPhotoCollector } from '@/features/requests/components/WizardPhotoCollector';
+import type { FormSchema } from '@/features/requests/components/DynamicForm';
 import {
   AZORES_ISLANDS,
   AZORES_BOUNDS,
@@ -26,6 +30,7 @@ interface CategoryResponse {
   name: string;
   slug: string;
   description: string;
+  formSchema: string | null;
 }
 
 const SELECT_CLASS =
@@ -46,19 +51,20 @@ const requestSchema = z.object({
   island: z.string().min(1, 'Selecione uma ilha'),
   municipality: z.string().min(1, 'Selecione um município'),
   parish: z.string().optional(),
-  area: z.string().optional(),
-  areaUnit: z.string().optional(),
   urgency: z.enum(['LOW', 'MEDIUM', 'HIGH']).optional(),
 });
 
 type RequestFormData = z.infer<typeof requestSchema>;
 
-const STEPS = ['Categoria', 'Detalhes', 'Localização', 'Revisão'];
+const STEPS = ['Categoria', 'Detalhes', 'Localização', 'Fotografias', 'Revisão'];
 
 export function CreateRequest() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
+  const [dynamicValues, setDynamicValues] = useState<Record<string, string>>({});
+  const [dynamicErrors, setDynamicErrors] = useState<Record<string, string>>({});
+  const [photoFiles, setPhotoFiles] = useState<File[]>([]);
 
   const { data: categories } = useQuery({
     queryKey: ['categories'],
@@ -79,15 +85,59 @@ export function CreateRequest() {
     resolver: zodResolver(requestSchema) as never,
     defaultValues: {
       urgency: 'MEDIUM',
-      areaUnit: 'hectares',
       island: '',
       municipality: '',
       parish: '',
     },
   });
 
+  const values = watch();
+
+  const selectedCategory = categories?.find((c) => String(c.id) === values.categoryId);
+
+  const formSchema: FormSchema | null = useMemo(() => {
+    if (!selectedCategory?.formSchema) return null;
+    try {
+      return JSON.parse(selectedCategory.formSchema) as FormSchema;
+    } catch {
+      return null;
+    }
+  }, [selectedCategory?.formSchema]);
+
+  const handleDynamicChange = useCallback((name: string, value: string) => {
+    setDynamicValues((prev) => ({ ...prev, [name]: value }));
+    setDynamicErrors((prev) => {
+      const next = { ...prev };
+      delete next[name];
+      return next;
+    });
+  }, []);
+
+  async function uploadPhotos(requestId: number) {
+    for (const file of photoFiles) {
+      try {
+        const { uploadUrl, publicUrl } = await getUploadUrl(requestId);
+        const uploadResponse = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: file,
+          headers: { 'Content-Type': file.type },
+        });
+        if (!uploadResponse.ok) {
+          throw new Error('Upload failed');
+        }
+        await confirmPhoto(requestId, publicUrl);
+      } catch {
+        toast.error(`Erro ao carregar foto: ${file.name}`);
+      }
+    }
+  }
+
   const createMutation = useMutation({
     mutationFn: async (data: RequestFormData) => {
+      const formData = Object.keys(dynamicValues).length > 0
+        ? JSON.stringify(dynamicValues)
+        : undefined;
+
       const dto: CreateServiceRequestDto = {
         categoryId: Number(data.categoryId),
         title: data.title,
@@ -97,13 +147,17 @@ export function CreateRequest() {
         parish: data.parish || undefined,
         municipality: data.municipality,
         island: data.island,
-        area: data.area ? Number(data.area) : undefined,
-        areaUnit: data.areaUnit || undefined,
         urgency: data.urgency as Urgency,
+        formData,
       };
       const created = await createRequest(dto);
-      await publishRequest(created.id);
-      return created;
+
+      if (photoFiles.length > 0) {
+        await uploadPhotos(created.id);
+      }
+
+      const published = await publishRequest(created.id);
+      return published;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
@@ -111,8 +165,6 @@ export function CreateRequest() {
       navigate(`/requests/${data.id}`);
     },
   });
-
-  const values = watch();
 
   // Cascading dropdowns: island → municipalities → parishes
   const selectedIslandData = useMemo(
@@ -140,7 +192,6 @@ export function CreateRequest() {
     [values.island, values.municipality, values.parish],
   );
 
-  // Map center: prioritize parish > municipality > island > default Azores view
   const mapCenter = useMemo(() => {
     if (selectedParishData) {
       return {
@@ -178,7 +229,6 @@ export function CreateRequest() {
     setValue('municipality', newMunicipality);
     setValue('parish', '');
 
-    // Auto-set coordinates to municipality centroid
     if (values.island && newMunicipality) {
       const muni = findMunicipality(values.island, newMunicipality);
       if (muni) {
@@ -192,7 +242,6 @@ export function CreateRequest() {
     const newParish = e.target.value;
     setValue('parish', newParish);
 
-    // Auto-set coordinates to parish centroid
     if (values.island && values.municipality && newParish) {
       const parish = findParish(values.island, values.municipality, newParish);
       if (parish) {
@@ -207,7 +256,6 @@ export function CreateRequest() {
     setValue('longitude', lng);
   }
 
-  // Haversine distance in km between two points
   function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
     const R = 6371;
     const dLat = ((lat2 - lat1) * Math.PI) / 180;
@@ -220,7 +268,6 @@ export function CreateRequest() {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  // Validate pin proximity to selected parish (max 5km)
   const pinTooFar = useMemo(() => {
     if (!selectedParishData || values.latitude == null || values.longitude == null) return false;
     const dist = distanceKm(
@@ -232,20 +279,37 @@ export function CreateRequest() {
     return dist > 5;
   }, [selectedParishData, values.latitude, values.longitude]);
 
+  function validateDynamicFields(): boolean {
+    if (!formSchema?.fields) return true;
+    const newErrors: Record<string, string> = {};
+    for (const field of formSchema.fields) {
+      if (field.required && !dynamicValues[field.name]?.trim()) {
+        newErrors[field.name] = `${field.label} é obrigatório.`;
+      }
+    }
+    setDynamicErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  }
+
   async function handleNext() {
     const fieldsToValidate: (keyof RequestFormData)[][] = [
       ['categoryId'],
       ['title', 'description', 'urgency'],
       ['island', 'municipality', 'latitude', 'longitude'],
-      [],
+      [], // photos — no validation needed
+      [], // review
     ];
-    const valid = await trigger(fieldsToValidate[step]);
-    if (valid && !(step === 2 && pinTooFar)) setStep((s) => s + 1);
+
+    if (step === 1) {
+      const valid = await trigger(fieldsToValidate[step]);
+      const dynamicValid = validateDynamicFields();
+      if (valid && dynamicValid) setStep((s) => s + 1);
+    } else {
+      const valid = await trigger(fieldsToValidate[step]);
+      if (valid && !(step === 2 && pinTooFar)) setStep((s) => s + 1);
+    }
   }
 
-  const selectedCategory = categories?.find((c) => String(c.id) === values.categoryId);
-
-  // Location error message (combine lat/lng errors)
   const locationError =
     errors.latitude?.message || errors.longitude?.message;
 
@@ -313,7 +377,7 @@ export function CreateRequest() {
           </Card>
         )}
 
-        {/* Step 1: Details */}
+        {/* Step 1: Details + Dynamic Form */}
         {step === 1 && (
           <Card>
             <CardHeader>
@@ -342,28 +406,7 @@ export function CreateRequest() {
                 />
                 {errors.description && <p className="text-xs text-red-600 mt-1">{errors.description.message}</p>}
               </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <Input
-                  label="Área"
-                  type="number"
-                  step="0.1"
-                  id="area"
-                  placeholder="Ex: 2.5"
-                  error={errors.area?.message}
-                  {...register('area')}
-                />
-                <div>
-                  <label htmlFor="areaUnit" className="block text-sm font-medium text-neutral-700 mb-1.5">
-                    Unidade
-                  </label>
-                  <select id="areaUnit" className={SELECT_CLASS} {...register('areaUnit')}>
-                    <option value="hectares">Hectares</option>
-                    <option value="m2">m²</option>
-                    <option value="alqueires">Alqueires</option>
-                  </select>
-                </div>
-              </div>
-              <div>
+              <div className="mb-4">
                 <label htmlFor="urgency" className="block text-sm font-medium text-neutral-700 mb-1.5">
                   Urgência
                 </label>
@@ -373,6 +416,18 @@ export function CreateRequest() {
                   <option value="HIGH">Alta</option>
                 </select>
               </div>
+
+              {/* Dynamic fields from category form_schema */}
+              {formSchema && (
+                <div className="mt-6 pt-4 border-t border-neutral-200">
+                  <DynamicForm
+                    schema={formSchema}
+                    values={dynamicValues}
+                    onChange={handleDynamicChange}
+                    errors={dynamicErrors}
+                  />
+                </div>
+              )}
             </CardBody>
           </Card>
         )}
@@ -387,7 +442,6 @@ export function CreateRequest() {
               </p>
             </CardHeader>
             <CardBody>
-              {/* Island / Municipality / Parish dropdowns */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-5">
                 <div>
                   <label htmlFor="island" className="block text-sm font-medium text-neutral-700 mb-1.5">
@@ -451,7 +505,6 @@ export function CreateRequest() {
                 </div>
               </div>
 
-              {/* Map picker */}
               <LocationPicker
                 lat={values.latitude ?? null}
                 lng={values.longitude ?? null}
@@ -470,8 +523,30 @@ export function CreateRequest() {
           </Card>
         )}
 
-        {/* Step 3: Review */}
+        {/* Step 3: Photos */}
         {step === 3 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Camera className="h-5 w-5 text-neutral-500" />
+                <h2 className="font-semibold text-neutral-900">Fotografias</h2>
+              </div>
+              <p className="text-sm text-neutral-500 mt-1">
+                Adicione fotos do terreno ou local de trabalho para os prestadores terem mais contexto.
+              </p>
+            </CardHeader>
+            <CardBody>
+              <WizardPhotoCollector
+                files={photoFiles}
+                onChange={setPhotoFiles}
+                maxPhotos={10}
+              />
+            </CardBody>
+          </Card>
+        )}
+
+        {/* Step 4: Review */}
+        {step === 4 && (
           <Card>
             <CardHeader>
               <h2 className="font-semibold text-neutral-900">Revisão</h2>
@@ -496,12 +571,23 @@ export function CreateRequest() {
                   <p className="text-neutral-500">Descrição</p>
                   <p className="font-medium text-neutral-900">{values.description}</p>
                 </div>
-                {values.area && (
-                  <div>
-                    <p className="text-neutral-500">Área</p>
-                    <p className="font-medium text-neutral-900">{values.area} {values.areaUnit}</p>
-                  </div>
+
+                {/* Dynamic form data in review */}
+                {formSchema?.fields && Object.keys(dynamicValues).length > 0 && (
+                  <>
+                    {formSchema.fields.map((field) =>
+                      dynamicValues[field.name] ? (
+                        <div key={field.name}>
+                          <p className="text-neutral-500">{field.label}</p>
+                          <p className="font-medium text-neutral-900">
+                            {dynamicValues[field.name]} {field.unit ?? ''}
+                          </p>
+                        </div>
+                      ) : null,
+                    )}
+                  </>
                 )}
+
                 <div className="col-span-2">
                   <p className="text-neutral-500">Localização</p>
                   <p className="font-medium text-neutral-900">
@@ -511,6 +597,13 @@ export function CreateRequest() {
                     {values.latitude}, {values.longitude}
                   </p>
                 </div>
+
+                {photoFiles.length > 0 && (
+                  <div className="col-span-2">
+                    <p className="text-neutral-500">Fotografias</p>
+                    <p className="font-medium text-neutral-900">{photoFiles.length} foto(s)</p>
+                  </div>
+                )}
               </div>
               {createMutation.isError && (
                 <p className="text-sm text-red-600 mt-4">

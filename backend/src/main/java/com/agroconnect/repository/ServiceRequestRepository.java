@@ -34,7 +34,7 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
                                                    @Param("radiusMeters") double radiusMeters,
                                                    Pageable pageable);
 
-    @Query("SELECT sr FROM ServiceRequest sr WHERE sr.status = 'PUBLISHED' AND sr.expiresAt < :now")
+    @Query("SELECT sr FROM ServiceRequest sr WHERE sr.status IN ('PUBLISHED', 'WITH_PROPOSALS') AND sr.expiresAt < :now")
     List<ServiceRequest> findExpiredPublished(@Param("now") Instant now);
 
     @Query("SELECT sr FROM ServiceRequest sr WHERE sr.status = com.agroconnect.model.enums.RequestStatus.COMPLETED AND sr.updatedAt < :cutoff")

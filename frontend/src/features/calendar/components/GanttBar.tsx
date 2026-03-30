@@ -12,10 +12,6 @@ interface GanttBarProps {
 }
 
 const URGENCY_STYLES: Record<string, { bar: string; text: string }> = {
-  URGENT: {
-    bar: 'bg-danger-500 hover:bg-danger-600',
-    text: 'text-white',
-  },
   HIGH: {
     bar: 'bg-warning-500 hover:bg-warning-600',
     text: 'text-white',

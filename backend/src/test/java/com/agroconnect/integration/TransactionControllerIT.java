@@ -2,11 +2,14 @@ package com.agroconnect.integration;
 
 import com.agroconnect.dto.request.CreateProposalDto;
 import com.agroconnect.dto.request.CreateServiceRequestDto;
+import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
 import com.agroconnect.dto.request.UpdateProviderProfileRequest;
 import com.agroconnect.fixture.TestContainersConfig;
+import com.agroconnect.model.User;
 import com.agroconnect.model.enums.PricingModel;
 import com.agroconnect.model.enums.Urgency;
+import com.agroconnect.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -40,6 +43,9 @@ class TransactionControllerIT extends TestContainersConfig {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private static String clientToken;
     private static String providerToken;
     private static Long requestId;
@@ -51,23 +57,43 @@ class TransactionControllerIT extends TestContainersConfig {
     void setup_createRequestAndAcceptProposal() throws Exception {
         // Register client
         RegisterRequest clientReg = new RegisterRequest(
-                "tx-client@test.pt", "password123", "password123",
-                "Cliente Transação", "+351977777777", "CLIENT", null, null);
-        MvcResult clientResult = mockMvc.perform(post("/v1/auth/register")
+                "tx-client@test.pt", "Password1", "Password1",
+                "Cliente Transacao", "+351977777777", "CLIENT", null, null);
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(clientReg)))
-                .andExpect(status().isCreated()).andReturn();
+                .andExpect(status().isCreated());
+
+        User clientUser = userRepository.findByEmail("tx-client@test.pt").orElseThrow();
+        clientUser.setEmailVerified(true);
+        userRepository.save(clientUser);
+
+        MvcResult clientResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("tx-client@test.pt", "Password1"))))
+                .andExpect(status().isOk())
+                .andReturn();
         clientToken = objectMapper.readTree(clientResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
 
         // Register provider
         RegisterRequest providerReg = new RegisterRequest(
-                "tx-provider@test.pt", "password123", "password123",
-                "Prestador Transação", "+351988888888", "PROVIDER_MANAGER", "TxTest Lda", "222111000");
-        MvcResult providerResult = mockMvc.perform(post("/v1/auth/register")
+                "tx-provider@test.pt", "Password1", "Password1",
+                "Prestador Transacao", "+351988888888", "PROVIDER_MANAGER", "TxTest Lda", "222111000");
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(providerReg)))
-                .andExpect(status().isCreated()).andReturn();
+                .andExpect(status().isCreated());
+
+        User providerUser = userRepository.findByEmail("tx-provider@test.pt").orElseThrow();
+        providerUser.setEmailVerified(true);
+        userRepository.save(providerUser);
+
+        MvcResult providerResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("tx-provider@test.pt", "Password1"))))
+                .andExpect(status().isOk())
+                .andReturn();
         providerToken = objectMapper.readTree(providerResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
 
@@ -76,13 +102,13 @@ class TransactionControllerIT extends TestContainersConfig {
                         .header("Authorization", "Bearer " + providerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new UpdateProviderProfileRequest(
-                                null, null, null, null, null, 38.6667, -27.2167, "Terceira", "Angra do Heroísmo", null))))
+                                null, null, null, null, null, 38.6667, -27.2167, "Terceira", "Angra do Heroismo", null))))
                 .andExpect(status().isOk());
 
         // Create + publish request
         CreateServiceRequestDto requestDto = new CreateServiceRequestDto(
-                1L, "Serviço para transações", "Teste transações",
-                38.6667, -27.2167, "São Sebastião", "Angra do Heroísmo", "Terceira",
+                1L, "Servico para transacoes", "Teste transacoes",
+                38.6667, -27.2167, "Sao Sebastiao", "Angra do Heroismo", "Terceira",
                 1.0, "hectares", Urgency.LOW, null, null, null);
         MvcResult reqResult = mockMvc.perform(post("/v1/requests")
                         .header("Authorization", "Bearer " + clientToken)
@@ -95,10 +121,10 @@ class TransactionControllerIT extends TestContainersConfig {
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk());
 
-        // Create and accept proposal → creates transaction
+        // Create and accept proposal
         CreateProposalDto proposalDto = new CreateProposalDto(
                 new BigDecimal("200.00"), PricingModel.FIXED, null, null,
-                "Serviço rápido", "Tudo incluído", null, null, null);
+                "Servico rapido", "Tudo incluido", null, null, null);
         MvcResult propResult = mockMvc.perform(post("/v1/requests/" + requestId + "/proposals")
                         .header("Authorization", "Bearer " + providerToken)
                         .contentType(MediaType.APPLICATION_JSON)

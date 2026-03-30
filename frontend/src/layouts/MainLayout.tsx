@@ -30,7 +30,6 @@ function buildNavItems(role?: Role): NavItem[] {
   ];
 
   const providerItems: NavItem[] = [
-    { to: '/provider/dashboard', label: 'Backoffice', icon: LayoutDashboard },
     { to: '/provider/team', label: 'Equipa', icon: Users },
     { to: '/provider/machines', label: 'Máquinas', icon: Wrench },
     { to: '/provider/inventory', label: 'Inventário', icon: Package },
@@ -47,7 +46,7 @@ function buildNavItems(role?: Role): NavItem[] {
     return [...common, ...providerItems];
   }
   if (role === 'ADMIN') {
-    return [...common, ...adminItems];
+    return [...common.filter((item) => item.to !== '/dashboard'), ...adminItems];
   }
   return common;
 }

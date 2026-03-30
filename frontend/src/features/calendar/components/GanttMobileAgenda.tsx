@@ -11,7 +11,6 @@ interface GanttMobileAgendaProps {
 }
 
 const URGENCY_BADGE: Record<string, { variant: 'danger' | 'warning' | 'default' | 'info'; label: string }> = {
-  URGENT: { variant: 'danger', label: 'Urgente' },
   HIGH: { variant: 'warning', label: 'Alta' },
   MEDIUM: { variant: 'default', label: 'Média' },
   LOW: { variant: 'info', label: 'Baixa' },

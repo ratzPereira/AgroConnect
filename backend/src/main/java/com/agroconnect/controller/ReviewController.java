@@ -18,6 +18,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -36,6 +37,7 @@ public class ReviewController {
     private final ReviewService reviewService;
 
     @PostMapping("/requests/{id}/reviews")
+    @PreAuthorize("hasAnyRole('CLIENT', 'PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
     @Operation(summary = "Submit a review for a completed service",
             description = "Submits a review. Both client and provider can review each other. When both have reviewed, request transitions to RATED.")
     @ApiResponse(responseCode = "201", description = "Review created")

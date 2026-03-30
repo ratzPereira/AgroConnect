@@ -112,4 +112,60 @@ class InventoryServiceTest {
 
         verify(inventoryItemRepository).delete(item);
     }
+
+    @Test
+    void listByProvider_shouldReturnAllItems() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByProviderId(1L)).thenReturn(List.of(item));
+
+        List<InventoryItemResponse> result = service.listByProvider(2L);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void getById_givenValidItem_shouldReturnResponse() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(item));
+
+        InventoryItemResponse response = service.getById(1L, 2L);
+
+        assertNotNull(response);
+    }
+
+    @Test
+    void getById_givenNonExistentItem_shouldThrowNotFound() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.getById(999L, 2L));
+    }
+
+    @Test
+    void delete_givenNonExistentItem_shouldThrowNotFound() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.delete(999L, 2L));
+    }
+
+    @Test
+    void listByProvider_givenWrongProvider_shouldThrowForbidden() {
+        when(providerProfileRepository.findByUserId(99L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ForbiddenException.class,
+                () -> service.listByProvider(99L));
+    }
+
+    @Test
+    void update_givenNonExistentItem_shouldThrowNotFound() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        UpdateInventoryItemDto dto = new UpdateInventoryItemDto(100.0, 10.0, new BigDecimal("2.00"));
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.update(999L, dto, 2L));
+    }
 }

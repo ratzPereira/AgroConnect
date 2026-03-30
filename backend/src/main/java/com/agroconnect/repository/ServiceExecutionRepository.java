@@ -12,7 +12,15 @@ import java.util.Optional;
 
 public interface ServiceExecutionRepository extends JpaRepository<ServiceExecution, Long> {
 
-    Optional<ServiceExecution> findByProposalId(Long proposalId);
+    @Query("SELECT e FROM ServiceExecution e " +
+           "LEFT JOIN FETCH e.proposal p " +
+           "LEFT JOIN FETCH p.request " +
+           "LEFT JOIN FETCH e.assignments a " +
+           "LEFT JOIN FETCH a.teamMember " +
+           "LEFT JOIN FETCH a.machine " +
+           "LEFT JOIN FETCH e.photos " +
+           "WHERE p.id = :proposalId")
+    Optional<ServiceExecution> findByProposalId(@Param("proposalId") Long proposalId);
 
     @Query("""
             SELECT se FROM ServiceExecution se

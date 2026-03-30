@@ -2,6 +2,8 @@ package com.agroconnect.dto.request;
 
 import com.agroconnect.model.enums.Urgency;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
 
@@ -20,9 +22,13 @@ public record UpdateServiceRequestDto(
         @Schema(description = "Detailed description", example = "Necessito de lavoura profunda")
         String description,
 
+        @DecimalMin(value = "36.9", message = "A latitude deve estar dentro dos Açores")
+        @DecimalMax(value = "39.8", message = "A latitude deve estar dentro dos Açores")
         @Schema(description = "Location latitude", example = "38.7167")
         Double latitude,
 
+        @DecimalMin(value = "-31.3", message = "A longitude deve estar dentro dos Açores")
+        @DecimalMax(value = "-24.7", message = "A longitude deve estar dentro dos Açores")
         @Schema(description = "Location longitude", example = "-27.2167")
         Double longitude,
 

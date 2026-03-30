@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.time.Instant;
+import java.time.format.DateTimeParseException;
 import java.util.Map;
 
 @RestController
@@ -131,9 +132,20 @@ public class ExecutionController {
             @RequestBody Map<String, Object> body,
             @AuthenticationPrincipal UserPrincipal principal) {
         String photoUrl = (String) body.get("photoUrl");
+        if (photoUrl == null || photoUrl.isBlank()) {
+            return ResponseEntity.badRequest().build();
+        }
         Double latitude = body.get("latitude") != null ? ((Number) body.get("latitude")).doubleValue() : null;
         Double longitude = body.get("longitude") != null ? ((Number) body.get("longitude")).doubleValue() : null;
-        Instant takenAt = body.get("takenAt") != null ? Instant.parse((String) body.get("takenAt")) : null;
+        String takenAtStr = body.get("takenAt") != null ? body.get("takenAt").toString() : null;
+        Instant takenAt = null;
+        if (takenAtStr != null && !takenAtStr.isBlank()) {
+            try {
+                takenAt = Instant.parse(takenAtStr);
+            } catch (DateTimeParseException e) {
+                return ResponseEntity.badRequest().build();
+            }
+        }
 
         var response = executionService.confirmPhoto(id, photoUrl, latitude, longitude, takenAt, principal.getId());
         return ResponseEntity.ok(response);

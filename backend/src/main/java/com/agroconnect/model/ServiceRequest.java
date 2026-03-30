@@ -107,6 +107,9 @@ public class ServiceRequest {
     @Column(name = "expires_at")
     private Instant expiresAt;
 
+    @Column(name = "dispute_reason", length = 2000)
+    private String disputeReason;
+
     @OneToMany(mappedBy = "request", cascade = CascadeType.PERSIST, orphanRemoval = true)
     @OrderBy("sortOrder ASC")
     @Builder.Default

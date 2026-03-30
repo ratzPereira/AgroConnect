@@ -6,7 +6,6 @@ import { cn } from '@/utils/cn';
 import { useCalendarEvents } from '../hooks/useCalendar';
 
 const URGENCY_BADGE: Record<string, { variant: 'danger' | 'warning' | 'default' | 'info'; label: string }> = {
-  URGENT: { variant: 'danger', label: 'Urgente' },
   HIGH: { variant: 'warning', label: 'Alta' },
   MEDIUM: { variant: 'default', label: 'Média' },
   LOW: { variant: 'info', label: 'Baixa' },

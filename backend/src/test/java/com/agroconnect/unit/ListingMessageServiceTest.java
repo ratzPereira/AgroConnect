@@ -242,6 +242,103 @@ class ListingMessageServiceTest {
         assertThrows(ForbiddenException.class, () -> service.markAsRead(1L, 3L));
     }
 
+    // ── GET CONVERSATION MESSAGES ──
+
+    @Test
+    void getConversationMessages_givenParticipant_shouldReturnMessages() {
+        ListingConversation conv = createConversation(1L, activeListing, buyerUser);
+        ListingMessage msg = createMessage(1L, conv, buyerUser, "Bom dia");
+        Page<ListingMessage> msgPage = new PageImpl<>(List.of(msg));
+
+        when(listingConversationRepository.findById(1L)).thenReturn(Optional.of(conv));
+        when(listingMessageRepository.findByConversationIdOrderBySentAtAsc(eq(1L), any(Pageable.class)))
+                .thenReturn(msgPage);
+        stubDisplayName(2L, "Pedro Santos");
+
+        var result = service.getConversationMessages(1L, 2L, PageRequest.of(0, 50));
+
+        assertNotNull(result);
+        assertEquals(1, result.getTotalElements());
+        assertEquals("Bom dia", result.getContent().get(0).content());
+    }
+
+    @Test
+    void getConversationMessages_givenNonParticipant_shouldThrowForbidden() {
+        ListingConversation conv = createConversation(1L, activeListing, buyerUser);
+
+        when(listingConversationRepository.findById(1L)).thenReturn(Optional.of(conv));
+
+        assertThrows(ForbiddenException.class,
+                () -> service.getConversationMessages(1L, 3L, PageRequest.of(0, 50)));
+    }
+
+    @Test
+    void getConversationMessages_givenNonExistentConversation_shouldThrowNotFound() {
+        when(listingConversationRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.getConversationMessages(999L, 1L, PageRequest.of(0, 50)));
+    }
+
+    @Test
+    void replyToConversation_givenBuyerSender_shouldNotifySeller() {
+        SendListingMessageDto dto = new SendListingMessageDto("Quanto custa envio?");
+        ListingConversation conv = createConversation(1L, activeListing, buyerUser);
+        ListingMessage savedMsg = createMessage(4L, conv, buyerUser, dto.content());
+
+        when(listingConversationRepository.findById(1L)).thenReturn(Optional.of(conv));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(buyerUser));
+        when(listingMessageRepository.save(any(ListingMessage.class))).thenReturn(savedMsg);
+        when(listingConversationRepository.save(any(ListingConversation.class))).thenReturn(conv);
+        stubDisplayName(2L, "Pedro Santos");
+
+        ListingMessageResponse response = service.replyToConversation(1L, dto, 2L);
+
+        assertNotNull(response);
+        // Notification should go to seller (user 1)
+        verify(notificationService).create(eq(1L), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void sendFirstMessage_givenNonExistentListing_shouldThrowNotFound() {
+        SendListingMessageDto dto = new SendListingMessageDto("Test");
+        when(listingRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.sendFirstMessage(999L, dto, 2L));
+    }
+
+    @Test
+    void markAsRead_givenNonExistentConversation_shouldThrowNotFound() {
+        when(listingConversationRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.markAsRead(999L, 1L));
+    }
+
+    @Test
+    void getDisplayName_givenProviderUser_shouldReturnCompanyName() {
+        // Test that provider users get company name displayed
+        SendListingMessageDto dto = new SendListingMessageDto("Resposta do prestador.");
+        ListingConversation conv = createConversation(1L, activeListing, buyerUser);
+        ListingMessage savedMsg = createMessage(5L, conv, sellerUser, dto.content());
+
+        when(listingConversationRepository.findById(1L)).thenReturn(Optional.of(conv));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(sellerUser));
+        when(listingMessageRepository.save(any(ListingMessage.class))).thenReturn(savedMsg);
+        when(listingConversationRepository.save(any(ListingConversation.class))).thenReturn(conv);
+        // No client profile for seller, has provider profile
+        when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.empty());
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(
+                Optional.of(com.agroconnect.model.ProviderProfile.builder()
+                        .id(1L).companyName("Agro Terceira").build()));
+
+        ListingMessageResponse response = service.replyToConversation(1L, dto, 1L);
+
+        assertNotNull(response);
+        assertEquals("Agro Terceira", response.senderName());
+    }
+
     // ── Helper methods ──
 
     private User createTestUser(Long id, Role role) {

@@ -9,6 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 
 public interface TransactionRepository extends JpaRepository<Transaction, Long> {
@@ -82,6 +83,17 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     long countReleasedByProviderId(@Param("providerId") Long providerId);
 
     long countByStatus(com.agroconnect.model.enums.TransactionStatus status);
+
+    @Query("""
+            SELECT t FROM Transaction t
+            WHERE t.proposal.provider.user.id = :userId
+            AND t.createdAt >= :from
+            AND t.createdAt < :to
+            ORDER BY t.createdAt DESC
+            """)
+    List<Transaction> findByProviderUserIdAndDateRange(@Param("userId") Long userId,
+                                                       @Param("from") Instant from,
+                                                       @Param("to") Instant to);
 
     @Query("SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t")
     BigDecimal sumTotalAmount();

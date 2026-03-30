@@ -3,18 +3,25 @@ import { AnimatedPage } from '@/components/AnimatedPage';
 import { GanttChart } from '@/features/calendar/components/GanttChart';
 import { useCalendarEvents, useCalendarConflicts } from '@/features/calendar/hooks/useCalendar';
 
+function formatLocalDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 export function ProviderCalendar() {
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth());
 
-  // Build date range: first of month to last of month (ISO format)
+  // Build date range: first of month to last of month (local format)
   const { from, to } = useMemo(() => {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0);
     return {
-      from: firstDay.toISOString().slice(0, 10),
-      to: lastDay.toISOString().slice(0, 10),
+      from: formatLocalDate(firstDay),
+      to: formatLocalDate(lastDay),
     };
   }, [year, month]);
 

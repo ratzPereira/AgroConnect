@@ -13,6 +13,14 @@ import { cn } from '@/utils/cn';
 import { format } from 'date-fns';
 import type { RequestStatus } from '@/types/request';
 
+function getErrorMessage(error: unknown, fallback: string): string {
+  if (error && typeof error === 'object' && 'response' in error) {
+    const resp = (error as { response?: { data?: { message?: string } } }).response;
+    return resp?.data?.message || fallback;
+  }
+  return fallback;
+}
+
 interface ExecutionPanelProps {
   requestId: number;
   requestStatus: RequestStatus;
@@ -279,7 +287,9 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
                   </Button>
                 </div>
                 {completeMutation.isError && (
-                  <p className="text-sm text-red-600">Erro ao concluir. Tente novamente.</p>
+                  <p className="text-sm text-red-600">
+                    {getErrorMessage(completeMutation.error, 'Erro ao concluir. Tente novamente.')}
+                  </p>
                 )}
               </div>
             )}
@@ -295,11 +305,30 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
             {execution.notes && (
               <p className="text-sm text-neutral-700 mb-1">{execution.notes}</p>
             )}
-            {execution.materialsUsed && (
-              <p className="text-sm text-neutral-500">
-                <span className="font-medium">Materiais:</span> {execution.materialsUsed}
-              </p>
-            )}
+            {execution.materialsUsed && (() => {
+              let items: { product: string; quantity: number; unit: string }[] = [];
+              try { items = JSON.parse(execution.materialsUsed); } catch { /* not JSON */ }
+              if (!Array.isArray(items) || items.length === 0) {
+                return (
+                  <p className="text-sm text-neutral-500">
+                    <span className="font-medium">Materiais:</span> {execution.materialsUsed}
+                  </p>
+                );
+              }
+              return (
+                <div>
+                  <span className="text-sm font-medium text-neutral-500">Materiais:</span>
+                  <ul className="mt-1 space-y-1">
+                    {items.map((m, i) => (
+                      <li key={i} className="text-sm text-neutral-700 flex items-center gap-2">
+                        <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
+                        {m.product} — {m.quantity} {m.unit}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
           </div>
         )}
       </CardBody>

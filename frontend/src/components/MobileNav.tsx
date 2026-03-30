@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FileText, Bell, User, Briefcase, Shield, Store } from 'lucide-react';
+import { LayoutDashboard, FileText, Bell, User, Briefcase, Shield, Store, DollarSign } from 'lucide-react';
 import { useAuthStore } from '@/stores/authStore';
 import { useNotificationStore } from '@/stores/notificationStore';
 import { cn } from '@/utils/cn';
@@ -24,7 +24,10 @@ function buildMobileNavItems(role: Role | undefined, unreadCount: number): Mobil
   const isAdmin = role === 'ADMIN';
 
   if (isProvider) {
-    base.push({ to: '/provider/dashboard', label: 'Backoffice', icon: Briefcase });
+    base.push(
+      { to: '/provider/team', label: 'Equipa', icon: Briefcase },
+      { to: '/provider/finance', label: 'Finanças', icon: DollarSign },
+    );
   }
   if (isAdmin) {
     base.push({ to: '/admin/dashboard', label: 'Admin', icon: Shield });

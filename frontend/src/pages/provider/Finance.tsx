@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
-import { getFinanceSummary, getFinanceTransactions } from '@/api/finance';
+import { useQuery, useMutation } from '@tanstack/react-query';
+import { getFinanceSummary, getFinanceTransactions, exportFinanceCsv } from '@/api/finance';
+import { toast } from 'sonner';
 import { Card, CardHeader } from '@/components/ui/Card';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -8,7 +9,8 @@ import { StatCard } from '@/components/ui/StatCard';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EmptyTransactions } from '@/components/illustrations/EmptyTransactions';
 import { TransactionDetailModal } from '@/features/transactions/components/TransactionDetailModal';
-import { TrendingUp, DollarSign, Clock, CheckCircle } from 'lucide-react';
+import { TrendingUp, DollarSign, Clock, CheckCircle, Download } from 'lucide-react';
+import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/cn';
 import type { TransactionStatus } from '@/types/transaction';
 import type { TransactionItem } from '@/api/finance';
@@ -23,6 +25,19 @@ const statusColors: Record<string, string> = {
 
 export function Finance() {
   const [selectedTx, setSelectedTx] = useState<TransactionItem | null>(null);
+  const [exportFrom, setExportFrom] = useState(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 3);
+    return d.toISOString().slice(0, 10);
+  });
+  const [exportTo, setExportTo] = useState(() => new Date().toISOString().slice(0, 10));
+
+  const exportMutation = useMutation({
+    mutationFn: () => exportFinanceCsv(exportFrom, exportTo),
+    onSuccess: () => toast.success('CSV exportado com sucesso.'),
+    onError: () => toast.error('Erro ao exportar CSV.'),
+  });
+
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ['finance-summary'],
     queryFn: getFinanceSummary,
@@ -83,7 +98,35 @@ export function Finance() {
           </div>
 
           <Card>
-            <CardHeader><h2 className="font-semibold text-neutral-900 text-sm">Histórico de transações</h2></CardHeader>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                <h2 className="font-semibold text-neutral-900 text-sm">Histórico de transações</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <input
+                    type="date"
+                    value={exportFrom}
+                    onChange={(e) => setExportFrom(e.target.value)}
+                    className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+                  />
+                  <span className="text-xs text-neutral-400">a</span>
+                  <input
+                    type="date"
+                    value={exportTo}
+                    onChange={(e) => setExportTo(e.target.value)}
+                    className="rounded-lg border border-neutral-300 px-2 py-1 text-xs"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    loading={exportMutation.isPending}
+                    onClick={() => exportMutation.mutate()}
+                  >
+                    <Download className="h-3.5 w-3.5" />
+                    Exportar CSV
+                  </Button>
+                </div>
+              </div>
+            </CardHeader>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-neutral-200 text-left text-neutral-500">

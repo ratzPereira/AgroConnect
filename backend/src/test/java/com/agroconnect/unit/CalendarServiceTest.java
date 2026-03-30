@@ -8,6 +8,7 @@ import com.agroconnect.exception.ValidationException;
 import com.agroconnect.model.ExecutionAssignment;
 import com.agroconnect.model.Machine;
 import com.agroconnect.model.Proposal;
+import com.agroconnect.model.ServiceCategory;
 import com.agroconnect.model.ProviderProfile;
 import com.agroconnect.model.ServiceExecution;
 import com.agroconnect.model.ServiceRequest;
@@ -28,6 +29,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -89,7 +91,7 @@ class CalendarServiceTest {
                 .proposal(proposal)
                 .scheduledDate(LocalDate.of(2026, 4, 1))
                 .scheduledEndDate(LocalDate.of(2026, 4, 3))
-                .assignments(List.of(
+                .assignments(Set.of(
                         ExecutionAssignment.builder()
                                 .id(1L)
                                 .teamMember(teamMember)
@@ -135,7 +137,7 @@ class CalendarServiceTest {
                         .build())
                 .scheduledDate(LocalDate.of(2026, 4, 2))
                 .scheduledEndDate(LocalDate.of(2026, 4, 2))
-                .assignments(List.of(
+                .assignments(Set.of(
                         ExecutionAssignment.builder()
                                 .id(2L)
                                 .teamMember(teamMember) // same team member
@@ -195,5 +197,139 @@ class CalendarServiceTest {
 
         assertThatThrownBy(() -> calendarService.updateSchedule(100L, dto, 2L))
                 .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void getCalendarEvents_givenNoProvider_shouldThrow() {
+        when(providerProfileRepository.findByUserId(99L)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> calendarService.getCalendarEvents(99L,
+                LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30)))
+                .isInstanceOf(com.agroconnect.exception.ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getConflicts_givenNoConflicts_shouldReturnEmpty() {
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(execution));
+
+        // Single execution cannot conflict with itself
+        List<ConflictResponse> conflicts = calendarService.getConflicts(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(conflicts).isEmpty();
+    }
+
+    @Test
+    void getConflicts_givenMachineConflict_shouldDetect() {
+        Machine machine = Machine.builder().id(1L).name("Trator JD").build();
+
+        ServiceExecution exec1 = ServiceExecution.builder()
+                .id(100L)
+                .proposal(proposal)
+                .scheduledDate(LocalDate.of(2026, 4, 1))
+                .scheduledEndDate(LocalDate.of(2026, 4, 1))
+                .assignments(Set.of(
+                        ExecutionAssignment.builder().id(1L).teamMember(teamMember).machine(machine).build()
+                ))
+                .build();
+
+        ServiceExecution exec2 = ServiceExecution.builder()
+                .id(101L)
+                .proposal(Proposal.builder().id(6L).provider(provider)
+                        .request(ServiceRequest.builder().id(11L).title("Outro serviço")
+                                .category(com.agroconnect.model.ServiceCategory.builder().id(2L).name("Poda").build())
+                                .status(RequestStatus.AWARDED).island("São Miguel").parish("R. Grande")
+                                .urgency(com.agroconnect.model.enums.Urgency.LOW).build())
+                        .build())
+                .scheduledDate(LocalDate.of(2026, 4, 1))
+                .scheduledEndDate(LocalDate.of(2026, 4, 1))
+                .assignments(Set.of(
+                        ExecutionAssignment.builder().id(2L).teamMember(
+                                TeamMember.builder().id(2L).name("Outro membro").role(TeamMemberRole.OPERATOR).provider(provider).build()
+                        ).machine(machine).build()
+                ))
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(exec1, exec2));
+
+        List<ConflictResponse> conflicts = calendarService.getConflicts(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(conflicts).isNotEmpty();
+        boolean hasMachineConflict = conflicts.stream()
+                .anyMatch(c -> "MACHINE".equals(c.resourceType()));
+        assertThat(hasMachineConflict).isTrue();
+    }
+
+    @Test
+    void getCalendarEvents_givenAssignmentWithMachine_shouldIncludeMachineData() {
+        Machine machine = Machine.builder().id(1L).name("Trator JD").build();
+        ServiceExecution execWithMachine = ServiceExecution.builder()
+                .id(100L)
+                .proposal(proposal)
+                .scheduledDate(LocalDate.of(2026, 4, 1))
+                .scheduledEndDate(LocalDate.of(2026, 4, 3))
+                .assignments(Set.of(
+                        ExecutionAssignment.builder().id(1L).teamMember(teamMember).machine(machine).build()
+                ))
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(execWithMachine));
+
+        List<CalendarEventResponse> events = calendarService.getCalendarEvents(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(events.get(0).assignments().get(0).machineId()).isEqualTo(1L);
+        assertThat(events.get(0).assignments().get(0).machineName()).isEqualTo("Trator JD");
+    }
+
+    @Test
+    void getCalendarEvents_givenNoExecutions_shouldReturnEmpty() {
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of());
+
+        List<CalendarEventResponse> events = calendarService.getCalendarEvents(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(events).isEmpty();
+    }
+
+    @Test
+    void updateSchedule_givenNonExistentExecution_shouldThrow() {
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(999L)).thenReturn(Optional.empty());
+
+        ScheduleUpdateDto dto = new ScheduleUpdateDto(
+                LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7));
+
+        assertThatThrownBy(() -> calendarService.updateSchedule(999L, dto, 1L))
+                .isInstanceOf(com.agroconnect.exception.ResourceNotFoundException.class);
+    }
+
+    @Test
+    void detectConflicts_givenNullScheduledDates_shouldSkipExecution() {
+        ServiceExecution nullDateExec = ServiceExecution.builder()
+                .id(200L)
+                .proposal(proposal)
+                .scheduledDate(null)
+                .scheduledEndDate(null)
+                .assignments(Set.of())
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(nullDateExec));
+
+        List<ConflictResponse> conflicts = calendarService.getConflicts(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(conflicts).isEmpty();
     }
 }

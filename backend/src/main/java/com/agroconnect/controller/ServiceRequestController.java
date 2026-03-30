@@ -1,5 +1,6 @@
 package com.agroconnect.controller;
 
+import com.agroconnect.dto.request.ConfirmPhotoUploadDto;
 import com.agroconnect.dto.request.CreateServiceRequestDto;
 import com.agroconnect.dto.request.DisputeRequestDto;
 import com.agroconnect.dto.request.ResolveDisputeDto;
@@ -39,7 +40,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/v1/requests")
@@ -233,10 +233,9 @@ public class ServiceRequestController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public ResponseEntity<ServiceRequestResponse> confirmPhoto(
             @Parameter(description = "Request ID") @PathVariable Long id,
-            @RequestBody Map<String, String> body,
+            @Valid @RequestBody ConfirmPhotoUploadDto dto,
             @AuthenticationPrincipal UserPrincipal principal) {
-        String photoUrl = body.get("photoUrl");
-        var response = requestService.confirmPhotoUpload(id, photoUrl, principal.getId());
+        var response = requestService.confirmPhotoUpload(id, dto.photoUrl(), principal.getId());
         return ResponseEntity.ok(response);
     }
 

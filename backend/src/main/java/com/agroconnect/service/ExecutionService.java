@@ -57,6 +57,7 @@ public class ExecutionService {
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), SRID_WGS84);
     private static final double CHECKIN_RADIUS_METERS = 500;
     private static final int PRESIGNED_URL_EXPIRY_MINUTES = 15;
+    private static final int MAX_EXECUTION_PHOTOS = 20;
 
     private final ServiceExecutionRepository executionRepository;
     private final ExecutionAssignmentRepository assignmentRepository;
@@ -100,6 +101,13 @@ public class ExecutionService {
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido de serviço não encontrado."));
 
         Proposal acceptedProposal = findAcceptedProposal(requestId);
+
+        // Validate authorization: must be the client or the provider's user
+        boolean isClient = request.getClient().getId().equals(userId);
+        boolean isProviderUser = acceptedProposal.getProvider().getUser().getId().equals(userId);
+        if (!isClient && !isProviderUser) {
+            throw new ForbiddenException("Não tem permissão para ver esta execução.");
+        }
 
         ServiceExecution execution = executionRepository.findByProposalId(acceptedProposal.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Execução não encontrada."));
@@ -179,10 +187,31 @@ public class ExecutionService {
     }
 
     public PresignedUrlResponse generatePhotoUploadUrl(Long executionId, Long userId) {
+        return generatePhotoUploadUrl(executionId, userId, "image/jpeg");
+    }
+
+    public PresignedUrlResponse generatePhotoUploadUrl(Long executionId, Long userId, String contentType) {
         ServiceExecution execution = findByIdOrThrow(executionId);
         validateProviderAccess(execution, userId);
 
-        String objectKey = "executions/" + executionId + "/" + UUID.randomUUID() + ".jpg";
+        if (execution.getCompletedAt() != null) {
+            throw new InvalidStateException("Não é possível adicionar fotos após a conclusão.");
+        }
+        if (execution.getCheckinTime() == null) {
+            throw new InvalidStateException("É necessário fazer check-in antes de adicionar fotos.");
+        }
+
+        long photoCount = photoRepository.countByExecutionId(execution.getId());
+        if (photoCount >= MAX_EXECUTION_PHOTOS) {
+            throw new InvalidStateException("Limite máximo de " + MAX_EXECUTION_PHOTOS + " fotos por execução atingido.");
+        }
+
+        String extension = switch (contentType) {
+            case "image/png" -> ".png";
+            case "image/webp" -> ".webp";
+            default -> ".jpg";
+        };
+        String objectKey = "executions/" + executionId + "/" + UUID.randomUUID() + extension;
 
         try {
             String uploadUrl = minioClient.getPresignedObjectUrl(
@@ -209,6 +238,13 @@ public class ExecutionService {
                                                   Instant takenAt, Long userId) {
         ServiceExecution execution = findByIdOrThrow(executionId);
         validateProviderAccess(execution, userId);
+
+        if (execution.getCompletedAt() != null) {
+            throw new InvalidStateException("Não é possível adicionar fotos após a conclusão.");
+        }
+        if (execution.getCheckinTime() == null) {
+            throw new InvalidStateException("É necessário fazer check-in antes de adicionar fotos.");
+        }
 
         Point location = null;
         if (latitude != null && longitude != null) {

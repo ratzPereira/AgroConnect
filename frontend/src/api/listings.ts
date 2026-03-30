@@ -28,14 +28,14 @@ export async function searchListings(
 ): Promise<Page<ListingSummary>> {
   const { page = 0, size = 20, ...filters } = params;
   const queryParams: Record<string, string | number> = { page, size };
-  if (filters.search) queryParams.search = filters.search;
+  if (filters.search) queryParams.q = filters.search;
   if (filters.category) queryParams.category = filters.category;
   if (filters.island) queryParams.island = filters.island;
   if (filters.minPrice !== undefined) queryParams.minPrice = filters.minPrice;
   if (filters.maxPrice !== undefined) queryParams.maxPrice = filters.maxPrice;
-  if (filters.latitude !== undefined) queryParams.latitude = filters.latitude;
-  if (filters.longitude !== undefined) queryParams.longitude = filters.longitude;
-  if (filters.radiusKm !== undefined) queryParams.radiusKm = filters.radiusKm;
+  if (filters.latitude !== undefined) queryParams.lat = filters.latitude;
+  if (filters.longitude !== undefined) queryParams.lng = filters.longitude;
+  if (filters.radiusKm !== undefined) queryParams.radius = filters.radiusKm;
 
   const response = await apiClient.get<Page<ListingSummary>>('/listings', { params: queryParams });
   return response.data;
@@ -72,17 +72,17 @@ export async function getMyListings(
 ): Promise<Page<ListingSummary>> {
   const params: Record<string, string | number> = { page, size };
   if (status) params.status = status;
-  const response = await apiClient.get<Page<ListingSummary>>('/listings/mine', { params });
+  const response = await apiClient.get<Page<ListingSummary>>('/listings/me', { params });
   return response.data;
 }
 
 export async function getMyListingStats(): Promise<ListingStats> {
-  const response = await apiClient.get<ListingStats>('/listings/mine/stats');
+  const response = await apiClient.get<ListingStats>('/listings/me/stats');
   return response.data;
 }
 
 export async function getListingUploadUrl(listingId: number): Promise<PresignedUrlResponse> {
-  const response = await apiClient.post<PresignedUrlResponse>(`/listings/${listingId}/photos/upload`);
+  const response = await apiClient.post<PresignedUrlResponse>(`/listings/${listingId}/photos/upload-url`);
   return response.data;
 }
 

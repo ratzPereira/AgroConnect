@@ -40,6 +40,12 @@ const CHAT_STATUSES = new Set([
 
 const REVIEW_STATUSES = new Set(['COMPLETED', 'RATED']);
 
+const TERMINAL_LABELS: Record<string, string> = {
+  CANCELLED: 'Cancelado',
+  EXPIRED: 'Expirado',
+  DISPUTED: 'Em Disputa',
+};
+
 function buildTimelineSteps(status: string): Array<{ label: string; status: 'completed' | 'active' | 'upcoming' }> {
   const allSteps = [
     { key: 'DRAFT', label: 'Rascunho' },
@@ -52,7 +58,12 @@ function buildTimelineSteps(status: string): Array<{ label: string; status: 'com
     { key: 'RATED', label: 'Avaliado' },
   ];
 
-  const currentIndex = allSteps.findIndex((s) => s.key === status);
+  let currentIndex = allSteps.findIndex((s) => s.key === status);
+
+  if (currentIndex === -1 && status in TERMINAL_LABELS) {
+    allSteps.push({ key: status, label: TERMINAL_LABELS[status] });
+    currentIndex = allSteps.length - 1;
+  }
 
   return allSteps.map((step, index) => ({
     label: step.label,
@@ -121,13 +132,14 @@ export function RequestDetail() {
   const isOwner = request && request.clientId === user?.id;
   const alreadyProposed = isProvider && proposals && proposals.length > 0;
   const canPropose = isProvider && !alreadyProposed && request && (request.status === 'PUBLISHED' || request.status === 'WITH_PROPOSALS');
-  const canCancel = isOwner && request && !['RATED', 'EXPIRED', 'CANCELLED'].includes(request.status);
+  const canCancel = isOwner && request && !['COMPLETED', 'RATED', 'DISPUTED', 'EXPIRED', 'CANCELLED'].includes(request.status);
   const canUploadPhotos = request && ['DRAFT', 'PUBLISHED', 'WITH_PROPOSALS'].includes(request.status);
 
   const showExecution = request && EXECUTION_STATUSES.has(request.status);
   const showChat = request && CHAT_STATUSES.has(request.status);
   const showConfirmation = isOwner && request?.status === 'AWAITING_CONFIRMATION';
-  const showReviewForm = request && REVIEW_STATUSES.has(request.status) &&
+  const isParticipant = isOwner || (isProvider && proposals?.some((p) => p.status === 'ACCEPTED'));
+  const showReviewForm = isParticipant && request && REVIEW_STATUSES.has(request.status) &&
     reviews && !reviews.some((r) => r.authorId === user?.id);
 
   if (requestLoading) {

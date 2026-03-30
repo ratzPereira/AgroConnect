@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   sendListingMessage,
   getConversationMessages,
+  getMyConversations,
   replyToConversation,
   markConversationRead,
 } from '@/api/listings';
@@ -55,6 +56,21 @@ export function ListingChatPanel({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
+  // Fetch conversations for this listing so we can resolve activeConvId after first message
+  const { data: conversationsPage } = useQuery({
+    queryKey: ['listing-conversations', listingId],
+    queryFn: () => getMyConversations(0, 100),
+    enabled: open,
+    select: (page) => page.content.filter((c) => c.listingId === listingId),
+  });
+
+  // When conversations load and we don't have an activeConvId yet, pick the first match
+  useEffect(() => {
+    if (conversationsPage && conversationsPage.length > 0 && !activeConvId) {
+      setActiveConvId(conversationsPage[0].id);
+    }
+  }, [conversationsPage, activeConvId]);
+
   // Fetch messages when conversation exists
   const { data: messagesPage, isLoading } = useQuery({
     queryKey: ['listing-messages', activeConvId],
@@ -75,7 +91,7 @@ export function ListingChatPanel({
 
   // Subscribe to real-time messages
   useStompSubscription(
-    `/topic/conversation/${activeConvId}`,
+    `/topic/listing-conversation/${activeConvId}`,
     useCallback(
       (msg) => {
         try {
@@ -113,23 +129,11 @@ export function ListingChatPanel({
   // Send first message (creates conversation)
   const sendFirstMut = useMutation({
     mutationFn: (text: string) => sendListingMessage(listingId, text),
-    onSuccess: (msg) => {
+    onSuccess: async () => {
       setContent('');
-      // The response may include conversation info; for now invalidate and re-fetch
-      queryClient.invalidateQueries({ queryKey: ['listing-conversations'] });
-      // We need the conversation ID from the response context
-      // Typically the backend returns the message with convId or we navigate
-      queryClient.invalidateQueries({ queryKey: ['listing-messages'] });
-      // Optimistically add the message
-      if (activeConvId) {
-        queryClient.setQueryData(
-          ['listing-messages', activeConvId],
-          (old: { content: ListingMessage[] } | undefined) => {
-            if (!old) return { content: [msg], totalPages: 1, totalElements: 1, number: 0, size: 50, first: true, last: true };
-            return { ...old, content: [...old.content, msg] };
-          },
-        );
-      }
+      // Refetch conversations to get the newly created conversation ID
+      await queryClient.invalidateQueries({ queryKey: ['listing-conversations', listingId] });
+      // The useEffect watching conversationsPage will set activeConvId automatically
     },
   });
 

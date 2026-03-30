@@ -1,0 +1,6 @@
+# Test profile — disables rate limiting and scheduling so integration tests are not throttled or interfered with
+agroconnect:
+  rate-limit:
+    enabled: false
+  scheduling:
+    enabled: false

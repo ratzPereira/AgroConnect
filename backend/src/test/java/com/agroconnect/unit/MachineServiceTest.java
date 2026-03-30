@@ -103,4 +103,78 @@ class MachineServiceTest {
 
         assertThrows(ForbiddenException.class, () -> service.getById(1L, 99L));
     }
+
+    @Test
+    void getById_givenValidMachine_shouldReturnResponse() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(machineRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(machine));
+
+        MachineResponse response = service.getById(1L, 2L);
+
+        assertNotNull(response);
+        assertEquals(MachineStatus.AVAILABLE, response.status());
+    }
+
+    @Test
+    void getById_givenNonExistentMachine_shouldThrowNotFound() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(machineRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.getById(999L, 2L));
+    }
+
+    @Test
+    void listByProvider_shouldReturnAllMachines() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(machineRepository.findByProviderId(1L)).thenReturn(java.util.List.of(machine));
+
+        java.util.List<MachineResponse> result = service.listByProvider(2L);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void listByProviderAndStatus_shouldReturnFilteredMachines() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(machineRepository.findByProviderIdAndStatus(1L, MachineStatus.AVAILABLE))
+                .thenReturn(java.util.List.of(machine));
+
+        java.util.List<MachineResponse> result = service.listByProviderAndStatus(2L, MachineStatus.AVAILABLE);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void update_givenNullStatus_shouldNotChangeStatus() {
+        UpdateMachineDto dto = new UpdateMachineDto("Trator", "Trator", null, null, null, null, null);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(machineRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(machine));
+        when(machineRepository.save(any(Machine.class))).thenReturn(machine);
+
+        service.update(1L, dto, 2L);
+
+        assertEquals(MachineStatus.AVAILABLE, machine.getStatus());
+    }
+
+    @Test
+    void update_givenNonExistentMachine_shouldThrowNotFound() {
+        UpdateMachineDto dto = new UpdateMachineDto("Trator", "Trator", null, null, null, null, null);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(machineRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.update(999L, dto, 2L));
+    }
+
+    @Test
+    void delete_givenNonExistentMachine_shouldThrowNotFound() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(machineRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.delete(999L, 2L));
+    }
 }

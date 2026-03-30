@@ -4,11 +4,14 @@ import com.agroconnect.dto.request.CheckinExecutionDto;
 import com.agroconnect.dto.request.CompleteExecutionDto;
 import com.agroconnect.dto.request.CreateProposalDto;
 import com.agroconnect.dto.request.CreateServiceRequestDto;
+import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
 import com.agroconnect.dto.request.UpdateProviderProfileRequest;
 import com.agroconnect.fixture.TestContainersConfig;
+import com.agroconnect.model.User;
 import com.agroconnect.model.enums.PricingModel;
 import com.agroconnect.model.enums.Urgency;
+import com.agroconnect.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -22,7 +25,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.math.BigDecimal;
-import java.util.Map;
 
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -42,6 +44,9 @@ class ExecutionControllerIT extends TestContainersConfig {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private static String clientToken;
     private static String providerToken;
     private static Long requestId;
@@ -53,26 +58,44 @@ class ExecutionControllerIT extends TestContainersConfig {
     void setup_fullFlowUntilAwarded() throws Exception {
         // Register client
         RegisterRequest clientReg = new RegisterRequest(
-                "exec-client@test.pt", "password123", "password123",
+                "exec-client@test.pt", "Password1", "Password1",
                 "Cliente Execução", "+351955555555", "CLIENT", null, null);
 
-        MvcResult clientResult = mockMvc.perform(post("/v1/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(clientReg)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User clientUser = userRepository.findByEmail("exec-client@test.pt").orElseThrow();
+        clientUser.setEmailVerified(true);
+        userRepository.save(clientUser);
+
+        MvcResult clientResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("exec-client@test.pt", "Password1"))))
+                .andExpect(status().isOk())
                 .andReturn();
         clientToken = objectMapper.readTree(clientResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
 
         // Register provider
         RegisterRequest providerReg = new RegisterRequest(
-                "exec-provider@test.pt", "password123", "password123",
+                "exec-provider@test.pt", "Password1", "Password1",
                 "Prestador Execução", "+351966666666", "PROVIDER_MANAGER", "ExecTest Lda", "555444333");
 
-        MvcResult providerResult = mockMvc.perform(post("/v1/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(providerReg)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User providerUser = userRepository.findByEmail("exec-provider@test.pt").orElseThrow();
+        providerUser.setEmailVerified(true);
+        userRepository.save(providerUser);
+
+        MvcResult providerResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("exec-provider@test.pt", "Password1"))))
+                .andExpect(status().isOk())
                 .andReturn();
         providerToken = objectMapper.readTree(providerResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
@@ -120,7 +143,7 @@ class ExecutionControllerIT extends TestContainersConfig {
         proposalId = objectMapper.readTree(propResult.getResponse().getContentAsString())
                 .get("id").asLong();
 
-        // Accept proposal → AWARDED + execution created
+        // Accept proposal -> AWARDED + execution created
         mockMvc.perform(post("/v1/proposals/" + proposalId + "/accept")
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk())

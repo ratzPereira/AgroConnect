@@ -28,7 +28,7 @@ const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then(m => ({ 
 const ResetPassword = lazy(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
 const ProviderOnboarding = lazy(() => import('@/pages/ProviderOnboarding').then(m => ({ default: m.ProviderOnboarding })));
 const NotFound = lazy(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })));
-const ProviderDashboard = lazy(() => import('@/pages/provider/Dashboard').then(m => ({ default: m.ProviderDashboard })));
+
 const Team = lazy(() => import('@/pages/provider/Team').then(m => ({ default: m.Team })));
 const Machines = lazy(() => import('@/pages/provider/Machines').then(m => ({ default: m.Machines })));
 const Inventory = lazy(() => import('@/pages/provider/Inventory').then(m => ({ default: m.Inventory })));
@@ -80,7 +80,7 @@ export const router = createBrowserRouter([
               {
                 element: <RoleRoute allowedRoles={['PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR']} />,
                 children: [
-                  { path: '/provider/dashboard', element: <PageSuspense><ProviderDashboard /></PageSuspense>, handle: { breadcrumb: 'Backoffice' } },
+
                   { path: '/provider/team', element: <PageSuspense><Team /></PageSuspense>, handle: { breadcrumb: 'Equipa' } },
                   { path: '/provider/machines', element: <PageSuspense><Machines /></PageSuspense>, handle: { breadcrumb: 'Máquinas' } },
                   { path: '/provider/inventory', element: <PageSuspense><Inventory /></PageSuspense>, handle: { breadcrumb: 'Inventário' } },

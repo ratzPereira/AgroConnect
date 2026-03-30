@@ -25,14 +25,6 @@ const ISLAND_OPTIONS = [
   ...AZORES_ISLANDS.map((i) => ({ value: i.name, label: i.name })),
 ];
 
-const CATEGORY_PIN_COLORS: Record<ListingCategory, string> = {
-  ANIMALS: '#C9A86E',
-  PLANTS: '#5ACA2D',
-  SEEDS: '#F5A623',
-  PRODUCE: '#3DA63D',
-  EQUIPMENT: '#B0ADA3',
-};
-
 export function Marketplace() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,7 +42,6 @@ export function Marketplace() {
 
   const category = categoryParam || null;
 
-  // Update search params helper
   const updateParams = useCallback(
     (updates: Record<string, string>) => {
       const newParams = new URLSearchParams(searchParams);
@@ -61,7 +52,6 @@ export function Marketplace() {
           newParams.delete(key);
         }
       });
-      // Reset page on filter change (unless explicitly changing page)
       if (!('page' in updates)) {
         newParams.delete('page');
       }
@@ -89,20 +79,22 @@ export function Marketplace() {
 
   const listings = data?.content ?? [];
   const totalPages = data?.totalPages ?? 0;
+  const totalElements = data?.totalElements ?? 0;
 
-  // Map pins from listings
   const mapPins: RequestPin[] = useMemo(
     () =>
-      listings.map((l) => ({
-        id: l.id,
-        latitude: l.latitude,
-        longitude: l.longitude,
-        status: 'PUBLISHED' as const,
-        title: l.title,
-        categoryName: l.category,
-        urgency: 'LOW' as const,
-        island: l.island,
-      })),
+      listings
+        .filter((l) => l.latitude && l.longitude)
+        .map((l) => ({
+          id: l.id,
+          latitude: l.latitude,
+          longitude: l.longitude,
+          status: 'PUBLISHED' as const,
+          title: l.title,
+          categoryName: l.category,
+          urgency: 'LOW' as const,
+          island: l.island,
+        })),
     [listings],
   );
 
@@ -120,9 +112,7 @@ export function Marketplace() {
         setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
         setNearMe(true);
       },
-      () => {
-        // Geolocation denied or unavailable
-      },
+      () => { /* Geolocation denied or unavailable */ },
     );
   }
 
@@ -136,10 +126,17 @@ export function Marketplace() {
   return (
     <AnimatedPage>
       {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900">
-          Marketplace
-        </h1>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+        <div>
+          <h1 className="text-2xl font-bold font-display text-neutral-900">
+            Marketplace
+          </h1>
+          {!isLoading && totalElements > 0 && (
+            <p className="text-sm text-neutral-500" style={{ marginTop: 2 }}>
+              {totalElements} anúncio{totalElements !== 1 ? 's' : ''} encontrado{totalElements !== 1 ? 's' : ''}
+            </p>
+          )}
+        </div>
         <Button onClick={() => navigate('/marketplace/new')} size="sm">
           <Plus className="h-4 w-4" />
           <span className="hidden sm:inline">Publicar Anúncio</span>
@@ -147,25 +144,37 @@ export function Marketplace() {
       </div>
 
       {/* Search bar */}
-      <form onSubmit={handleSearchSubmit} className="mb-4">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-neutral-400" />
+      <form onSubmit={handleSearchSubmit} style={{ marginBottom: 20 }}>
+        <div style={{ position: 'relative' }}>
+          <Search
+            className="text-neutral-400"
+            style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', width: 16, height: 16 }}
+          />
           <input
             name="search"
             type="text"
             defaultValue={searchQuery}
-            placeholder="Pesquisar anúncios..."
-            className={cn(
-              'block w-full rounded-lg border border-neutral-300 pl-10 pr-4 py-2.5 text-sm',
-              'placeholder:text-neutral-400',
-              'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            )}
+            placeholder="Pesquisar animais, plantas, equipamentos..."
+            className="placeholder:text-neutral-400"
+            style={{
+              display: 'block',
+              width: '100%',
+              borderRadius: 12,
+              border: '1px solid #e5e5e5',
+              backgroundColor: '#fafaf9',
+              paddingLeft: 40,
+              paddingRight: 16,
+              paddingTop: 10,
+              paddingBottom: 10,
+              fontSize: 14,
+              outline: 'none',
+            }}
           />
         </div>
       </form>
 
       {/* Category pills */}
-      <div className="mb-4">
+      <div style={{ marginBottom: 20 }}>
         <CategoryFilter
           selected={category as ListingCategory | null}
           onSelect={(cat) => updateParams({ category: cat ?? '' })}
@@ -173,12 +182,18 @@ export function Marketplace() {
       </div>
 
       {/* Filters row */}
-      <div className="flex flex-wrap items-center gap-3 mb-6">
-        {/* Island filter */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 24 }}>
         <select
           value={islandParam}
           onChange={(e) => updateParams({ island: e.target.value })}
-          className="rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+          style={{
+            borderRadius: 12,
+            border: '1px solid #e5e5e5',
+            backgroundColor: 'white',
+            padding: '8px 12px',
+            fontSize: 14,
+            outline: 'none',
+          }}
         >
           {ISLAND_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -187,77 +202,93 @@ export function Marketplace() {
           ))}
         </select>
 
-        {/* Price range */}
-        <div className="flex items-center gap-1.5">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
           <Input
             type="number"
             placeholder="Min"
-            className="w-20"
+            className="w-20 rounded-xl"
             value={minPriceParam}
             onChange={(e) => updateParams({ minPrice: e.target.value })}
           />
-          <span className="text-neutral-400 text-sm">-</span>
+          <span className="text-neutral-300 text-sm">—</span>
           <Input
             type="number"
             placeholder="Max"
-            className="w-20"
+            className="w-20 rounded-xl"
             value={maxPriceParam}
             onChange={(e) => updateParams({ maxPrice: e.target.value })}
           />
-          <span className="text-xs text-neutral-400">EUR</span>
+          <span className="text-xs text-neutral-400 font-medium">EUR</span>
         </div>
 
-        {/* Near me toggle */}
         <button
           type="button"
           onClick={handleNearMe}
           className={cn(
-            'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border text-sm font-medium transition-colors duration-200',
+            'inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200',
             nearMe
-              ? 'border-primary-500 bg-primary-50 text-primary-700'
-              : 'border-neutral-300 text-neutral-600 hover:bg-neutral-50',
+              ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-200 shadow-sm'
+              : 'bg-white text-neutral-600 ring-1 ring-neutral-200 hover:ring-neutral-300 hover:bg-neutral-50',
           )}
+          style={{ padding: '8px 14px', borderRadius: 12 }}
         >
-          <MapPin className="h-4 w-4" />
+          <MapPin style={{ width: 16, height: 16 }} />
           Perto de mim
         </button>
 
-        {/* View mode toggle */}
-        <div className="ml-auto flex items-center gap-1 bg-neutral-100 rounded-lg p-0.5">
+        {/* View toggle */}
+        <div
+          className="bg-neutral-100"
+          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2, borderRadius: 12, padding: 2 }}
+        >
           <button
             type="button"
             onClick={() => setViewMode('grid')}
             className={cn(
-              'p-1.5 rounded-md transition-colors duration-150',
-              viewMode === 'grid' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500',
+              'transition-all duration-150',
+              viewMode === 'grid'
+                ? 'bg-white shadow-sm text-neutral-900'
+                : 'text-neutral-400 hover:text-neutral-600',
             )}
+            style={{ padding: 8, borderRadius: 8 }}
             aria-label="Vista em grelha"
           >
-            <LayoutGrid className="h-4 w-4" />
+            <LayoutGrid style={{ width: 16, height: 16 }} />
           </button>
           <button
             type="button"
             onClick={() => setViewMode('map')}
             className={cn(
-              'p-1.5 rounded-md transition-colors duration-150',
-              viewMode === 'map' ? 'bg-white shadow-sm text-neutral-900' : 'text-neutral-500',
+              'transition-all duration-150',
+              viewMode === 'map'
+                ? 'bg-white shadow-sm text-neutral-900'
+                : 'text-neutral-400 hover:text-neutral-600',
             )}
+            style={{ padding: 8, borderRadius: 8 }}
             aria-label="Vista no mapa"
           >
-            <Map className="h-4 w-4" />
+            <Map style={{ width: 16, height: 16 }} />
           </button>
         </div>
       </div>
 
       {/* Content */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+            gap: 16,
+          }}
+        >
           {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
-              <Skeleton className="aspect-[16/10] w-full" />
-              <div className="p-3 space-y-2">
-                <Skeleton.Line className="h-4 w-3/4" />
-                <Skeleton.Line className="h-6 w-20" />
+            <div key={i} style={{ borderRadius: 16, border: '1px solid #e5e5e5', backgroundColor: 'white', overflow: 'hidden' }}>
+              <div style={{ height: 192 }}>
+                <Skeleton className="w-full" style={{ height: '100%' }} />
+              </div>
+              <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <Skeleton.Line className="h-4 w-4/5" />
+                <Skeleton.Line className="h-6 w-24" />
                 <Skeleton.Line className="h-3 w-1/2" />
               </div>
             </div>
@@ -277,7 +308,13 @@ export function Marketplace() {
         />
       ) : viewMode === 'grid' ? (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
+              gap: 16,
+            }}
+          >
             {listings.map((listing) => (
               <ListingCard
                 key={listing.id}
@@ -287,9 +324,8 @@ export function Marketplace() {
             ))}
           </div>
 
-          {/* Pagination */}
           {totalPages > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-8">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, marginTop: 40 }}>
               <Button
                 variant="outline"
                 size="sm"
@@ -298,8 +334,8 @@ export function Marketplace() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="text-sm text-neutral-600">
-                {page + 1} de {totalPages}
+              <span className="text-sm font-medium text-neutral-600">
+                Página {page + 1} de {totalPages}
               </span>
               <Button
                 variant="outline"
@@ -322,14 +358,27 @@ export function Marketplace() {
         />
       )}
 
-      {/* Floating action button for mobile */}
+      {/* Mobile FAB */}
       <button
         type="button"
         onClick={() => navigate('/marketplace/new')}
-        className="fixed bottom-20 right-4 lg:hidden z-30 flex items-center justify-center h-14 w-14 rounded-full bg-primary-600 text-white shadow-lg hover:bg-primary-700 transition-colors"
+        className="lg:hidden bg-primary-600 text-white hover:bg-primary-700 active:scale-95 transition-all"
+        style={{
+          position: 'fixed',
+          bottom: 80,
+          right: 16,
+          zIndex: 30,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          height: 56,
+          width: 56,
+          borderRadius: '50%',
+          boxShadow: '0 4px 14px rgba(45, 138, 45, 0.25)',
+        }}
         aria-label="Publicar Anúncio"
       >
-        <Plus className="h-6 w-6" />
+        <Plus style={{ width: 24, height: 24 }} />
       </button>
     </AnimatedPage>
   );

@@ -18,14 +18,12 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 import org.locationtech.jts.geom.Point;
 
 import java.time.Instant;
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "service_executions", indexes = {
@@ -58,8 +56,7 @@ public class ServiceExecution {
     @Column(name = "notes", columnDefinition = "TEXT")
     private String notes;
 
-    @Column(name = "materials_used", columnDefinition = "jsonb")
-    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "materials_used", columnDefinition = "text")
     private String materialsUsed;
 
     @Column(name = "scheduled_date")
@@ -77,9 +74,9 @@ public class ServiceExecution {
 
     @OneToMany(mappedBy = "execution", cascade = CascadeType.PERSIST)
     @Builder.Default
-    private List<ExecutionAssignment> assignments = new ArrayList<>();
+    private Set<ExecutionAssignment> assignments = new HashSet<>();
 
-    @OneToMany(mappedBy = "execution", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "execution", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     @Builder.Default
-    private List<ExecutionPhoto> photos = new ArrayList<>();
+    private Set<ExecutionPhoto> photos = new HashSet<>();
 }

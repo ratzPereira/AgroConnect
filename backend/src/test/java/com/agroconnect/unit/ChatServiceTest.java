@@ -139,4 +139,79 @@ class ChatServiceTest {
 
         assertNotNull(result);
     }
+
+    @Test
+    void sendMessage_givenProviderSender_shouldSucceed() {
+        SendMessageDto dto = new SendMessageDto("Amanhã começamos o trabalho.");
+
+        ChatMessage saved = ChatMessage.builder()
+                .id(2L).request(awardedRequest).sender(providerUser)
+                .content(dto.content()).sentAt(Instant.now()).build();
+
+        when(requestRepository.findById(1L)).thenReturn(Optional.of(awardedRequest));
+        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(acceptedProposal));
+        when(userRepository.findById(2L)).thenReturn(Optional.of(providerUser));
+        when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(saved);
+        when(clientProfileRepository.findByUserId(2L)).thenReturn(Optional.empty());
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(
+                Optional.of(providerProfile));
+
+        ChatMessageResponse response = service.sendMessage(1L, dto, 2L);
+
+        assertNotNull(response);
+        // Notification should go to client (not provider)
+        verify(notificationService).create(eq(1L), anyString(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void sendMessage_givenNonExistentRequest_shouldThrowNotFound() {
+        SendMessageDto dto = new SendMessageDto("Test");
+        when(requestRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
+                () -> service.sendMessage(999L, dto, 1L));
+    }
+
+    @Test
+    void getMessages_givenNonParticipant_shouldThrowForbidden() {
+        when(requestRepository.findById(1L)).thenReturn(Optional.of(awardedRequest));
+        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(acceptedProposal));
+
+        assertThrows(ForbiddenException.class,
+                () -> service.getMessages(1L, 99L, org.springframework.data.domain.PageRequest.of(0, 50)));
+    }
+
+    @Test
+    void sendMessage_givenCompletedRequest_shouldSucceed() {
+        ServiceRequest completedRequest = ServiceRequestFixture.aRequest()
+                .status(com.agroconnect.model.enums.RequestStatus.COMPLETED).client(clientUser)
+                .category(ServiceRequestFixture.aCategory().build()).build();
+
+        SendMessageDto dto = new SendMessageDto("Obrigado pelo serviço.");
+        ChatMessage saved = ChatMessage.builder()
+                .id(3L).request(completedRequest).sender(clientUser)
+                .content(dto.content()).sentAt(Instant.now()).build();
+
+        when(requestRepository.findById(1L)).thenReturn(Optional.of(completedRequest));
+        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(acceptedProposal));
+        when(userRepository.findById(1L)).thenReturn(Optional.of(clientUser));
+        when(chatMessageRepository.save(any(ChatMessage.class))).thenReturn(saved);
+        when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.of(clientProfile));
+
+        ChatMessageResponse response = service.sendMessage(1L, dto, 1L);
+
+        assertNotNull(response);
+    }
+
+    @Test
+    void sendMessage_givenPublishedRequest_shouldThrowInvalidState() {
+        ServiceRequest publishedRequest = ServiceRequestFixture.aRequest()
+                .status(com.agroconnect.model.enums.RequestStatus.PUBLISHED).client(clientUser)
+                .category(ServiceRequestFixture.aCategory().build()).build();
+
+        SendMessageDto dto = new SendMessageDto("Test");
+        when(requestRepository.findById(1L)).thenReturn(Optional.of(publishedRequest));
+
+        assertThrows(InvalidStateException.class, () -> service.sendMessage(1L, dto, 1L));
+    }
 }

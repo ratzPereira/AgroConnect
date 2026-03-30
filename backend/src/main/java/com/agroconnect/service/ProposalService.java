@@ -19,6 +19,8 @@ import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.repository.TransactionRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,7 @@ public class ProposalService {
     private final TransactionRepository transactionRepository;
     private final NotificationService notificationService;
     private final ExecutionService executionService;
+    private final EntityManager entityManager;
 
     @Value("${agroconnect.commission.rate}")
     private BigDecimal commissionRate;
@@ -113,6 +116,9 @@ public class ProposalService {
 
         ServiceRequest request = proposal.getRequest();
 
+        // Acquire pessimistic lock to prevent concurrent acceptance
+        entityManager.lock(request, LockModeType.PESSIMISTIC_WRITE);
+
         if (!request.getClient().getId().equals(userId)) {
             throw new ForbiddenException("Não tem permissão para aceitar esta proposta.");
         }
@@ -123,6 +129,11 @@ public class ProposalService {
 
         if (proposal.getStatus() != ProposalStatus.PENDING) {
             throw new InvalidStateException("Só é possível aceitar propostas pendentes.");
+        }
+
+        // Check if proposal has expired
+        if (proposal.getValidUntil() != null && proposal.getValidUntil().isBefore(Instant.now())) {
+            throw new InvalidStateException("Esta proposta expirou e não pode ser aceite.");
         }
 
         // Accept proposal

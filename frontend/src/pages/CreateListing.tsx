@@ -76,7 +76,7 @@ const MAX_PHOTOS = 8;
 
 const listingSchema = z.object({
   category: z.enum(['ANIMALS', 'PLANTS', 'SEEDS', 'PRODUCE', 'EQUIPMENT'], {
-    required_error: 'Selecione uma categoria',
+    error: 'Selecione uma categoria',
   }),
   title: z
     .string()
@@ -95,11 +95,11 @@ const listingSchema = z.object({
   municipality: z.string().min(1, 'Selecione um município'),
   parish: z.string().optional(),
   latitude: z
-    .number({ required_error: 'Marque a localização no mapa' })
+    .number({ error: 'Marque a localização no mapa' })
     .min(AZORES_BOUNDS.minLat, 'A localização deve estar nos Açores')
     .max(AZORES_BOUNDS.maxLat, 'A localização deve estar nos Açores'),
   longitude: z
-    .number({ required_error: 'Marque a localização no mapa' })
+    .number({ error: 'Marque a localização no mapa' })
     .min(AZORES_BOUNDS.minLng, 'A localização deve estar nos Açores')
     .max(AZORES_BOUNDS.maxLng, 'A localização deve estar nos Açores'),
 });
@@ -370,7 +370,7 @@ export function CreateListing() {
 
       <form
         onSubmit={handleSubmit((data) => createMut.mutate(data))}
-        className="max-w-2xl space-y-6"
+        className="max-w-4xl mx-auto space-y-6"
       >
         {/* Category selection */}
         <Card>

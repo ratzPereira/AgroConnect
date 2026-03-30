@@ -108,4 +108,73 @@ class TeamMemberServiceTest {
 
         assertThrows(ForbiddenException.class, () -> service.getById(1L, 99L));
     }
+
+    @Test
+    void listByProvider_shouldReturnActiveMembers() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByProviderIdAndActiveTrue(1L)).thenReturn(List.of(teamMember));
+
+        List<TeamMemberResponse> result = service.listByProvider(2L);
+
+        assertEquals(1, result.size());
+    }
+
+    @Test
+    void getById_givenValidId_shouldReturnResponse() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(teamMember));
+
+        TeamMemberResponse response = service.getById(1L, 2L);
+
+        assertNotNull(response);
+    }
+
+    @Test
+    void getById_givenNonExistentMember_shouldThrowNotFound() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.getById(999L, 2L));
+    }
+
+    @Test
+    void update_givenNullRole_shouldNotChangeRole() {
+        teamMember.setRole(TeamMemberRole.OPERATOR);
+        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("New Name", "+351910000000", null);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(teamMember));
+        when(teamMemberRepository.save(any(TeamMember.class))).thenReturn(teamMember);
+
+        service.update(1L, dto, 2L);
+
+        assertEquals(TeamMemberRole.OPERATOR, teamMember.getRole());
+        assertEquals("New Name", teamMember.getName());
+    }
+
+    @Test
+    void deactivate_givenNonExistentMember_shouldThrowNotFound() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.deactivate(999L, 2L));
+    }
+
+    @Test
+    void create_givenWrongProvider_shouldThrowForbidden() {
+        CreateTeamMemberDto dto = new CreateTeamMemberDto("Test", "test@test.pt", null, TeamMemberRole.OPERATOR);
+        when(providerProfileRepository.findByUserId(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ForbiddenException.class, () -> service.create(dto, 99L));
+    }
+
+    @Test
+    void update_givenNonExistentMember_shouldThrowNotFound() {
+        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("New Name", null, null);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.update(999L, dto, 2L));
+    }
 }

@@ -1,3 +1,5 @@
+import type { RequestStatus } from './request';
+
 export interface CalendarAssignment {
   teamMemberId: number;
   teamMemberName: string;
@@ -12,10 +14,10 @@ export interface CalendarEvent {
   categoryName: string;
   scheduledDate: string;
   scheduledEndDate: string;
-  status: string;
+  status: RequestStatus;
   island: string;
   parish: string;
-  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH';
   assignments: CalendarAssignment[];
 }
 
@@ -48,8 +50,8 @@ export interface GanttBar {
   categoryName: string;
   startDate: string;
   endDate: string;
-  urgency: 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
-  status: string;
+  urgency: 'LOW' | 'MEDIUM' | 'HIGH';
+  status: RequestStatus;
   island: string;
   parish: string;
   hasConflict?: boolean;

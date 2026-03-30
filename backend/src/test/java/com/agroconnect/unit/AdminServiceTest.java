@@ -2,6 +2,8 @@ package com.agroconnect.unit;
 
 import com.agroconnect.dto.response.AdminDashboardResponse;
 import com.agroconnect.dto.response.AdminUserResponse;
+import com.agroconnect.exception.ResourceNotFoundException;
+import com.agroconnect.fixture.ServiceRequestFixture;
 import com.agroconnect.fixture.UserFixture;
 import com.agroconnect.model.User;
 import com.agroconnect.model.enums.RequestStatus;
@@ -29,6 +31,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -111,5 +114,122 @@ class AdminServiceTest {
         var result = service.listDisputes(PageRequest.of(0, 20));
 
         assertNotNull(result);
+    }
+
+    @Test
+    void unbanUser_givenValidUser_shouldSetActive() {
+        User user = UserFixture.aClientUser().active(false).build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        service.unbanUser(1L);
+
+        assertEquals(true, user.isActive());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void banUser_givenNonExistentUser_shouldThrowNotFound() {
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.banUser(999L));
+    }
+
+    @Test
+    void unbanUser_givenNonExistentUser_shouldThrowNotFound() {
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.unbanUser(999L));
+    }
+
+    @Test
+    void getUserDetail_givenValidUser_shouldReturnResponse() {
+        User user = UserFixture.aClientUser().build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.of(UserFixture.aClientProfile().user(user).build()));
+        when(requestRepository.countByClientId(1L)).thenReturn(3L);
+        when(proposalRepository.countByProviderUserId(1L)).thenReturn(0L);
+
+        AdminUserResponse result = service.getUserDetail(1L);
+
+        assertNotNull(result);
+        assertEquals("João Silva", result.name());
+        assertEquals(3L, result.requestCount());
+    }
+
+    @Test
+    void getUserDetail_givenNonExistentUser_shouldThrowNotFound() {
+        when(userRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.getUserDetail(999L));
+    }
+
+    @Test
+    void listUsers_givenNullRole_shouldReturnAllUsers() {
+        User user = UserFixture.aClientUser().build();
+        Page<User> page = new PageImpl<>(List.of(user));
+
+        when(userRepository.findAllByOrderByCreatedAtDesc(any())).thenReturn(page);
+        when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.of(UserFixture.aClientProfile().user(user).build()));
+        when(requestRepository.countByClientId(1L)).thenReturn(0L);
+        when(proposalRepository.countByProviderUserId(1L)).thenReturn(0L);
+
+        Page<AdminUserResponse> result = service.listUsers(null, PageRequest.of(0, 20));
+
+        assertEquals(1, result.getTotalElements());
+        verify(userRepository).findAllByOrderByCreatedAtDesc(any());
+    }
+
+    @Test
+    void getDisplayName_givenProviderUser_shouldReturnCompanyName() {
+        User user = UserFixture.aProviderUser().build();
+        when(userRepository.findById(2L)).thenReturn(Optional.of(user));
+        when(clientProfileRepository.findByUserId(2L)).thenReturn(Optional.empty());
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(
+                Optional.of(UserFixture.aProviderProfile().user(user).build()));
+        when(requestRepository.countByClientId(2L)).thenReturn(0L);
+        when(proposalRepository.countByProviderUserId(2L)).thenReturn(5L);
+
+        AdminUserResponse result = service.getUserDetail(2L);
+
+        assertEquals("AgroServiços Terceira", result.name());
+        assertEquals(5L, result.proposalCount());
+    }
+
+    @Test
+    void getDisplayName_givenNoProfile_shouldReturnEmail() {
+        User user = UserFixture.aClientUser().build();
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.empty());
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.empty());
+        when(requestRepository.countByClientId(1L)).thenReturn(0L);
+        when(proposalRepository.countByProviderUserId(1L)).thenReturn(0L);
+
+        AdminUserResponse result = service.getUserDetail(1L);
+
+        assertEquals("joao.silva@email.pt", result.name());
+    }
+
+    @Test
+    void listDisputes_givenDisputedRequest_shouldReturnMappedResponse() {
+        User disputeClient = UserFixture.aClientUser().build();
+        var category = ServiceRequestFixture.aCategory().build();
+        var request = ServiceRequestFixture.aRequest()
+                .status(RequestStatus.DISPUTED).client(disputeClient).category(category).build();
+
+        Page<com.agroconnect.model.ServiceRequest> page = new PageImpl<>(List.of(request));
+        when(requestRepository.findByStatusOrderByCreatedAtDesc(eq(RequestStatus.DISPUTED), any()))
+                .thenReturn(page);
+        when(clientProfileRepository.findByUserId(1L)).thenReturn(
+                Optional.of(UserFixture.aClientProfile().user(disputeClient).build()));
+        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of());
+        when(transactionRepository.findByRequestId(1L)).thenReturn(Optional.empty());
+
+        var result = service.listDisputes(PageRequest.of(0, 20));
+
+        assertEquals(1, result.getTotalElements());
+        assertEquals("N/A", result.getContent().get(0).providerName());
     }
 }

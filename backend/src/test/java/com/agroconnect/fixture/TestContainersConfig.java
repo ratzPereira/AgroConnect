@@ -1,11 +1,13 @@
 package com.agroconnect.fixture;
 
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.utility.DockerImageName;
 
+@ActiveProfiles("test")
 public abstract class TestContainersConfig {
 
     static final PostgreSQLContainer<?> POSTGRES;

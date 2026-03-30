@@ -1,9 +1,17 @@
 package com.agroconnect.unit;
 
 import com.agroconnect.dto.response.FinanceSummaryResponse;
+import com.agroconnect.exception.ForbiddenException;
+import com.agroconnect.fixture.ProposalFixture;
+import com.agroconnect.fixture.ServiceRequestFixture;
 import com.agroconnect.fixture.UserFixture;
+import com.agroconnect.model.Proposal;
 import com.agroconnect.model.ProviderProfile;
+import com.agroconnect.model.ServiceRequest;
+import com.agroconnect.model.Transaction;
 import com.agroconnect.model.User;
+import com.agroconnect.model.enums.RequestStatus;
+import com.agroconnect.model.enums.TransactionStatus;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.service.FinanceService;
@@ -16,11 +24,16 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 
 import java.math.BigDecimal;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
@@ -90,5 +103,77 @@ class FinanceServiceTest {
         var result = service.getTransactionHistory(2L, PageRequest.of(0, 20));
 
         assertNotNull(result);
+    }
+
+    @Test
+    void exportTransactionsCsv_givenTransactions_shouldReturnCsvWithHeader() {
+        ServiceRequest request = ServiceRequestFixture.aRequest()
+                .status(RequestStatus.COMPLETED)
+                .client(UserFixture.aClientUser().build())
+                .category(ServiceRequestFixture.aCategory().build()).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(request).provider(providerProfile).build();
+        Transaction tx = ProposalFixture.aTransaction()
+                .status(TransactionStatus.RELEASED)
+                .request(request).proposal(proposal)
+                .createdAt(Instant.parse("2025-06-15T10:30:00Z"))
+                .build();
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(transactionRepository.findByProviderUserIdAndDateRange(eq(2L), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(tx));
+
+        byte[] csv = service.exportTransactionsCsv(2L, LocalDate.of(2025, 6, 1), LocalDate.of(2025, 6, 30));
+        String content = new String(csv, StandardCharsets.UTF_8);
+
+        assertTrue(content.startsWith("Data,ID Pedido,Valor Bruto,"));
+        assertTrue(content.contains("Libertado"));
+        assertTrue(content.contains("250.00"));
+    }
+
+    @Test
+    void exportTransactionsCsv_givenEmptyRange_shouldReturnHeaderOnly() {
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(transactionRepository.findByProviderUserIdAndDateRange(eq(2L), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of());
+
+        byte[] csv = service.exportTransactionsCsv(2L, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31));
+        String content = new String(csv, StandardCharsets.UTF_8);
+
+        assertTrue(content.startsWith("Data,ID Pedido,"));
+        long lineCount = content.chars().filter(c -> c == '\n').count();
+        assertEquals(1, lineCount);
+    }
+
+    @Test
+    void exportTransactionsCsv_givenNonProvider_shouldThrowForbidden() {
+        when(providerProfileRepository.findByUserId(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ForbiddenException.class,
+                () -> service.exportTransactionsCsv(999L, LocalDate.of(2025, 1, 1), LocalDate.of(2025, 1, 31)));
+    }
+
+    @Test
+    void exportTransactionsCsv_givenHeldTransaction_shouldTranslateStatusToRetido() {
+        ServiceRequest request = ServiceRequestFixture.aRequest()
+                .status(RequestStatus.AWARDED)
+                .client(UserFixture.aClientUser().build())
+                .category(ServiceRequestFixture.aCategory().build()).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(request).provider(providerProfile).build();
+        Transaction tx = ProposalFixture.aTransaction()
+                .status(TransactionStatus.HELD)
+                .request(request).proposal(proposal)
+                .createdAt(Instant.parse("2025-03-10T08:00:00Z"))
+                .build();
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(transactionRepository.findByProviderUserIdAndDateRange(eq(2L), any(Instant.class), any(Instant.class)))
+                .thenReturn(List.of(tx));
+
+        byte[] csv = service.exportTransactionsCsv(2L, LocalDate.of(2025, 3, 1), LocalDate.of(2025, 3, 31));
+        String content = new String(csv, StandardCharsets.UTF_8);
+
+        assertTrue(content.contains("Retido"));
     }
 }

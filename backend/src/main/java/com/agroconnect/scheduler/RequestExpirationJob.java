@@ -33,7 +33,7 @@ public class RequestExpirationJob {
         }
 
         if (!expired.isEmpty()) {
-            log.info("Expired {} published requests", expired.size());
+            log.info("Expired {} requests (PUBLISHED/WITH_PROPOSALS)", expired.size());
         }
     }
 }

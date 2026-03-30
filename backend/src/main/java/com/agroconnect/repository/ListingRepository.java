@@ -30,7 +30,7 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
             AND (:maxPrice IS NULL OR l.price <= CAST(:maxPrice AS DECIMAL))
             AND (:lat IS NULL OR :lng IS NULL OR :radiusMeters IS NULL
                  OR ST_DWithin(CAST(l.location AS geography),
-                               ST_SetSRID(ST_MakePoint(CAST(:lng AS DOUBLE PRECISION), CAST(:lat AS DOUBLE PRECISION)), 4326)::geography,
+                               CAST(ST_SetSRID(ST_MakePoint(CAST(:lng AS DOUBLE PRECISION), CAST(:lat AS DOUBLE PRECISION)), 4326) AS geography),
                                CAST(:radiusMeters AS DOUBLE PRECISION)))
             ORDER BY l.created_at DESC
             """,
@@ -45,7 +45,7 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
             AND (:maxPrice IS NULL OR l.price <= CAST(:maxPrice AS DECIMAL))
             AND (:lat IS NULL OR :lng IS NULL OR :radiusMeters IS NULL
                  OR ST_DWithin(CAST(l.location AS geography),
-                               ST_SetSRID(ST_MakePoint(CAST(:lng AS DOUBLE PRECISION), CAST(:lat AS DOUBLE PRECISION)), 4326)::geography,
+                               CAST(ST_SetSRID(ST_MakePoint(CAST(:lng AS DOUBLE PRECISION), CAST(:lat AS DOUBLE PRECISION)), 4326) AS geography),
                                CAST(:radiusMeters AS DOUBLE PRECISION)))
             """,
             nativeQuery = true)

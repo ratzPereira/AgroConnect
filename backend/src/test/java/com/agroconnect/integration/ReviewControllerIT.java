@@ -5,11 +5,14 @@ import com.agroconnect.dto.request.CompleteExecutionDto;
 import com.agroconnect.dto.request.CreateProposalDto;
 import com.agroconnect.dto.request.CreateReviewDto;
 import com.agroconnect.dto.request.CreateServiceRequestDto;
+import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
 import com.agroconnect.dto.request.UpdateProviderProfileRequest;
 import com.agroconnect.fixture.TestContainersConfig;
+import com.agroconnect.model.User;
 import com.agroconnect.model.enums.PricingModel;
 import com.agroconnect.model.enums.Urgency;
+import com.agroconnect.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -42,6 +45,9 @@ class ReviewControllerIT extends TestContainersConfig {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private static String clientToken;
     private static String providerToken;
     private static Long requestId;
@@ -54,23 +60,43 @@ class ReviewControllerIT extends TestContainersConfig {
     void setup_fullFlowToCompleted() throws Exception {
         // Register client
         RegisterRequest clientReg = new RegisterRequest(
-                "rev-client@test.pt", "password123", "password123",
-                "Cliente Reviews", "+351911111111", "CLIENT", null, null);
-        MvcResult clientResult = mockMvc.perform(post("/v1/auth/register")
+                "rev-client@test.pt", "Password1", "Password1",
+                "Cliente Reviews", "+351911119911", "CLIENT", null, null);
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(clientReg)))
-                .andExpect(status().isCreated()).andReturn();
+                .andExpect(status().isCreated());
+
+        User clientUser = userRepository.findByEmail("rev-client@test.pt").orElseThrow();
+        clientUser.setEmailVerified(true);
+        userRepository.save(clientUser);
+
+        MvcResult clientResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("rev-client@test.pt", "Password1"))))
+                .andExpect(status().isOk())
+                .andReturn();
         clientToken = objectMapper.readTree(clientResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
 
         // Register provider
         RegisterRequest providerReg = new RegisterRequest(
-                "rev-provider@test.pt", "password123", "password123",
-                "Prestador Reviews", "+351922222222", "PROVIDER_MANAGER", "ReviewTest Lda", "111222333");
-        MvcResult providerResult = mockMvc.perform(post("/v1/auth/register")
+                "rev-provider@test.pt", "Password1", "Password1",
+                "Prestador Reviews", "+351922229922", "PROVIDER_MANAGER", "ReviewTest Lda", "111222399");
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(providerReg)))
-                .andExpect(status().isCreated()).andReturn();
+                .andExpect(status().isCreated());
+
+        User providerUser = userRepository.findByEmail("rev-provider@test.pt").orElseThrow();
+        providerUser.setEmailVerified(true);
+        userRepository.save(providerUser);
+
+        MvcResult providerResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("rev-provider@test.pt", "Password1"))))
+                .andExpect(status().isOk())
+                .andReturn();
         providerToken = objectMapper.readTree(providerResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
 

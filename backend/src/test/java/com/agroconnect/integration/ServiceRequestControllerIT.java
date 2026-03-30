@@ -4,9 +4,10 @@ import com.agroconnect.dto.request.CreateServiceRequestDto;
 import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
 import com.agroconnect.fixture.TestContainersConfig;
+import com.agroconnect.model.User;
 import com.agroconnect.model.enums.Urgency;
+import com.agroconnect.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
@@ -18,11 +19,9 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
-import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,6 +36,9 @@ class ServiceRequestControllerIT extends TestContainersConfig {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private UserRepository userRepository;
+
     private static String clientToken;
     private static String providerToken;
     private static Long requestId;
@@ -46,26 +48,44 @@ class ServiceRequestControllerIT extends TestContainersConfig {
     void setup_registerClientAndProvider() throws Exception {
         // Register client
         RegisterRequest clientReg = new RegisterRequest(
-                "sr-client@test.pt", "password123", "password123",
+                "sr-client@test.pt", "Password1", "Password1",
                 "Cliente Teste", "+351911111111", "CLIENT", null, null);
 
-        MvcResult clientResult = mockMvc.perform(post("/v1/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(clientReg)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User clientUser = userRepository.findByEmail("sr-client@test.pt").orElseThrow();
+        clientUser.setEmailVerified(true);
+        userRepository.save(clientUser);
+
+        MvcResult clientResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("sr-client@test.pt", "Password1"))))
+                .andExpect(status().isOk())
                 .andReturn();
         clientToken = objectMapper.readTree(clientResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
 
         // Register provider
         RegisterRequest providerReg = new RegisterRequest(
-                "sr-provider@test.pt", "password123", "password123",
+                "sr-provider@test.pt", "Password1", "Password1",
                 "Prestador Teste", "+351922222222", "PROVIDER_MANAGER", "AgroTeste Lda", "999888777");
 
-        MvcResult providerResult = mockMvc.perform(post("/v1/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(providerReg)))
-                .andExpect(status().isCreated())
+                .andExpect(status().isCreated());
+
+        User providerUser = userRepository.findByEmail("sr-provider@test.pt").orElseThrow();
+        providerUser.setEmailVerified(true);
+        userRepository.save(providerUser);
+
+        MvcResult providerResult = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("sr-provider@test.pt", "Password1"))))
+                .andExpect(status().isOk())
                 .andReturn();
         providerToken = objectMapper.readTree(providerResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
@@ -111,9 +131,9 @@ class ServiceRequestControllerIT extends TestContainersConfig {
     @Order(4)
     void create_givenProviderRole_shouldReturn403() throws Exception {
         CreateServiceRequestDto dto = new CreateServiceRequestDto(
-                1L, "Test", "Test",
-                38.6667, -27.2167, null, null, null,
-                null, null, null, null, null, null);
+                1L, "Teste provider", "Teste se provider consegue criar",
+                38.6667, -27.2167, "São Sebastião", "Angra do Heroísmo", "Terceira",
+                2.0, "hectares", Urgency.LOW, null, null, null);
 
         mockMvc.perform(post("/v1/requests")
                         .header("Authorization", "Bearer " + providerToken)

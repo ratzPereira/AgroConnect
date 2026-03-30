@@ -1,10 +1,13 @@
 package com.agroconnect.integration;
 
 import com.agroconnect.dto.request.CreateMachineDto;
+import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
 import com.agroconnect.dto.request.UpdateMachineDto;
 import com.agroconnect.fixture.TestContainersConfig;
+import com.agroconnect.model.User;
 import com.agroconnect.model.enums.MachineStatus;
+import com.agroconnect.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -32,6 +35,7 @@ class MachineControllerIT extends TestContainersConfig {
 
     @Autowired private MockMvc mockMvc;
     @Autowired private ObjectMapper objectMapper;
+    @Autowired private UserRepository userRepository;
 
     private static String providerToken;
     private static Long machineId;
@@ -40,13 +44,24 @@ class MachineControllerIT extends TestContainersConfig {
     @Order(1)
     void setup_registerProvider() throws Exception {
         RegisterRequest reg = new RegisterRequest(
-                "mc-provider@test.pt", "password123", "password123",
+                "mc-provider@test.pt", "Password1", "Password1",
                 "MC Provider", "+351922000002", "PROVIDER_MANAGER", "AgroMachine Lda", "222333444");
-        MvcResult result = mockMvc.perform(post("/v1/auth/register")
+        mockMvc.perform(post("/v1/auth/register")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(reg)))
-                .andExpect(status().isCreated()).andReturn();
-        providerToken = objectMapper.readTree(result.getResponse().getContentAsString()).get("accessToken").asText();
+                .andExpect(status().isCreated());
+
+        User user = userRepository.findByEmail("mc-provider@test.pt").orElseThrow();
+        user.setEmailVerified(true);
+        userRepository.save(user);
+
+        MvcResult result = mockMvc.perform(post("/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new LoginRequest("mc-provider@test.pt", "Password1"))))
+                .andExpect(status().isOk())
+                .andReturn();
+        providerToken = objectMapper.readTree(result.getResponse().getContentAsString())
+                .get("accessToken").asText();
     }
 
     @Test

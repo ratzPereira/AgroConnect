@@ -17,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +27,7 @@ public class TransactionService {
     private static final Logger log = LoggerFactory.getLogger(TransactionService.class);
 
     private final TransactionRepository transactionRepository;
+    private final AuditService auditService;
 
     public Page<TransactionResponse> listMyTransactions(Long userId, Pageable pageable) {
         return transactionRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
@@ -60,6 +62,8 @@ public class TransactionService {
         transactionRepository.save(tx);
 
         log.info("Transaction {} released for request {}", tx.getId(), requestId);
+        auditService.log(null, "RELEASED", "Transaction", tx.getId(),
+                Map.of("oldStatus", "HELD"), Map.of("newStatus", "RELEASED", "amount", tx.getProviderPayout()));
     }
 
     @Transactional
@@ -76,5 +80,7 @@ public class TransactionService {
         transactionRepository.save(tx);
 
         log.info("Transaction {} refunded for request {}", tx.getId(), requestId);
+        auditService.log(null, "REFUNDED", "Transaction", tx.getId(),
+                Map.of("oldStatus", "HELD"), Map.of("newStatus", "REFUNDED", "amount", tx.getAmount()));
     }
 }

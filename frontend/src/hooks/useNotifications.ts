@@ -15,11 +15,11 @@ export function useNotifications() {
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const { setUnreadCount, incrementUnread } = useNotificationStore();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
-  const userId = useAuthStore((s) => s.user?.id);
 
   // WebSocket subscription for real-time notifications
+  // Spring resolves the user automatically from the session principal
   useStompSubscription(
-    `/user/${userId}/queue/notifications`,
+    '/user/queue/notifications',
     (msg) => {
       try {
         const notification = JSON.parse(msg.body);
@@ -31,7 +31,7 @@ export function useNotifications() {
         incrementUnread();
       }
     },
-    isAuthenticated && userId != null,
+    isAuthenticated,
   );
 
   // Polling fallback for unread count

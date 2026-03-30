@@ -43,7 +43,7 @@ class AdminControllerIT extends TestContainersConfig {
         // Admin users need to be created directly (no public registration for ADMIN role)
         User admin = User.builder()
                 .email("admin-it@test.pt")
-                .passwordHash(passwordEncoder.encode("password123"))
+                .passwordHash(passwordEncoder.encode("Password1"))
                 .role(Role.ADMIN)
                 .emailVerified(true)
                 .active(true)
