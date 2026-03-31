@@ -197,7 +197,7 @@ export const mockTransactions: Transaction[] = [
 
 export const mockNotification: Notification = {
   id: 1,
-  type: 'PROPOSAL_RECEIVED',
+  type: 'NEW_PROPOSAL',
   title: 'Nova proposta recebida',
   body: 'Recebeu uma proposta para o seu pedido de limpeza de terreno.',
   data: '{"requestId": 2, "proposalId": 1}',

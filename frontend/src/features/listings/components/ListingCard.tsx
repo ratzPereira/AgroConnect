@@ -17,7 +17,7 @@ const CATEGORY_LABELS: Record<ListingCategory, string> = {
   EQUIPMENT: 'Equipamento',
 };
 
-const CATEGORY_ICONS: Record<ListingCategory, ComponentType<{ className?: string }>> = {
+const CATEGORY_ICONS: Record<ListingCategory, ComponentType<{ className?: string; style?: React.CSSProperties }>> = {
   ANIMALS: Beef,
   PLANTS: Sprout,
   SEEDS: Wheat,

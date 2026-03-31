@@ -284,7 +284,7 @@ export function Marketplace() {
           {Array.from({ length: 8 }).map((_, i) => (
             <div key={i} style={{ borderRadius: 16, border: '1px solid #e5e5e5', backgroundColor: 'white', overflow: 'hidden' }}>
               <div style={{ height: 192 }}>
-                <Skeleton className="w-full" style={{ height: '100%' }} />
+                <Skeleton className="w-full h-full" />
               </div>
               <div style={{ padding: 14, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <Skeleton.Line className="h-4 w-4/5" />
