@@ -28,9 +28,10 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/offline.html',
+        navigateFallback: '/index.html',
         navigateFallbackDenylist: [/^\/api\//, /^\/swagger/, /^\/ws\//, /^\/v3\//],
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
+        cleanupOutdatedCaches: true,
         globIgnores: ['**/background.png'],
         maximumFileSizeToCacheInBytes: 3 * 1024 * 1024,
         runtimeCaching: [

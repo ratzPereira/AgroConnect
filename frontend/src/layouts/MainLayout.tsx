@@ -5,6 +5,7 @@ import { useNotifications } from '@/hooks/useNotifications';
 import { NotificationBell } from '@/components/NotificationBell';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MobileNav } from '@/components/MobileNav';
+import { PWAInstallBanner } from '@/components/PWAInstallBanner';
 import { cn } from '@/utils/cn';
 import {
   LayoutDashboard, FileText, CreditCard, Bell, LogOut,
@@ -131,6 +132,7 @@ export function MainLayout() {
 
       {/* Mobile bottom navigation */}
       <MobileNav />
+      <PWAInstallBanner />
     </div>
   );
 }
