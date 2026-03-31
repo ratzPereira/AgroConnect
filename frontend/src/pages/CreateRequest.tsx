@@ -552,7 +552,7 @@ export function CreateRequest() {
               <h2 className="font-semibold text-neutral-900">Revisão</h2>
             </CardHeader>
             <CardBody>
-              <div className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 text-sm">
                 <div>
                   <p className="text-neutral-500">Categoria</p>
                   <p className="font-medium text-neutral-900">{selectedCategory?.name}</p>

@@ -63,14 +63,14 @@ export function Inventory() {
               costPerUnit: fd.get('costPerUnit') ? Number(fd.get('costPerUnit')) : undefined,
             });
           }} className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
               <input name="productName" placeholder="Nome do produto" required className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
               <select name="unit" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm">
                 <option value="KG">Kg</option><option value="L">Litros</option><option value="UNIT">Unidades</option>
               </select>
               <input name="quantity" type="number" step="0.01" min="0" placeholder="Quantidade" required className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
             </div>
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <input name="minStockAlert" type="number" step="0.01" placeholder="Alerta mín. stock" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
               <input name="costPerUnit" type="number" step="0.01" placeholder="Custo/unidade (€)" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
             </div>

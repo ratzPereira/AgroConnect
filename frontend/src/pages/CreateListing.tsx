@@ -524,7 +524,7 @@ export function CreateListing() {
 
               {/* Quantity + Unit — for PRODUCE, SEEDS, ANIMALS */}
               {selectedCategoryMeta?.showQuantity && (
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Input
                     label="Quantidade"
                     type="number"
@@ -649,7 +649,7 @@ export function CreateListing() {
           <CardBody>
             {/* Photo previews */}
             {photos.length > 0 && (
-              <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 mb-3">
                 {photos.map((photo, i) => (
                   <div key={photo.url} className="relative group aspect-square">
                     <img

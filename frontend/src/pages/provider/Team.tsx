@@ -124,11 +124,11 @@ function TeamMemberFormInline({ initial, loading, onSubmit, onCancel }: {
 
   return (
     <form onSubmit={(e) => { e.preventDefault(); onSubmit({ name, email, phone: phone || undefined, role }); }} className="space-y-3">
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Nome" required className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
         <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Email" type="email" required disabled={!!initial} className="rounded-lg border border-neutral-300 px-3 py-2 text-sm disabled:bg-neutral-100" />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Telefone" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
         <select value={role} onChange={(e) => setRole(e.target.value as TeamMemberRole)} className="rounded-lg border border-neutral-300 px-3 py-2 text-sm">
           <option value="OPERATOR">Operador</option>

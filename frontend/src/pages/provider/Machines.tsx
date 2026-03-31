@@ -69,11 +69,11 @@ export function Machines() {
                 licensePlate: (fd.get('licensePlate') as string) || undefined,
               });
             }} className="space-y-3">
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input name="name" placeholder="Nome da maquina" required className={INPUT_CLASS} />
                 <input name="type" placeholder="Tipo (ex: Trator)" className={INPUT_CLASS} />
               </div>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <input name="licensePlate" placeholder="Matricula" className={INPUT_CLASS} />
                 <input name="description" placeholder="Descricao" className={INPUT_CLASS} />
               </div>
@@ -178,11 +178,11 @@ function MachineEditForm({ machine, onSave, onCancel, loading }: MachineEditForm
       }}
       className="space-y-3"
     >
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <input name="name" defaultValue={machine.name} required className={INPUT_CLASS} />
         <input name="type" defaultValue={machine.type ?? ''} placeholder="Tipo" className={INPUT_CLASS} />
       </div>
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <input name="licensePlate" defaultValue={machine.licensePlate ?? ''} placeholder="Matricula" className={INPUT_CLASS} />
         <select name="status" defaultValue={machine.status} className={SELECT_CLASS}>
           <option value="AVAILABLE">Disponivel</option>
