@@ -52,6 +52,9 @@ management:
       exposure:
         include: health,info,prometheus,metrics
       base-path: /actuator
+  health:
+    mail:
+      enabled: false
   endpoint:
     health:
       show-details: when_authorized
