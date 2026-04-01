@@ -152,3 +152,8 @@ body {
 #root {
   min-height: 100svh;
 }
+
+/* Contain Leaflet's internal z-indexes so they don't overlap modals/sheets */
+.leaflet-container {
+  isolation: isolate;
+}
