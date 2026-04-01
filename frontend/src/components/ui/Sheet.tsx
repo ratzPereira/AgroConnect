@@ -33,7 +33,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
   return (
     <AnimatePresence>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end">
+        <div className="fixed inset-0 z-50 flex items-end justify-center">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -58,7 +58,7 @@ export function Sheet({ open, onClose, title, children, className }: SheetProps)
               if (info.velocity.y > 500 || info.offset.y > 100) onClose();
             }}
             className={cn(
-              'relative w-full max-h-[85vh] rounded-t-2xl bg-white shadow-xl overflow-y-auto',
+              'relative w-full md:max-w-lg max-h-[85vh] rounded-t-2xl bg-white shadow-xl overflow-y-auto',
               className,
             )}
           >

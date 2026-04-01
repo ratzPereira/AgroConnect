@@ -194,9 +194,11 @@ export function ListingDetail() {
     );
   }
 
-  const cat = CATEGORY_META[listing.category];
+  const cat = CATEGORY_META[listing.category] ?? CATEGORY_META.EQUIPMENT;
   const CatIcon = cat.icon;
-  const initials = listing.sellerName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+  const sellerName = listing.sellerName ?? 'Utilizador';
+  const initials = sellerName.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
+  const hasCoordinates = listing.latitude != null && listing.longitude != null;
 
   return (
     <AnimatedPage>
@@ -298,7 +300,7 @@ export function ListingDetail() {
               <DetailItem
                 icon={<MapPin className="h-4 w-4" />}
                 label="Localização"
-                value={listing.island + (listing.municipality ? `, ${listing.municipality}` : '')}
+                value={(listing.island ?? '') + (listing.municipality ? `, ${listing.municipality}` : '') || 'Não especificada'}
               />
               <DetailItem
                 icon={<Calendar className="h-4 w-4" />}
@@ -375,8 +377,8 @@ export function ListingDetail() {
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <p className="font-semibold text-neutral-900 truncate">{listing.sellerName}</p>
-                    {listing.sellerRating !== null ? (
+                    <p className="font-semibold text-neutral-900 truncate">{sellerName}</p>
+                    {listing.sellerRating != null ? (
                       <div className="flex items-center gap-1 mt-0.5">
                         {renderStars(listing.sellerRating)}
                         <span className="text-xs text-neutral-500 ml-0.5">
@@ -401,40 +403,42 @@ export function ListingDetail() {
               </div>
 
               {/* Map card */}
-              <div className="rounded-2xl border border-neutral-200/80 bg-white overflow-hidden shadow-sm">
-                <div className="h-[180px]">
-                  <MapContainer
-                    center={[listing.latitude, listing.longitude]}
-                    zoom={12}
-                    style={{ height: '100%', width: '100%' }}
-                    scrollWheelZoom={false}
-                    dragging={false}
-                    zoomControl={false}
-                    attributionControl={false}
-                  >
-                    <TileLayer
-                      url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
-                    />
-                    <Marker position={[listing.latitude, listing.longitude]} icon={markerIcon} />
-                  </MapContainer>
-                </div>
-                <div className="px-4 py-3.5">
-                  <div className="flex items-start gap-2">
-                    <MapPin className="h-4 w-4 text-neutral-400 mt-0.5 flex-shrink-0" />
-                    <div className="min-w-0">
-                      <p className="text-sm font-medium text-neutral-900">{listing.island}</p>
-                      {(listing.municipality || listing.parish) && (
-                        <p className="text-xs text-neutral-500">
-                          {[listing.municipality, listing.parish].filter(Boolean).join(', ')}
-                        </p>
-                      )}
-                      {listing.locationName && (
-                        <p className="text-xs text-neutral-400 mt-0.5">{listing.locationName}</p>
-                      )}
+              {hasCoordinates && (
+                <div className="rounded-2xl border border-neutral-200/80 bg-white overflow-hidden shadow-sm">
+                  <div className="h-[180px]">
+                    <MapContainer
+                      center={[listing.latitude, listing.longitude]}
+                      zoom={12}
+                      style={{ height: '100%', width: '100%' }}
+                      scrollWheelZoom={false}
+                      dragging={false}
+                      zoomControl={false}
+                      attributionControl={false}
+                    >
+                      <TileLayer
+                        url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+                      />
+                      <Marker position={[listing.latitude, listing.longitude]} icon={markerIcon} />
+                    </MapContainer>
+                  </div>
+                  <div className="px-4 py-3.5">
+                    <div className="flex items-start gap-2">
+                      <MapPin className="h-4 w-4 text-neutral-400 mt-0.5 flex-shrink-0" />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium text-neutral-900">{listing.island}</p>
+                        {(listing.municipality || listing.parish) && (
+                          <p className="text-xs text-neutral-500">
+                            {[listing.municipality, listing.parish].filter(Boolean).join(', ')}
+                          </p>
+                        )}
+                        {listing.locationName && (
+                          <p className="text-xs text-neutral-400 mt-0.5">{listing.locationName}</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
+              )}
 
               {/* Safety notice */}
               <div className="rounded-xl bg-neutral-50 border border-neutral-200/60 px-4 py-3 flex items-start gap-2.5">
