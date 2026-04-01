@@ -126,7 +126,7 @@ export function Marketplace() {
   return (
     <AnimatedPage>
       {/* Header */}
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 24 }}>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <div>
           <h1 className="text-2xl font-bold font-display text-neutral-900">
             Marketplace
@@ -182,18 +182,11 @@ export function Marketplace() {
       </div>
 
       {/* Filters row */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+      <div className="flex flex-wrap items-center gap-2.5 mb-6">
         <select
           value={islandParam}
           onChange={(e) => updateParams({ island: e.target.value })}
-          style={{
-            borderRadius: 12,
-            border: '1px solid #e5e5e5',
-            backgroundColor: 'white',
-            padding: '8px 12px',
-            fontSize: 14,
-            outline: 'none',
-          }}
+          className="rounded-xl border border-neutral-200 bg-white px-3 py-2 text-sm outline-none"
         >
           {ISLAND_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -202,11 +195,11 @@ export function Marketplace() {
           ))}
         </select>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+        <div className="flex items-center gap-1.5">
           <Input
             type="number"
             placeholder="Min"
-            className="w-20 rounded-xl"
+            className="w-16 sm:w-20 rounded-xl"
             value={minPriceParam}
             onChange={(e) => updateParams({ minPrice: e.target.value })}
           />
@@ -214,7 +207,7 @@ export function Marketplace() {
           <Input
             type="number"
             placeholder="Max"
-            className="w-20 rounded-xl"
+            className="w-16 sm:w-20 rounded-xl"
             value={maxPriceParam}
             onChange={(e) => updateParams({ maxPrice: e.target.value })}
           />
@@ -225,49 +218,43 @@ export function Marketplace() {
           type="button"
           onClick={handleNearMe}
           className={cn(
-            'inline-flex items-center gap-1.5 text-sm font-medium transition-all duration-200',
+            'inline-flex items-center gap-1.5 text-sm font-medium rounded-xl px-3 py-2 transition-all duration-200',
             nearMe
               ? 'bg-primary-50 text-primary-700 ring-1 ring-primary-200 shadow-sm'
               : 'bg-white text-neutral-600 ring-1 ring-neutral-200 hover:ring-neutral-300 hover:bg-neutral-50',
           )}
-          style={{ padding: '8px 14px', borderRadius: 12 }}
         >
-          <MapPin style={{ width: 16, height: 16 }} />
-          Perto de mim
+          <MapPin className="w-4 h-4" />
+          <span className="hidden sm:inline">Perto de mim</span>
         </button>
 
         {/* View toggle */}
-        <div
-          className="bg-neutral-100"
-          style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 2, borderRadius: 12, padding: 2 }}
-        >
+        <div className="bg-neutral-100 flex items-center gap-0.5 rounded-xl p-0.5 ml-auto">
           <button
             type="button"
             onClick={() => setViewMode('grid')}
             className={cn(
-              'transition-all duration-150',
+              'p-2 rounded-lg transition-all duration-150',
               viewMode === 'grid'
                 ? 'bg-white shadow-sm text-neutral-900'
                 : 'text-neutral-400 hover:text-neutral-600',
             )}
-            style={{ padding: 8, borderRadius: 8 }}
             aria-label="Vista em grelha"
           >
-            <LayoutGrid style={{ width: 16, height: 16 }} />
+            <LayoutGrid className="w-4 h-4" />
           </button>
           <button
             type="button"
             onClick={() => setViewMode('map')}
             className={cn(
-              'transition-all duration-150',
+              'p-2 rounded-lg transition-all duration-150',
               viewMode === 'map'
                 ? 'bg-white shadow-sm text-neutral-900'
                 : 'text-neutral-400 hover:text-neutral-600',
             )}
-            style={{ padding: 8, borderRadius: 8 }}
             aria-label="Vista no mapa"
           >
-            <Map style={{ width: 16, height: 16 }} />
+            <Map className="w-4 h-4" />
           </button>
         </div>
       </div>

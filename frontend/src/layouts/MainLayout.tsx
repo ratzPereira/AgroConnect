@@ -71,7 +71,7 @@ export function MainLayout() {
   const navItems = buildNavItems(user?.role);
 
   return (
-    <div className="min-h-svh flex">
+    <div className="min-h-svh flex max-w-full overflow-x-hidden">
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200">
         <div className="flex flex-col items-center px-5 pt-7 pb-5">
@@ -112,7 +112,7 @@ export function MainLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 bg-neutral-50 pb-16 lg:pb-0">
+      <main className="flex-1 bg-neutral-50 pb-16 lg:pb-0 overflow-x-hidden">
         {/* Mobile top header */}
         <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-white lg:hidden">
           <img src="/logotipo.png" alt="AgroConnect" className="h-8" />
