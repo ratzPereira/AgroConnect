@@ -3,8 +3,12 @@ package com.agroconnect.controller;
 import com.agroconnect.dto.response.AdminDashboardResponse;
 import com.agroconnect.dto.response.AdminDisputeResponse;
 import com.agroconnect.dto.response.AdminUserResponse;
+import com.agroconnect.dto.response.ListingResponse;
+import com.agroconnect.dto.response.ListingSummaryResponse;
 import com.agroconnect.exception.GlobalExceptionHandler.ErrorResponse;
+import com.agroconnect.model.enums.ListingStatus;
 import com.agroconnect.model.enums.Role;
+import com.agroconnect.security.UserPrincipal;
 import com.agroconnect.service.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -18,6 +22,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -124,6 +130,57 @@ public class AdminController {
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
         var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         var result = adminService.listDisputes(pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/listings")
+    @Operation(summary = "List marketplace listings",
+            description = "Returns paginated list of marketplace listings, optionally filtered by status.")
+    @ApiResponse(responseCode = "200", description = "Page of listings")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not an admin",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Page<ListingSummaryResponse>> listListings(
+            @Parameter(description = "Filter by status") @RequestParam(required = false) ListingStatus status,
+            @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
+            @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var result = adminService.listListings(status, pageable);
+        return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/listings/{id}")
+    @Operation(summary = "Get listing details",
+            description = "Returns full detail of a marketplace listing.")
+    @ApiResponse(responseCode = "200", description = "Listing details")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not an admin",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Listing not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ListingResponse> getListingDetail(
+            @Parameter(description = "Listing ID") @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = adminService.getListingDetail(id, principal.getId());
+        return ResponseEntity.ok(result);
+    }
+
+    @DeleteMapping("/listings/{id}")
+    @Operation(summary = "Remove a listing",
+            description = "Sets the listing status to REMOVED. Soft-delete operation.")
+    @ApiResponse(responseCode = "200", description = "Listing removed")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not an admin",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Listing not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ListingResponse> removeListing(
+            @Parameter(description = "Listing ID") @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var result = adminService.removeListing(id, principal.getId());
         return ResponseEntity.ok(result);
     }
 }

@@ -2,13 +2,18 @@ package com.agroconnect.unit;
 
 import com.agroconnect.dto.response.AdminDashboardResponse;
 import com.agroconnect.dto.response.AdminUserResponse;
+import com.agroconnect.dto.response.ListingResponse;
+import com.agroconnect.dto.response.ListingSummaryResponse;
 import com.agroconnect.exception.ResourceNotFoundException;
 import com.agroconnect.fixture.ServiceRequestFixture;
 import com.agroconnect.fixture.UserFixture;
+import com.agroconnect.model.Listing;
 import com.agroconnect.model.User;
+import com.agroconnect.model.enums.ListingStatus;
 import com.agroconnect.model.enums.RequestStatus;
 import com.agroconnect.model.enums.Role;
 import com.agroconnect.repository.ClientProfileRepository;
+import com.agroconnect.repository.ListingRepository;
 import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.ReviewRepository;
@@ -16,6 +21,7 @@ import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.repository.UserRepository;
 import com.agroconnect.service.AdminService;
+import com.agroconnect.service.ListingService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -47,6 +53,8 @@ class AdminServiceTest {
     @Mock private ProposalRepository proposalRepository;
     @Mock private ClientProfileRepository clientProfileRepository;
     @Mock private ProviderProfileRepository providerProfileRepository;
+    @Mock private ListingRepository listingRepository;
+    @Mock private ListingService listingService;
 
     private AdminService service;
 
@@ -55,7 +63,7 @@ class AdminServiceTest {
         service = new AdminService(
                 userRepository, requestRepository, transactionRepository,
                 reviewRepository, proposalRepository, clientProfileRepository,
-                providerProfileRepository);
+                providerProfileRepository, listingRepository, listingService);
     }
 
     @Test
@@ -69,6 +77,9 @@ class AdminServiceTest {
         when(transactionRepository.sumTotalCommissions()).thenReturn(new BigDecimal("6000.00"));
         when(requestRepository.countByStatus(RequestStatus.DISPUTED)).thenReturn(3L);
         when(reviewRepository.findAverageRating()).thenReturn(4.2);
+        when(listingRepository.count()).thenReturn(30L);
+        when(listingRepository.countByStatus(ListingStatus.ACTIVE)).thenReturn(20L);
+        when(listingRepository.countByStatus(ListingStatus.SOLD)).thenReturn(8L);
 
         AdminDashboardResponse response = service.getDashboard();
 
@@ -77,6 +88,9 @@ class AdminServiceTest {
         assertEquals(70, response.totalClients());
         assertEquals(3, response.pendingDisputes());
         assertEquals(4.2, response.avgPlatformRating());
+        assertEquals(30, response.totalListings());
+        assertEquals(20, response.activeListings());
+        assertEquals(8, response.soldListings());
     }
 
     @Test
@@ -210,6 +224,62 @@ class AdminServiceTest {
         AdminUserResponse result = service.getUserDetail(1L);
 
         assertEquals("joao.silva@email.pt", result.name());
+    }
+
+    @Test
+    void listListings_givenStatusFilter_shouldFilterByStatus() {
+        Listing listing = Listing.builder().id(1L).title("Tractor")
+                .status(ListingStatus.ACTIVE).build();
+        Page<Listing> page = new PageImpl<>(List.of(listing));
+
+        when(listingRepository.findByStatusOrderByCreatedAtDesc(eq(ListingStatus.ACTIVE), any()))
+                .thenReturn(page);
+
+        Page<ListingSummaryResponse> result = service.listListings(ListingStatus.ACTIVE, PageRequest.of(0, 20));
+
+        assertEquals(1, result.getTotalElements());
+        verify(listingRepository).findByStatusOrderByCreatedAtDesc(eq(ListingStatus.ACTIVE), any());
+    }
+
+    @Test
+    void listListings_givenNullStatus_shouldReturnAllListings() {
+        when(listingRepository.findAllByOrderByCreatedAtDesc(any()))
+                .thenReturn(Page.empty());
+
+        Page<ListingSummaryResponse> result = service.listListings(null, PageRequest.of(0, 20));
+
+        assertNotNull(result);
+        verify(listingRepository).findAllByOrderByCreatedAtDesc(any());
+    }
+
+    @Test
+    void removeListing_shouldDelegateToListingService() {
+        ListingResponse expected = new ListingResponse(
+                1L, "Test", "desc", null, false, null, null, null,
+                null, null, null, null, null, null, null,
+                ListingStatus.REMOVED, 0, 1L, "Seller", null, 0,
+                List.of(), 0L, false, null, null, null);
+        when(listingService.remove(1L, 99L)).thenReturn(expected);
+
+        ListingResponse result = service.removeListing(1L, 99L);
+
+        assertEquals(expected, result);
+        verify(listingService).remove(1L, 99L);
+    }
+
+    @Test
+    void getListingDetail_shouldDelegateToListingService() {
+        ListingResponse expected = new ListingResponse(
+                1L, "Test", "desc", null, false, null, null, null,
+                null, null, null, null, null, null, null,
+                ListingStatus.ACTIVE, 0, 1L, "Seller", null, 0,
+                List.of(), 0L, false, null, null, null);
+        when(listingService.findById(1L, 99L)).thenReturn(expected);
+
+        ListingResponse result = service.getListingDetail(1L, 99L);
+
+        assertEquals(expected, result);
+        verify(listingService).findById(1L, 99L);
     }
 
     @Test

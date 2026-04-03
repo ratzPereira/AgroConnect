@@ -12,5 +12,7 @@ public record ClientDashboardResponse(
         @Schema(description = "Completed + rated request count") int completedRequests,
         @Schema(description = "Total spent (released transactions)") BigDecimal totalSpent,
         @Schema(description = "Recent requests (max 10)") List<ServiceRequestSummaryResponse> recentRequests,
-        @Schema(description = "Recent notifications (max 6)") List<NotificationResponse> recentNotifications
+        @Schema(description = "Recent notifications (max 6)") List<NotificationResponse> recentNotifications,
+        @Schema(description = "Active marketplace listings count") int activeListings,
+        @Schema(description = "Sold marketplace listings count") int soldListings
 ) {}

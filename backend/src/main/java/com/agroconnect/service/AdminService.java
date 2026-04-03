@@ -9,10 +9,16 @@ import com.agroconnect.model.Proposal;
 import com.agroconnect.model.ProviderProfile;
 import com.agroconnect.model.ServiceRequest;
 import com.agroconnect.model.User;
+import com.agroconnect.dto.response.ListingResponse;
+import com.agroconnect.dto.response.ListingSummaryResponse;
+import com.agroconnect.mapper.ListingMapper;
+import com.agroconnect.model.Listing;
+import com.agroconnect.model.enums.ListingStatus;
 import com.agroconnect.model.enums.ProposalStatus;
 import com.agroconnect.model.enums.RequestStatus;
 import com.agroconnect.model.enums.Role;
 import com.agroconnect.repository.ClientProfileRepository;
+import com.agroconnect.repository.ListingRepository;
 import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.ReviewRepository;
@@ -43,6 +49,8 @@ public class AdminService {
     private final ProposalRepository proposalRepository;
     private final ClientProfileRepository clientProfileRepository;
     private final ProviderProfileRepository providerProfileRepository;
+    private final ListingRepository listingRepository;
+    private final ListingService listingService;
 
     public AdminDashboardResponse getDashboard() {
         long totalUsers = userRepository.count();
@@ -54,12 +62,16 @@ public class AdminService {
         BigDecimal totalCommissions = transactionRepository.sumTotalCommissions();
         long pendingDisputes = requestRepository.countByStatus(RequestStatus.DISPUTED);
         double avgPlatformRating = reviewRepository.findAverageRating();
+        long totalListings = listingRepository.count();
+        long activeListings = listingRepository.countByStatus(ListingStatus.ACTIVE);
+        long soldListings = listingRepository.countByStatus(ListingStatus.SOLD);
 
         return new AdminDashboardResponse(
                 totalUsers, totalClients, totalProviders,
                 totalRequests, activeRequests,
                 totalVolume, totalCommissions,
-                pendingDisputes, avgPlatformRating
+                pendingDisputes, avgPlatformRating,
+                totalListings, activeListings, soldListings
         );
     }
 
@@ -96,6 +108,25 @@ public class AdminService {
         user.setActive(true);
         userRepository.save(user);
         log.info("User {} unbanned by admin", userId);
+    }
+
+    public Page<ListingSummaryResponse> listListings(ListingStatus status, Pageable pageable) {
+        Page<Listing> page;
+        if (status != null) {
+            page = listingRepository.findByStatusOrderByCreatedAtDesc(status, pageable);
+        } else {
+            page = listingRepository.findAllByOrderByCreatedAtDesc(pageable);
+        }
+        return page.map(listing -> ListingMapper.toSummaryResponse(listing, null));
+    }
+
+    public ListingResponse getListingDetail(Long id, Long adminUserId) {
+        return listingService.findById(id, adminUserId);
+    }
+
+    @Transactional
+    public ListingResponse removeListing(Long id, Long adminUserId) {
+        return listingService.remove(id, adminUserId);
     }
 
     public Page<AdminDisputeResponse> listDisputes(Pageable pageable) {

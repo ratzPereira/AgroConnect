@@ -64,4 +64,8 @@ public interface ListingRepository extends JpaRepository<Listing, Long> {
     List<Listing> findExpiredActive(@Param("now") Instant now);
 
     long countBySellerIdAndStatus(Long sellerId, ListingStatus status);
+
+    long countByStatus(ListingStatus status);
+
+    Page<Listing> findAllByOrderByCreatedAtDesc(Pageable pageable);
 }

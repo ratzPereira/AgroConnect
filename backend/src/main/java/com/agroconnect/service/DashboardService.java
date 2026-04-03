@@ -7,6 +7,8 @@ import com.agroconnect.mapper.NotificationMapper;
 import com.agroconnect.mapper.ServiceRequestMapper;
 import com.agroconnect.model.ServiceRequest;
 import com.agroconnect.model.enums.RequestStatus;
+import com.agroconnect.model.enums.ListingStatus;
+import com.agroconnect.repository.ListingRepository;
 import com.agroconnect.repository.NotificationRepository;
 import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
@@ -33,6 +35,7 @@ public class DashboardService {
     private final ProposalRepository proposalRepository;
     private final TransactionRepository transactionRepository;
     private final NotificationRepository notificationRepository;
+    private final ListingRepository listingRepository;
 
     public ClientDashboardResponse getClientDashboard(Long userId) {
         List<ServiceRequest> allRequests = requestRepository.findByClientId(userId);
@@ -62,8 +65,12 @@ public class DashboardService {
                 .map(NotificationMapper::toResponse)
                 .getContent();
 
+        int activeListingsCount = (int) listingRepository.countBySellerIdAndStatus(userId, ListingStatus.ACTIVE);
+        int soldListingsCount = (int) listingRepository.countBySellerIdAndStatus(userId, ListingStatus.SOLD);
+
         return new ClientDashboardResponse(
                 active.size(), totalProposals, completedCount,
-                totalSpent, recentRequests, recentNotifications);
+                totalSpent, recentRequests, recentNotifications,
+                activeListingsCount, soldListingsCount);
     }
 }

@@ -7,6 +7,8 @@ import com.agroconnect.model.Notification;
 import com.agroconnect.model.ServiceRequest;
 import com.agroconnect.model.User;
 import com.agroconnect.model.enums.RequestStatus;
+import com.agroconnect.model.enums.ListingStatus;
+import com.agroconnect.repository.ListingRepository;
 import com.agroconnect.repository.NotificationRepository;
 import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
@@ -17,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -28,7 +32,9 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -38,6 +44,7 @@ class DashboardServiceTest {
     @Mock private ProposalRepository proposalRepository;
     @Mock private TransactionRepository transactionRepository;
     @Mock private NotificationRepository notificationRepository;
+    @Mock private ListingRepository listingRepository;
 
     private DashboardService service;
 
@@ -46,8 +53,10 @@ class DashboardServiceTest {
     @BeforeEach
     void setUp() {
         service = new DashboardService(requestRepository, proposalRepository,
-                transactionRepository, notificationRepository);
+                transactionRepository, notificationRepository, listingRepository);
         clientUser = UserFixture.aClientUser().build();
+        lenient().when(listingRepository.countBySellerIdAndStatus(anyLong(), any(ListingStatus.class)))
+                .thenReturn(0L);
     }
 
     @Test
@@ -226,5 +235,22 @@ class DashboardServiceTest {
         // totalSpent may be null if transaction repo returns null
         // This is acceptable behavior
         assertNotNull(response);
+    }
+
+    @Test
+    void getClientDashboard_shouldIncludeListingMetrics() {
+        when(requestRepository.findByClientId(1L)).thenReturn(List.of());
+        when(proposalRepository.countActiveProposalsByClientId(1L)).thenReturn(0L);
+        when(transactionRepository.sumReleasedAmountByClientId(1L)).thenReturn(BigDecimal.ZERO);
+        when(notificationRepository.findByUserIdOrderByCreatedAtDesc(eq(1L), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of()));
+        when(listingRepository.countBySellerIdAndStatus(1L, ListingStatus.ACTIVE)).thenReturn(5L);
+        when(listingRepository.countBySellerIdAndStatus(1L, ListingStatus.SOLD)).thenReturn(3L);
+
+        ClientDashboardResponse response = service.getClientDashboard(1L);
+
+        assertNotNull(response);
+        assertEquals(5, response.activeListings());
+        assertEquals(3, response.soldListings());
     }
 }

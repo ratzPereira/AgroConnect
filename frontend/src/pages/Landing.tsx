@@ -12,6 +12,7 @@ import {
   Star,
   Users,
   Navigation,
+  ShoppingBag,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useAnimatedCounter } from '@/hooks/useAnimatedCounter';
@@ -106,6 +107,11 @@ const FEATURES: Feature[] = [
     icon: Navigation,
     title: 'Acompanhamento GPS',
     description: 'Check-in com geolocalização para comprovar a presença no terreno.',
+  },
+  {
+    icon: ShoppingBag,
+    title: 'Marketplace de produtos',
+    description: 'Compre e venda produtos agrícolas, animais, sementes e equipamento diretamente entre produtores.',
   },
 ];
 

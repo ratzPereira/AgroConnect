@@ -15,5 +15,8 @@ public record AdminDashboardResponse(
         @Schema(description = "Total transaction volume") BigDecimal totalVolume,
         @Schema(description = "Total platform commissions") BigDecimal totalCommissions,
         @Schema(description = "Number of pending disputes") long pendingDisputes,
-        @Schema(description = "Average platform rating") double avgPlatformRating
+        @Schema(description = "Average platform rating") double avgPlatformRating,
+        @Schema(description = "Total marketplace listings") long totalListings,
+        @Schema(description = "Active marketplace listings") long activeListings,
+        @Schema(description = "Sold marketplace listings") long soldListings
 ) {}
