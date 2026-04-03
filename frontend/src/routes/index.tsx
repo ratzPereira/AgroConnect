@@ -1,4 +1,5 @@
 import { lazy } from 'react';
+import type { ComponentType } from 'react';
 import { createBrowserRouter } from 'react-router-dom';
 import { RootLayout } from '@/components/RootLayout';
 import { SmartRedirect } from '@/components/SmartRedirect';
@@ -10,36 +11,52 @@ import { OnboardingGuard } from '@/components/OnboardingGuard';
 import { RoleRoute } from '@/components/RoleRoute';
 import { PageSuspense } from '@/components/PageSuspense';
 
-// Lazy-loaded pages (code-split into separate chunks)
-const Dashboard = lazy(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
-const Login = lazy(() => import('@/pages/Login').then(m => ({ default: m.Login })));
-const Register = lazy(() => import('@/pages/Register').then(m => ({ default: m.Register })));
-const Requests = lazy(() => import('@/pages/Requests').then(m => ({ default: m.Requests })));
-const CreateRequest = lazy(() => import('@/pages/CreateRequest').then(m => ({ default: m.CreateRequest })));
-const RequestDetail = lazy(() => import('@/pages/RequestDetail').then(m => ({ default: m.RequestDetail })));
-const Transactions = lazy(() => import('@/pages/Transactions').then(m => ({ default: m.Transactions })));
-const Notifications = lazy(() => import('@/pages/Notifications').then(m => ({ default: m.Notifications })));
-const Profile = lazy(() => import('@/pages/Profile').then(m => ({ default: m.Profile })));
-const Landing = lazy(() => import('@/pages/Landing').then(m => ({ default: m.Landing })));
-const Terms = lazy(() => import('@/pages/Terms').then(m => ({ default: m.Terms })));
-const Privacy = lazy(() => import('@/pages/Privacy').then(m => ({ default: m.Privacy })));
-const VerifyEmail = lazy(() => import('@/pages/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
-const ForgotPassword = lazy(() => import('@/pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
-const ResetPassword = lazy(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
-const ProviderOnboarding = lazy(() => import('@/pages/ProviderOnboarding').then(m => ({ default: m.ProviderOnboarding })));
-const NotFound = lazy(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })));
+// Auto-reload on stale chunk after deploy (dynamic import fails when hash changes)
+function lazyWithReload<T extends ComponentType>(
+  factory: () => Promise<{ default: T }>
+): React.LazyExoticComponent<T> {
+  return lazy(() =>
+    factory().catch((error: unknown) => {
+      const alreadyReloaded = sessionStorage.getItem('chunk_reload');
+      if (!alreadyReloaded) {
+        sessionStorage.setItem('chunk_reload', '1');
+        window.location.reload();
+      }
+      throw error;
+    })
+  );
+}
 
-const Team = lazy(() => import('@/pages/provider/Team').then(m => ({ default: m.Team })));
-const Machines = lazy(() => import('@/pages/provider/Machines').then(m => ({ default: m.Machines })));
-const Inventory = lazy(() => import('@/pages/provider/Inventory').then(m => ({ default: m.Inventory })));
-const Finance = lazy(() => import('@/pages/provider/Finance').then(m => ({ default: m.Finance })));
-const ProviderCalendar = lazy(() => import('@/pages/provider/Calendar').then(m => ({ default: m.ProviderCalendar })));
-const AdminDashboard = lazy(() => import('@/pages/admin/Dashboard').then(m => ({ default: m.AdminDashboard })));
-const AdminUsers = lazy(() => import('@/pages/admin/Users').then(m => ({ default: m.AdminUsers })));
-const Marketplace = lazy(() => import('@/pages/Marketplace').then(m => ({ default: m.Marketplace })));
-const ListingDetail = lazy(() => import('@/pages/ListingDetail').then(m => ({ default: m.ListingDetail })));
-const CreateListing = lazy(() => import('@/pages/CreateListing').then(m => ({ default: m.CreateListing })));
-const MyListings = lazy(() => import('@/pages/MyListings').then(m => ({ default: m.MyListings })));
+// Lazy-loaded pages (code-split into separate chunks)
+const Dashboard = lazyWithReload(() => import('@/pages/Dashboard').then(m => ({ default: m.Dashboard })));
+const Login = lazyWithReload(() => import('@/pages/Login').then(m => ({ default: m.Login })));
+const Register = lazyWithReload(() => import('@/pages/Register').then(m => ({ default: m.Register })));
+const Requests = lazyWithReload(() => import('@/pages/Requests').then(m => ({ default: m.Requests })));
+const CreateRequest = lazyWithReload(() => import('@/pages/CreateRequest').then(m => ({ default: m.CreateRequest })));
+const RequestDetail = lazyWithReload(() => import('@/pages/RequestDetail').then(m => ({ default: m.RequestDetail })));
+const Transactions = lazyWithReload(() => import('@/pages/Transactions').then(m => ({ default: m.Transactions })));
+const Notifications = lazyWithReload(() => import('@/pages/Notifications').then(m => ({ default: m.Notifications })));
+const Profile = lazyWithReload(() => import('@/pages/Profile').then(m => ({ default: m.Profile })));
+const Landing = lazyWithReload(() => import('@/pages/Landing').then(m => ({ default: m.Landing })));
+const Terms = lazyWithReload(() => import('@/pages/Terms').then(m => ({ default: m.Terms })));
+const Privacy = lazyWithReload(() => import('@/pages/Privacy').then(m => ({ default: m.Privacy })));
+const VerifyEmail = lazyWithReload(() => import('@/pages/VerifyEmail').then(m => ({ default: m.VerifyEmail })));
+const ForgotPassword = lazyWithReload(() => import('@/pages/ForgotPassword').then(m => ({ default: m.ForgotPassword })));
+const ResetPassword = lazyWithReload(() => import('@/pages/ResetPassword').then(m => ({ default: m.ResetPassword })));
+const ProviderOnboarding = lazyWithReload(() => import('@/pages/ProviderOnboarding').then(m => ({ default: m.ProviderOnboarding })));
+const NotFound = lazyWithReload(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })));
+
+const Team = lazyWithReload(() => import('@/pages/provider/Team').then(m => ({ default: m.Team })));
+const Machines = lazyWithReload(() => import('@/pages/provider/Machines').then(m => ({ default: m.Machines })));
+const Inventory = lazyWithReload(() => import('@/pages/provider/Inventory').then(m => ({ default: m.Inventory })));
+const Finance = lazyWithReload(() => import('@/pages/provider/Finance').then(m => ({ default: m.Finance })));
+const ProviderCalendar = lazyWithReload(() => import('@/pages/provider/Calendar').then(m => ({ default: m.ProviderCalendar })));
+const AdminDashboard = lazyWithReload(() => import('@/pages/admin/Dashboard').then(m => ({ default: m.AdminDashboard })));
+const AdminUsers = lazyWithReload(() => import('@/pages/admin/Users').then(m => ({ default: m.AdminUsers })));
+const Marketplace = lazyWithReload(() => import('@/pages/Marketplace').then(m => ({ default: m.Marketplace })));
+const ListingDetail = lazyWithReload(() => import('@/pages/ListingDetail').then(m => ({ default: m.ListingDetail })));
+const CreateListing = lazyWithReload(() => import('@/pages/CreateListing').then(m => ({ default: m.CreateListing })));
+const MyListings = lazyWithReload(() => import('@/pages/MyListings').then(m => ({ default: m.MyListings })));
 
 export const router = createBrowserRouter([
   {

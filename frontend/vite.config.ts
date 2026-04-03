@@ -29,7 +29,7 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
-        navigateFallbackDenylist: [/^\/api\//, /^\/swagger/, /^\/ws\//, /^\/v3\//],
+        navigateFallbackDenylist: [/^\/api\//, /^\/swagger/, /^\/ws\//, /^\/v3\//, /^\/grafana\//],
         globPatterns: ['**/*.{js,css,html,ico,svg,woff2}'],
         cleanupOutdatedCaches: true,
         globIgnores: ['**/background.png'],
