@@ -36,9 +36,9 @@ export function AdminUsers() {
 
   return (
     <div className="animate-fade-in">
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
         <h1 className="text-xl font-bold text-neutral-900">Utilizadores</h1>
-        <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }} className="rounded-lg border border-neutral-300 px-3 py-2 text-sm">
+        <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }} className="rounded-lg border border-neutral-300 px-3 py-2 text-sm self-start">
           <option value="">Todos os papéis</option>
           <option value="CLIENT">Clientes</option>
           <option value="PROVIDER_MANAGER">Prestadores</option>
@@ -50,38 +50,38 @@ export function AdminUsers() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead><tr className="border-b border-neutral-200 text-left text-neutral-500">
-              <th className="px-6 py-3 font-medium">Nome</th>
-              <th className="px-6 py-3 font-medium">Email</th>
-              <th className="px-6 py-3 font-medium">Papel</th>
-              <th className="px-6 py-3 font-medium">Estado</th>
-              <th className="px-6 py-3 font-medium">Pedidos</th>
-              <th className="px-6 py-3 font-medium">Propostas</th>
-              <th className="px-6 py-3 font-medium">Registado</th>
-              <th className="px-6 py-3"></th>
+              <th className="px-3 sm:px-6 py-3 font-medium">Nome</th>
+              <th className="hidden md:table-cell px-6 py-3 font-medium">Email</th>
+              <th className="px-3 sm:px-6 py-3 font-medium">Papel</th>
+              <th className="px-3 sm:px-6 py-3 font-medium">Estado</th>
+              <th className="hidden lg:table-cell px-6 py-3 font-medium">Pedidos</th>
+              <th className="hidden lg:table-cell px-6 py-3 font-medium">Propostas</th>
+              <th className="hidden sm:table-cell px-6 py-3 font-medium">Registado</th>
+              <th className="px-3 sm:px-6 py-3"></th>
             </tr></thead>
             <tbody>
               {isLoading ? (
                 <tr><td colSpan={8} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin text-neutral-400 mx-auto" /></td></tr>
               ) : data?.content?.map((user) => (
                 <tr key={user.id} className="border-b border-neutral-100">
-                  <td className="px-6 py-3 font-medium text-neutral-900">{user.name}</td>
-                  <td className="px-6 py-3 text-neutral-600">{user.email}</td>
-                  <td className="px-6 py-3"><span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700">{roleLabels[user.role]}</span></td>
-                  <td className="px-6 py-3">{user.active
+                  <td className="px-3 sm:px-6 py-3 font-medium text-neutral-900">{user.name}</td>
+                  <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{user.email}</td>
+                  <td className="px-3 sm:px-6 py-3"><span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700">{roleLabels[user.role]}</span></td>
+                  <td className="px-3 sm:px-6 py-3">{user.active
                     ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Ativo</span>
                     : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-red-100 text-red-700">Banido</span>}
                   </td>
-                  <td className="px-6 py-3 text-neutral-600">{user.requestCount}</td>
-                  <td className="px-6 py-3 text-neutral-600">{user.proposalCount}</td>
-                  <td className="px-6 py-3 text-neutral-500">{new Date(user.createdAt).toLocaleDateString('pt-PT')}</td>
-                  <td className="px-6 py-3">
+                  <td className="hidden lg:table-cell px-6 py-3 text-neutral-600">{user.requestCount}</td>
+                  <td className="hidden lg:table-cell px-6 py-3 text-neutral-600">{user.proposalCount}</td>
+                  <td className="hidden sm:table-cell px-6 py-3 text-neutral-500">{new Date(user.createdAt).toLocaleDateString('pt-PT')}</td>
+                  <td className="px-3 sm:px-6 py-3">
                     {user.active ? (
                       <Button size="sm" variant="danger" onClick={() => banMut.mutate(user.id)} loading={banMut.isPending}>
-                        <Ban className="h-3.5 w-3.5" />Banir
+                        <Ban className="h-3.5 w-3.5" /><span className="hidden sm:inline">Banir</span>
                       </Button>
                     ) : (
                       <Button size="sm" variant="secondary" onClick={() => unbanMut.mutate(user.id)} loading={unbanMut.isPending}>
-                        <CheckCircle className="h-3.5 w-3.5" />Desbanir
+                        <CheckCircle className="h-3.5 w-3.5" /><span className="hidden sm:inline">Desbanir</span>
                       </Button>
                     )}
                   </td>

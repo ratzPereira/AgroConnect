@@ -16,10 +16,10 @@ interface ModalProps {
 }
 
 const sizeStyles: Record<ModalSize, string> = {
-  sm: 'max-w-[400px]',
-  md: 'max-w-[500px]',
-  lg: 'max-w-[640px]',
-  xl: 'max-w-[768px]',
+  sm: 'max-w-[min(400px,calc(100vw-2rem))]',
+  md: 'max-w-[min(500px,calc(100vw-2rem))]',
+  lg: 'max-w-[min(640px,calc(100vw-2rem))]',
+  xl: 'max-w-[min(768px,calc(100vw-2rem))]',
 };
 
 export function Modal({ open, onClose, title, size = 'md', children, className }: ModalProps) {

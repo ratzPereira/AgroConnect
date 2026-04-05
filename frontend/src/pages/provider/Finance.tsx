@@ -130,22 +130,22 @@ export function Finance() {
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead><tr className="border-b border-neutral-200 text-left text-neutral-500">
-                  <th className="px-6 py-3 font-medium">ID</th>
-                  <th className="px-6 py-3 font-medium">Valor</th>
-                  <th className="px-6 py-3 font-medium">Comissão</th>
-                  <th className="px-6 py-3 font-medium">Pagamento</th>
-                  <th className="px-6 py-3 font-medium">Estado</th>
-                  <th className="px-6 py-3 font-medium">Data</th>
+                  <th className="hidden sm:table-cell px-6 py-3 font-medium">ID</th>
+                  <th className="px-3 sm:px-6 py-3 font-medium">Valor</th>
+                  <th className="hidden md:table-cell px-6 py-3 font-medium">Comissão</th>
+                  <th className="px-3 sm:px-6 py-3 font-medium">Pagamento</th>
+                  <th className="px-3 sm:px-6 py-3 font-medium">Estado</th>
+                  <th className="hidden sm:table-cell px-6 py-3 font-medium">Data</th>
                 </tr></thead>
                 <tbody>
                   {transactions?.content?.map((tx) => (
                     <tr key={tx.id} className="border-b border-neutral-100 cursor-pointer hover:bg-neutral-50 transition-colors" onClick={() => setSelectedTx(tx)}>
-                      <td className="px-6 py-3 text-neutral-600">#{tx.id}</td>
-                      <td className="px-6 py-3 font-medium">€{tx.amount.toFixed(2)}</td>
-                      <td className="px-6 py-3 text-neutral-500">€{tx.commissionAmount.toFixed(2)}</td>
-                      <td className="px-6 py-3 text-leaf-700 font-medium">€{tx.providerPayout.toFixed(2)}</td>
-                      <td className="px-6 py-3"><span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', statusColors[tx.status] ?? '')}>{statusLabels[tx.status] ?? tx.status}</span></td>
-                      <td className="px-6 py-3 text-neutral-500">{new Date(tx.createdAt).toLocaleDateString('pt-PT')}</td>
+                      <td className="hidden sm:table-cell px-6 py-3 text-neutral-600">#{tx.id}</td>
+                      <td className="px-3 sm:px-6 py-3 font-medium">€{tx.amount.toFixed(2)}</td>
+                      <td className="hidden md:table-cell px-6 py-3 text-neutral-500">€{tx.commissionAmount.toFixed(2)}</td>
+                      <td className="px-3 sm:px-6 py-3 text-leaf-700 font-medium">€{tx.providerPayout.toFixed(2)}</td>
+                      <td className="px-3 sm:px-6 py-3"><span className={cn('text-xs font-medium px-2 py-0.5 rounded-full', statusColors[tx.status] ?? '')}>{statusLabels[tx.status] ?? tx.status}</span></td>
+                      <td className="hidden sm:table-cell px-6 py-3 text-neutral-500">{new Date(tx.createdAt).toLocaleDateString('pt-PT')}</td>
                     </tr>
                   ))}
                 </tbody>

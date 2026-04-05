@@ -338,7 +338,7 @@ export function Marketplace() {
       ) : (
         <AzoresMap
           pins={mapPins}
-          height="500px"
+          height="clamp(300px, 60vh, 600px)"
           onPinClick={(id) => navigate(`/marketplace/${id}`)}
           showClustering
           colorBy="status"

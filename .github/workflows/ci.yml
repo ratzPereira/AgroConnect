@@ -1,4 +1,4 @@
-name: CI
+name: CI/CD Pipeline
 
 on:
   push:
@@ -6,10 +6,21 @@ on:
   pull_request:
     branches: [main]
 
+# Cancel in-progress runs for the same branch (saves CI minutes, avoids stale deploys)
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pull-requests: write
+
 jobs:
+  # ─── Backend: compile, test, coverage ───────────────────────────
   backend:
-    name: Backend (Java 17)
+    name: Backend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     services:
       postgres:
@@ -46,7 +57,7 @@ jobs:
           distribution: 'temurin'
           cache: 'maven'
 
-      - name: Build and Test with Coverage
+      - name: Run unit + integration tests with coverage
         working-directory: backend
         run: mvn verify -q
         env:
@@ -65,16 +76,20 @@ jobs:
         with:
           name: backend-test-reports
           path: backend/target/surefire-reports/
+          retention-days: 14
 
       - name: Upload JaCoCo coverage
         uses: actions/upload-artifact@v4
         with:
           name: backend-coverage
           path: backend/target/site/jacoco/
+          retention-days: 14
 
+  # ─── Frontend: lint, build, test, coverage ──────────────────────
   frontend:
-    name: Frontend (Node 20)
+    name: Frontend Tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
 
     steps:
       - uses: actions/checkout@v4
@@ -90,11 +105,19 @@ jobs:
         working-directory: frontend
         run: npm ci --legacy-peer-deps
 
+      - name: Lint
+        working-directory: frontend
+        run: npm run lint
+
+      - name: Type check
+        working-directory: frontend
+        run: npx tsc --noEmit
+
       - name: Build
         working-directory: frontend
         run: npm run build
 
-      - name: Test with Coverage
+      - name: Test with coverage
         working-directory: frontend
         run: npx vitest run --coverage
 
@@ -103,7 +126,9 @@ jobs:
         with:
           name: frontend-coverage
           path: frontend/coverage/
+          retention-days: 14
 
+  # ─── SonarCloud: static analysis + coverage ─────────────────────
   sonarcloud:
     name: SonarCloud Analysis
     runs-on: ubuntu-latest
@@ -138,25 +163,46 @@ jobs:
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
 
+  # ─── Docker: build images + security scan ───────────────────────
   docker:
-    name: Docker Build
+    name: Docker Build & Security Scan
     runs-on: ubuntu-latest
     needs: [backend, frontend]
+    timeout-minutes: 15
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Build backend image
-        run: docker build -f docker/backend/Dockerfile ./backend
+        run: docker build -t agroconnect-backend:ci -f docker/backend/Dockerfile ./backend
 
       - name: Build frontend image
-        run: docker build -f docker/frontend/Dockerfile ./frontend
+        run: docker build -t agroconnect-frontend:ci -f docker/frontend/Dockerfile ./frontend
 
+      - name: Run Trivy vulnerability scan (backend)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'agroconnect-backend:ci'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+      - name: Run Trivy vulnerability scan (frontend)
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'agroconnect-frontend:ci'
+          format: 'table'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '0'
+
+  # ─── Deploy: backup → build → restart → verify ─────────────────
   deploy:
     name: Deploy to Production
     runs-on: ubuntu-latest
     needs: [backend, frontend, docker]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    environment: production
+    timeout-minutes: 15
 
     steps:
       - name: Deploy via SSH
@@ -165,9 +211,70 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.VPS_SSH_KEY }}
+          command_timeout: 10m
           script: |
+            set -e
             cd /opt/agroconnect
-            git pull origin main
-            docker compose up -d --build
-            sleep 10
-            curl -sf https://agroconnect.pt/api/actuator/health || echo "WARNING: Health check failed"
+
+            echo "══════════════════════════════════════"
+            echo "  AgroConnect Deploy — $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "══════════════════════════════════════"
+
+            # ── 1. Database backup ──
+            echo "▸ Creating database backup..."
+            BACKUP_DIR="/opt/agroconnect/backups"
+            mkdir -p "$BACKUP_DIR"
+            BACKUP_FILE="$BACKUP_DIR/pre-deploy-$(date '+%Y%m%d_%H%M%S').sql.gz"
+            docker compose exec -T postgres pg_dump -U "${POSTGRES_USER:-agroconnect}" "${POSTGRES_DB:-agroconnect}" | gzip > "$BACKUP_FILE"
+            echo "  ✓ Backup saved: $BACKUP_FILE ($(du -h "$BACKUP_FILE" | cut -f1))"
+
+            # Keep only last 10 backups
+            ls -1t "$BACKUP_DIR"/pre-deploy-*.sql.gz 2>/dev/null | tail -n +11 | xargs -r rm --
+            echo "  ✓ Old backups cleaned (keeping last 10)"
+
+            # ── 2. Pull latest code ──
+            echo "▸ Pulling latest code..."
+            git pull origin main --ff-only
+            echo "  ✓ Code updated to $(git rev-parse --short HEAD)"
+
+            # ── 3. Build and restart ──
+            echo "▸ Building and restarting services..."
+            docker compose up -d --build --remove-orphans 2>&1
+            echo "  ✓ Containers restarted"
+
+            # ── 4. Wait for backend health ──
+            echo "▸ Waiting for backend to become healthy..."
+            MAX_RETRIES=30
+            RETRY_INTERVAL=5
+            for i in $(seq 1 $MAX_RETRIES); do
+              if curl -sf --max-time 5 https://agroconnect.pt/api/actuator/health > /dev/null 2>&1; then
+                echo "  ✓ Backend healthy (attempt $i/$MAX_RETRIES)"
+                break
+              fi
+              if [ "$i" -eq "$MAX_RETRIES" ]; then
+                echo "  ✗ Backend failed health check after $MAX_RETRIES attempts"
+                echo "▸ Rolling back..."
+                git checkout HEAD~1 -- .
+                docker compose up -d --build 2>&1
+                echo "  ⚠ Rolled back to previous version"
+                exit 1
+              fi
+              echo "  … attempt $i/$MAX_RETRIES — retrying in ${RETRY_INTERVAL}s"
+              sleep $RETRY_INTERVAL
+            done
+
+            # ── 5. Verify frontend ──
+            echo "▸ Verifying frontend..."
+            if curl -sf --max-time 5 https://agroconnect.pt/ > /dev/null 2>&1; then
+              echo "  ✓ Frontend responding"
+            else
+              echo "  ⚠ Frontend may still be starting"
+            fi
+
+            # ── 6. Summary ──
+            echo ""
+            echo "══════════════════════════════════════"
+            echo "  ✓ Deploy complete!"
+            echo "  Commit: $(git rev-parse --short HEAD)"
+            echo "  Time:   $(date '+%Y-%m-%d %H:%M:%S')"
+            echo "══════════════════════════════════════"

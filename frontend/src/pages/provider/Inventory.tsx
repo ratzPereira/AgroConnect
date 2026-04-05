@@ -89,27 +89,27 @@ export function Inventory() {
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead><tr className="border-b border-neutral-200 text-left text-neutral-500">
-                <th className="px-6 py-3 font-medium">Produto</th>
-                <th className="px-6 py-3 font-medium">Unidade</th>
-                <th className="px-6 py-3 font-medium">Quantidade</th>
-                <th className="px-6 py-3 font-medium">Alerta</th>
-                <th className="px-6 py-3 font-medium">Custo/un</th>
-                <th className="px-6 py-3 font-medium">Estado</th>
-                <th className="px-6 py-3"></th>
+                <th className="px-3 sm:px-6 py-3 font-medium">Produto</th>
+                <th className="hidden sm:table-cell px-6 py-3 font-medium">Unidade</th>
+                <th className="px-3 sm:px-6 py-3 font-medium">Qtd.</th>
+                <th className="hidden md:table-cell px-6 py-3 font-medium">Alerta</th>
+                <th className="hidden md:table-cell px-6 py-3 font-medium">Custo/un</th>
+                <th className="px-3 sm:px-6 py-3 font-medium">Estado</th>
+                <th className="px-3 sm:px-6 py-3"></th>
               </tr></thead>
               <tbody>
                 {items.map((item) => (
                   <tr key={item.id} className="border-b border-neutral-100">
-                    <td className="px-6 py-3 font-medium text-neutral-900">{item.productName}</td>
-                    <td className="px-6 py-3 text-neutral-600">{unitLabels[item.unit]}</td>
-                    <td className="px-6 py-3 text-neutral-600">{item.quantity}</td>
-                    <td className="px-6 py-3 text-neutral-600">{item.minStockAlert ?? '—'}</td>
-                    <td className="px-6 py-3 text-neutral-600">{item.costPerUnit != null ? `€${item.costPerUnit}` : '—'}</td>
-                    <td className="px-6 py-3">{item.lowStock
+                    <td className="px-3 sm:px-6 py-3 font-medium text-neutral-900">{item.productName}</td>
+                    <td className="hidden sm:table-cell px-6 py-3 text-neutral-600">{unitLabels[item.unit]}</td>
+                    <td className="px-3 sm:px-6 py-3 text-neutral-600">{item.quantity}</td>
+                    <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{item.minStockAlert ?? '—'}</td>
+                    <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{item.costPerUnit != null ? `€${item.costPerUnit}` : '—'}</td>
+                    <td className="px-3 sm:px-6 py-3">{item.lowStock
                       ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning-100 text-warning-700">Baixo</span>
                       : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-leaf-100 text-leaf-700">OK</span>}
                     </td>
-                    <td className="px-6 py-3">
+                    <td className="px-3 sm:px-6 py-3">
                       <Button size="sm" variant="ghost" onClick={() => deleteMut.mutate(item.id)}><Trash2 className="h-4 w-4" /></Button>
                     </td>
                   </tr>
