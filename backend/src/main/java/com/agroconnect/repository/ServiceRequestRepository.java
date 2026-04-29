@@ -21,13 +21,13 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
     @Query(value = """
             SELECT sr.* FROM service_requests sr
             WHERE sr.status IN ('PUBLISHED', 'WITH_PROPOSALS')
-            AND ST_DWithin(sr.location::geography, :point::geography, :radiusMeters)
+            AND ST_DWithin(CAST(sr.location AS geography), CAST(:point AS geography), :radiusMeters)
             ORDER BY sr.created_at DESC
             """,
             countQuery = """
             SELECT COUNT(*) FROM service_requests sr
             WHERE sr.status IN ('PUBLISHED', 'WITH_PROPOSALS')
-            AND ST_DWithin(sr.location::geography, :point::geography, :radiusMeters)
+            AND ST_DWithin(CAST(sr.location AS geography), CAST(:point AS geography), :radiusMeters)
             """,
             nativeQuery = true)
     Page<ServiceRequest> findAvailableForProvider(@Param("point") Point point,
