@@ -14,7 +14,8 @@ public final class CategoryMapper {
                 category.getSlug(),
                 category.getDescription(),
                 category.getIconUrl(),
-                category.getPricingModels()
+                category.getPricingModels(),
+                category.getFormSchema()
         );
     }
 }

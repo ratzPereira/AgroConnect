@@ -70,11 +70,14 @@ services:
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET:-dev-jwt-secret-at-least-256-bits-long-for-hs256-algorithm}
       MINIO_ENDPOINT: http://minio:9000
+      MINIO_PUBLIC_ENDPOINT: http://localhost:8000/minio
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
       COMMISSION_RATE: ${COMMISSION_RATE:-0.12}
+      MAIL_HOST: mailpit
+      MAIL_PORT: 1025
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
     ports:
       - "18080:8080"
@@ -106,6 +109,7 @@ services:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
       - ./frontend/index.html:/app/index.html
+      - ./frontend/vite.config.ts:/app/vite.config.ts
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:3000 || exit 1"]
       interval: 10s
@@ -119,13 +123,15 @@ services:
     image: nginx:alpine
     container_name: agroconnect-nginx
     ports:
-      - "10080:80"
+      - "8000:80"
     volumes:
       - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
       backend:
         condition: service_healthy
       frontend:
+        condition: service_healthy
+      minio:
         condition: service_healthy
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:80 || exit 1"]
@@ -134,7 +140,45 @@ services:
       retries: 5
     restart: unless-stopped
 
+  # ── Prometheus ──
+  prometheus:
+    image: prom/prometheus
+    container_name: agroconnect-prometheus
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "19090:9090"
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Grafana ──
+  grafana:
+    image: grafana/grafana
+    container_name: agroconnect-grafana
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./docker/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    ports:
+      - "13001:3000"
+    depends_on:
+      - prometheus
+    restart: unless-stopped
+
+  mailpit:
+    image: axllent/mailpit
+    container_name: agroconnect-mailpit
+    ports:
+      - "11025:1025"
+      - "18025:8025"
+    restart: unless-stopped
+
 volumes:
   postgres-data:
   redis-data:
   minio-data:
+  grafana-data:

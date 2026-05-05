@@ -41,6 +41,7 @@ frontend/dist/
 .env
 .env.*
 !.env.example
+!.env.production
 
 # ── Docker volumes (local data) ──
 docker/postgres-data/

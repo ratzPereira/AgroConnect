@@ -1,0 +1,71 @@
+/* Exception to Tailwind-only rule: Leaflet L.DivIcon and markercluster require imperative CSS */
+
+.azores-map-pin {
+  width: 28px;
+  height: 36px;
+  position: relative;
+}
+
+.azores-map-pin svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+.azores-map-pin.active-job svg {
+  filter: drop-shadow(0 0 6px #f59e0b);
+}
+
+.azores-map-pin.selected {
+  transform: scale(1.2);
+  z-index: 1000 !important;
+}
+
+.azores-map-pin.dimmed {
+  opacity: 0.5;
+}
+
+/* Provider location pulsing dot */
+.provider-dot {
+  width: 16px;
+  height: 16px;
+  background: #3b82f6;
+  border: 3px solid white;
+  border-radius: 50%;
+  box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5);
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.5); }
+  70% { box-shadow: 0 0 0 12px rgba(59, 130, 246, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0); }
+}
+
+/* Cluster styling */
+.marker-cluster-small,
+.marker-cluster-medium,
+.marker-cluster-large {
+  border-radius: 50%;
+}
+
+.marker-cluster-small {
+  background-color: rgba(16, 185, 129, 0.3);
+}
+.marker-cluster-small div {
+  background-color: rgba(16, 185, 129, 0.7);
+}
+
+.marker-cluster-medium {
+  background-color: rgba(59, 130, 246, 0.3);
+}
+.marker-cluster-medium div {
+  background-color: rgba(59, 130, 246, 0.7);
+}
+
+.marker-cluster-large {
+  background-color: rgba(245, 158, 11, 0.3);
+}
+.marker-cluster-large div {
+  background-color: rgba(245, 158, 11, 0.7);
+}

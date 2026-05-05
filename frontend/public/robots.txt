@@ -1,0 +1,13 @@
+User-agent: *
+Allow: /landing
+Allow: /terms
+Allow: /privacy
+Disallow: /
+Disallow: /dashboard
+Disallow: /requests
+Disallow: /provider
+Disallow: /admin
+Disallow: /login
+Disallow: /register
+
+Sitemap: https://agroconnect.pt/sitemap.xml

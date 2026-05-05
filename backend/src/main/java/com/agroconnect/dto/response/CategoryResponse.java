@@ -23,5 +23,8 @@ public record CategoryResponse(
         String iconUrl,
 
         @Schema(description = "Supported pricing models", example = "[\"FIXED\", \"PER_UNIT\"]")
-        List<String> pricingModels
+        List<String> pricingModels,
+
+        @Schema(description = "Dynamic form schema (JSON) defining category-specific fields")
+        String formSchema
 ) {}

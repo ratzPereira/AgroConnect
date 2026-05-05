@@ -1,37 +1,38 @@
-import { useNavigate } from 'react-router-dom';
+import { Navigate } from 'react-router-dom';
 import { useAuthStore } from '@/stores/authStore';
-import { logout as logoutApi } from '@/api/auth';
-import { Button } from '@/components/ui/Button';
+import { AnimatedPage } from '@/components/AnimatedPage';
+import { ClientDashboard } from '@/features/dashboard/components/ClientDashboard';
+import { ProviderDashboard } from '@/pages/provider/Dashboard';
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Bom dia';
+  if (hour < 19) return 'Boa tarde';
+  return 'Boa noite';
+}
 
 export function Dashboard() {
-  const navigate = useNavigate();
-  const { user, logout } = useAuthStore();
+  const user = useAuthStore((s) => s.user);
+  const firstName = user?.name?.split(' ')[0] ?? 'utilizador';
+  const role = user?.role;
 
-  async function handleLogout() {
-    try {
-      await logoutApi();
-    } catch {
-      // Even if API call fails, clear local state
-    }
-    logout();
-    navigate('/login');
+  const isProvider = role === 'PROVIDER_MANAGER' || role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR';
+
+  if (role === 'ADMIN') {
+    return <Navigate to="/admin/dashboard" replace />;
   }
 
   return (
-    <div className="animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900">
-            Dashboard
-          </h1>
-          <p className="text-sm text-neutral-500 mt-2">
-            Bem-vindo, {user?.name ?? 'utilizador'}
-          </p>
-        </div>
-        <Button variant="outline" size="sm" onClick={handleLogout}>
-          Terminar sessão
-        </Button>
+    <AnimatedPage>
+      <div className="mb-6">
+        <h1 className="text-[28px] font-bold font-display leading-tight text-neutral-900">
+          {getGreeting()}, {firstName}
+        </h1>
+        <p className="text-sm text-neutral-500 mt-1">
+          Aqui está um resumo da sua atividade.
+        </p>
       </div>
-    </div>
+      {isProvider ? <ProviderDashboard inline /> : <ClientDashboard />}
+    </AnimatedPage>
   );
 }

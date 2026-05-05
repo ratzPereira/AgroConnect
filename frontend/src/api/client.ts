@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { toast } from 'sonner';
 import { useAuthStore } from '@/stores/authStore';
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? '/api/v1';
@@ -18,6 +19,24 @@ apiClient.interceptors.request.use((config) => {
   }
   return config;
 });
+
+// Toast notifications for API errors
+function showErrorToast(status: number | undefined): void {
+  const messages: Record<number, string> = {
+    403: 'Sem permissão para realizar esta ação.',
+    404: 'O recurso solicitado não foi encontrado.',
+    409: 'Operação em conflito. Tente novamente.',
+    429: 'Demasiados pedidos. Aguarde um momento.',
+  };
+
+  if (status && messages[status]) {
+    toast.error(messages[status], { duration: 6000 });
+  } else if (status && status >= 500) {
+    toast.error('Erro no servidor. Tente novamente mais tarde.', { duration: 6000 });
+  } else if (!status) {
+    toast.error('Erro de ligação. Verifique a sua internet.', { duration: 6000 });
+  }
+}
 
 // 401 interceptor — auto-refresh token
 let isRefreshing = false;
@@ -41,9 +60,15 @@ apiClient.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
+    const status = error.response?.status;
+
+    // Show toast for non-auth errors (skip 400 validation + 401 refresh)
+    if (status !== 401 && status !== 400) {
+      showErrorToast(status);
+    }
 
     if (
-      error.response?.status !== 401 ||
+      status !== 401 ||
       originalRequest._retry ||
       originalRequest.url?.includes('/auth/')
     ) {

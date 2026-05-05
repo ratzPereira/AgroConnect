@@ -15,6 +15,8 @@ public final class ProviderProfileMapper {
             longitude = profile.getLocation().getX();
         }
 
+        boolean profileComplete = profile.getIsland() != null && !profile.getIsland().isBlank();
+
         return new ProviderProfileResponse(
                 profile.getId(),
                 profile.getCompanyName(),
@@ -26,7 +28,11 @@ public final class ProviderProfileMapper {
                 profile.getTotalReviews(),
                 profile.isVerified(),
                 latitude,
-                longitude
+                longitude,
+                profile.getIsland(),
+                profile.getMunicipality(),
+                profile.getParish(),
+                profileComplete
         );
     }
 }
