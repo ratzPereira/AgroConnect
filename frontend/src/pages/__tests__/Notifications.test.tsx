@@ -28,7 +28,7 @@ vi.mock('@/stores/notificationStore', () => ({
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: Record<string, unknown>) => {
-      const { variants, initial, animate, ...rest } = props;
+      const { variants: _v, initial: _i, animate: _a, ...rest } = props;
       return <div {...rest}>{children as React.ReactNode}</div>;
     },
   },

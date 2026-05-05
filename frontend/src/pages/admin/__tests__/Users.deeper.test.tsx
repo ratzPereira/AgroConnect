@@ -80,7 +80,7 @@ const singlePageData = {
   last: true,
 };
 
-const multiPageData = {
+const _multiPageData = {
   content: [activeClient],
   totalPages: 3,
   totalElements: 50,

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 
 // ── Mock API modules ───────────────────────────────────────────────────────
 vi.mock('@/api/executions', () => ({
@@ -29,8 +29,8 @@ let teamMembersData: TeamMember[] | undefined;
 let machinesData: Machine[] | undefined;
 let mutationIsPending: boolean;
 let mutationIsError: boolean;
-let mutationOnSuccessFn: (() => void) | null;
-let mutationOnMutateFn: ((data: { teamMemberId: number; machineId?: number }) => void) | null;
+let _mutationOnSuccessFn: (() => void) | null;
+let _mutationOnMutateFn: ((data: { teamMemberId: number; machineId?: number }) => void) | null;
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(({ queryKey }: { queryKey: string[] }) => {
@@ -43,8 +43,8 @@ vi.mock('@tanstack/react-query', () => ({
     return { data: null };
   }),
   useMutation: vi.fn(({ onSuccess, mutationFn }: { onSuccess?: () => void; mutationFn?: (data: { teamMemberId: number; machineId?: number }) => Promise<unknown> }) => {
-    mutationOnSuccessFn = onSuccess ?? null;
-    mutationOnMutateFn = mutationFn ? ((data: { teamMemberId: number; machineId?: number }) => {
+    _mutationOnSuccessFn = onSuccess ?? null;
+    _mutationOnMutateFn = mutationFn ? ((data: { teamMemberId: number; machineId?: number }) => {
       mockMutate(data);
     }) : null;
 
@@ -79,8 +79,8 @@ describe('AssignmentForm (deeper)', () => {
     ];
     mutationIsPending = false;
     mutationIsError = false;
-    mutationOnSuccessFn = null;
-    mutationOnMutateFn = null;
+    _mutationOnSuccessFn = null;
+    _mutationOnMutateFn = null;
     mockMutate.mockReset();
     mockInvalidateQueries.mockReset();
   });

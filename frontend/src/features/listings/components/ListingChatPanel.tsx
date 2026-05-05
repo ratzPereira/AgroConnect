@@ -67,6 +67,7 @@ export function ListingChatPanel({
   // When conversations load and we don't have an activeConvId yet, pick the first match
   useEffect(() => {
     if (conversationsPage && conversationsPage.length > 0 && !activeConvId) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setActiveConvId(conversationsPage[0].id);
     }
   }, [conversationsPage, activeConvId]);

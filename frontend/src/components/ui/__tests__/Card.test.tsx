@@ -23,7 +23,7 @@ describe('Card', () => {
   });
 
   it('renders CardHeader with border-bottom styling', () => {
-    const { container } = render(
+    render(
       <Card>
         <CardHeader>Header</CardHeader>
       </Card>,
@@ -46,7 +46,7 @@ describe('Card', () => {
   });
 
   it('renders CardFooter with border-top styling', () => {
-    const { container } = render(
+    render(
       <Card>
         <CardFooter>Footer</CardFooter>
       </Card>,

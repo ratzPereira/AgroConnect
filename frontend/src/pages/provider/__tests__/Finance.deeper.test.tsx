@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
 import { getFinanceSummary, getFinanceTransactions, exportFinanceCsv } from '@/api/finance';
@@ -8,7 +8,7 @@ import type { FinanceSummary, TransactionItem } from '@/api/finance';
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: Record<string, unknown>) => {
-      const { variants, initial, animate, ...rest } = props;
+      const { variants: _v, initial: _i, animate: _a, ...rest } = props;
       return <div {...rest}>{children as React.ReactNode}</div>;
     },
   },
@@ -41,7 +41,7 @@ vi.mock('recharts', () => ({
 }));
 
 vi.mock('@/features/transactions/components/TransactionDetailModal', () => ({
-  TransactionDetailModal: ({ open, transaction, onClose }: { open: boolean; transaction: unknown; onClose: () => void }) =>
+  TransactionDetailModal: ({ open, transaction: _transaction, onClose }: { open: boolean; transaction: unknown; onClose: () => void }) =>
     open ? <div data-testid="transaction-modal"><button onClick={onClose}>close-modal</button></div> : null,
 }));
 

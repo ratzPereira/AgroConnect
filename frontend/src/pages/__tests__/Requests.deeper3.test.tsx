@@ -104,7 +104,7 @@ vi.mock('@/api/requests', () => ({
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: Record<string, unknown>) => {
-      const { variants, initial, animate, exit, transition, ...rest } = props;
+      const { variants: _v, initial: _i, animate: _a, exit: _e, transition: _t, ...rest } = props;
       return <div {...rest}>{children as React.ReactNode}</div>;
     },
   },

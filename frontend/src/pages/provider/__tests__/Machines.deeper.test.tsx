@@ -1,14 +1,14 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { screen, waitFor, within } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
-import { listMachines, createMachine, updateMachine, deleteMachine } from '@/api/machines';
+import { listMachines, createMachine, updateMachine } from '@/api/machines';
 import type { Machine } from '@/types/machine';
 
 vi.mock('framer-motion', () => ({
   motion: {
     div: ({ children, ...props }: Record<string, unknown>) => {
-      const { variants, initial, animate, ...rest } = props;
+      const { variants: _v, initial: _i, animate: _a, ...rest } = props;
       return <div {...rest}>{children as React.ReactNode}</div>;
     },
   },

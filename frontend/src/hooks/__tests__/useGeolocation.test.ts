@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { renderHook, act, cleanup } from '@testing-library/react';
+import { renderHook, cleanup } from '@testing-library/react';
 
 vi.mock('@/utils/haversine', () => ({
   haversineDistance: vi.fn(() => 5000),

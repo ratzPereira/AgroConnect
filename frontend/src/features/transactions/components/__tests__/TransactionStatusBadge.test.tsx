@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TransactionStatusBadge } from '../TransactionStatusBadge';
-import type { TransactionStatus } from '@/types/transaction';
 
 describe('TransactionStatusBadge', () => {
   it('renders PENDING status with correct label and styling', () => {

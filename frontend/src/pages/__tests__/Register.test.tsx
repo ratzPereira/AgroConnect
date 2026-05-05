@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, afterEach } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { server } from '@/test/mocks/server';

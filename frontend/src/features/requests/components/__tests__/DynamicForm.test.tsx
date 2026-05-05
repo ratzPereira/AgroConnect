@@ -22,7 +22,7 @@ describe('DynamicForm', () => {
     ],
   };
 
-  const mixedSchema: FormSchema = {
+  const _mixedSchema: FormSchema = {
     fields: [
       { name: 'soilType', label: 'Tipo de Solo', type: 'text', required: true },
       { name: 'treatment', label: 'Tratamento', type: 'select', options: ['A', 'B'], required: false },

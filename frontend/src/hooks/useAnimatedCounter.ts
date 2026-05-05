@@ -22,6 +22,7 @@ export function useAnimatedCounter(
     if (prefersReducedMotion || isFirstRender.current) {
       isFirstRender.current = false;
       const factor = Math.pow(10, decimals);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setCurrent(Math.round(target * factor) / factor);
       previousTargetRef.current = target;
       return;

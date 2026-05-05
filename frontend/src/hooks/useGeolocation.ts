@@ -20,6 +20,7 @@ export function useGeolocation(enabled = true) {
 
   useEffect(() => {
     if (!enabled || !navigator.geolocation) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setState((s) => ({ ...s, loading: false, error: 'Geolocalização não disponível' }));
       return;
     }

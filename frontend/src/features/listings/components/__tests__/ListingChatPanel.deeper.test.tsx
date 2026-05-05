@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ListingChatPanel } from '../ListingChatPanel';
 import type { ListingMessage } from '@/types/listing';
@@ -150,7 +150,6 @@ vi.mock('framer-motion', () => ({
       children,
       className,
       role,
-      ...rest
     }: Record<string, unknown>) => (
       <div className={className as string} role={role as string}>
         {children as React.ReactNode}

@@ -58,7 +58,7 @@ const { mockState } = vi.hoisted(() => {
 /* ── Mocks ───────────────────────────────────────────────── */
 
 vi.mock('@/api/listings', () => ({
-  getListingById: vi.fn((...args: unknown[]) => mockState.getListingByIdImpl()),
+  getListingById: vi.fn((..._args: unknown[]) => mockState.getListingByIdImpl()),
   markListingSold: vi.fn(() => Promise.resolve(mockState.baseListing)),
   removeListing: vi.fn(() => Promise.resolve()),
   toggleFavorite: vi.fn(() => Promise.resolve({ favorited: true })),

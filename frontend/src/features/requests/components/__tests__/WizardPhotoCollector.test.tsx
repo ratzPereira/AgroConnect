@@ -30,9 +30,7 @@ describe('WizardPhotoCollector', () => {
     const originalCreateObjectURL = URL.createObjectURL;
     URL.createObjectURL = vi.fn(() => 'blob:mock-preview-url');
 
-    const { rerender } = render(
-      <WizardPhotoCollector {...defaultProps} files={[mockFile1, mockFile2]} />,
-    );
+    render(<WizardPhotoCollector {...defaultProps} files={[mockFile1, mockFile2]} />);
 
     // The component uses internal state for previews generated via addFile,
     // but when files are provided directly, previews are driven by internal state.

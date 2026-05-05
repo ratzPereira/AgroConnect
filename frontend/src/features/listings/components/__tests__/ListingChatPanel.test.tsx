@@ -55,7 +55,7 @@ vi.mock('@/hooks/useStompClient', () => ({
 vi.mock('framer-motion', () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => <>{children}</>,
   motion: {
-    div: ({ children, className, role, ...rest }: Record<string, unknown>) => (
+    div: ({ children, className, role }: Record<string, unknown>) => (
       <div className={className as string} role={role as string}>{children as React.ReactNode}</div>
     ),
   },
