@@ -145,6 +145,11 @@ jobs:
         with:
           java-version: '17'
           distribution: 'temurin'
+          cache: 'maven'
+
+      - name: Compile backend (for Sonar Java analysis)
+        working-directory: backend
+        run: mvn compile -q -DskipTests
 
       - name: Download backend coverage
         uses: actions/download-artifact@v4
