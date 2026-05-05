@@ -107,63 +107,69 @@ public class CalendarService {
     }
 
     private List<ConflictResponse> detectConflicts(List<ServiceExecution> executions) {
-        // Map: resourceKey -> Map<date, List<execution>>
-        Map<String, Map<LocalDate, List<ServiceExecution>>> resourceSchedule = new HashMap<>();
+        Map<String, Map<LocalDate, List<ServiceExecution>>> resourceSchedule = buildResourceSchedule(executions);
+        return collectConflicts(resourceSchedule);
+    }
 
+    private Map<String, Map<LocalDate, List<ServiceExecution>>> buildResourceSchedule(List<ServiceExecution> executions) {
+        Map<String, Map<LocalDate, List<ServiceExecution>>> resourceSchedule = new HashMap<>();
         for (ServiceExecution exec : executions) {
             if (exec.getScheduledDate() == null || exec.getScheduledEndDate() == null) continue;
-
             LocalDate date = exec.getScheduledDate();
             while (!date.isAfter(exec.getScheduledEndDate())) {
-                for (ExecutionAssignment assignment : exec.getAssignments()) {
-                    // Track team member
-                    String tmKey = "TEAM_MEMBER:" + assignment.getTeamMember().getId();
-                    resourceSchedule
-                            .computeIfAbsent(tmKey, k -> new HashMap<>())
-                            .computeIfAbsent(date, k -> new ArrayList<>())
-                            .add(exec);
-
-                    // Track machine
-                    if (assignment.getMachine() != null) {
-                        String mKey = "MACHINE:" + assignment.getMachine().getId();
-                        resourceSchedule
-                                .computeIfAbsent(mKey, k -> new HashMap<>())
-                                .computeIfAbsent(date, k -> new ArrayList<>())
-                                .add(exec);
-                    }
-                }
+                addAssignmentsToSchedule(resourceSchedule, exec, date);
                 date = date.plusDays(1);
             }
         }
+        return resourceSchedule;
+    }
 
+    private void addAssignmentsToSchedule(
+            Map<String, Map<LocalDate, List<ServiceExecution>>> resourceSchedule,
+            ServiceExecution exec, LocalDate date) {
+        for (ExecutionAssignment assignment : exec.getAssignments()) {
+            registerResource(resourceSchedule, "TEAM_MEMBER:" + assignment.getTeamMember().getId(), date, exec);
+            if (assignment.getMachine() != null) {
+                registerResource(resourceSchedule, "MACHINE:" + assignment.getMachine().getId(), date, exec);
+            }
+        }
+    }
+
+    private void registerResource(
+            Map<String, Map<LocalDate, List<ServiceExecution>>> resourceSchedule,
+            String key, LocalDate date, ServiceExecution exec) {
+        resourceSchedule
+                .computeIfAbsent(key, k -> new HashMap<>())
+                .computeIfAbsent(date, k -> new ArrayList<>())
+                .add(exec);
+    }
+
+    private List<ConflictResponse> collectConflicts(
+            Map<String, Map<LocalDate, List<ServiceExecution>>> resourceSchedule) {
         List<ConflictResponse> conflicts = new ArrayList<>();
-
         for (Map.Entry<String, Map<LocalDate, List<ServiceExecution>>> entry : resourceSchedule.entrySet()) {
             String[] parts = entry.getKey().split(":");
             String resourceType = parts[0];
             Long resourceId = Long.valueOf(parts[1]);
-
             for (Map.Entry<LocalDate, List<ServiceExecution>> dateEntry : entry.getValue().entrySet()) {
                 List<ServiceExecution> execs = dateEntry.getValue();
                 if (execs.size() <= 1) continue;
-
-                // Conflict detected
-                String resourceName = findResourceName(execs, resourceType, resourceId);
-
-                List<ConflictingEvent> events = execs.stream()
-                        .map(e -> new ConflictingEvent(
-                                e.getId(),
-                                e.getProposal().getRequest().getTitle()
-                        ))
-                        .toList();
-
-                conflicts.add(new ConflictResponse(
-                        dateEntry.getKey(), resourceType, resourceId, resourceName, events
-                ));
+                conflicts.add(buildConflictResponse(dateEntry.getKey(), resourceType, resourceId, execs));
             }
         }
-
         return conflicts;
+    }
+
+    private ConflictResponse buildConflictResponse(
+            LocalDate date, String resourceType, Long resourceId, List<ServiceExecution> execs) {
+        String resourceName = findResourceName(execs, resourceType, resourceId);
+        List<ConflictingEvent> events = execs.stream()
+                .map(e -> new ConflictingEvent(
+                        e.getId(),
+                        e.getProposal().getRequest().getTitle()
+                ))
+                .toList();
+        return new ConflictResponse(date, resourceType, resourceId, resourceName, events);
     }
 
     private String findResourceName(List<ServiceExecution> executions, String type, Long id) {

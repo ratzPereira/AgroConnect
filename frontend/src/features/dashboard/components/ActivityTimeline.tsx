@@ -38,6 +38,14 @@ export function ActivityTimeline({ notifications, className }: ActivityTimelineP
             notif.link && 'cursor-pointer hover:bg-neutral-50',
           )}
           onClick={() => notif.link && navigate(notif.link)}
+          onKeyDown={(e) => {
+            if (notif.link && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault();
+              navigate(notif.link);
+            }
+          }}
+          role={notif.link ? 'button' : undefined}
+          tabIndex={notif.link ? 0 : undefined}
         >
           <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-neutral-100">
             <Bell className="h-4 w-4 text-neutral-500" />

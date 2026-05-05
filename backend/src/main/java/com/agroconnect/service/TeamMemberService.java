@@ -27,6 +27,8 @@ public class TeamMemberService {
 
     private static final Logger log = LoggerFactory.getLogger(TeamMemberService.class);
 
+    private static final String ERR_TEAM_MEMBER_NOT_FOUND = "Membro de equipa não encontrado.";
+
     private final TeamMemberRepository teamMemberRepository;
     private final ProviderProfileRepository providerProfileRepository;
 
@@ -40,7 +42,7 @@ public class TeamMemberService {
     public TeamMemberResponse getById(Long id, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         TeamMember member = teamMemberRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Membro de equipa não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_TEAM_MEMBER_NOT_FOUND));
         return TeamMemberMapper.toResponse(member);
     }
 
@@ -71,7 +73,7 @@ public class TeamMemberService {
     public TeamMemberResponse update(Long id, UpdateTeamMemberDto dto, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         TeamMember member = teamMemberRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Membro de equipa não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_TEAM_MEMBER_NOT_FOUND));
 
         member.setName(dto.name());
         member.setPhone(dto.phone());
@@ -88,7 +90,7 @@ public class TeamMemberService {
     public void deactivate(Long id, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         TeamMember member = teamMemberRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Membro de equipa não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_TEAM_MEMBER_NOT_FOUND));
 
         member.setActive(false);
         teamMemberRepository.save(member);

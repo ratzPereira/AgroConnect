@@ -36,33 +36,45 @@ public class WebSocketAuthConfig implements WebSocketMessageBrokerConfigurer {
         registration.interceptors(new ChannelInterceptor() {
             @Override
             public Message<?> preSend(Message<?> message, MessageChannel channel) {
-                StompHeaderAccessor accessor = MessageHeaderAccessor
-                        .getAccessor(message, StompHeaderAccessor.class);
-
-                if (accessor != null && StompCommand.CONNECT.equals(accessor.getCommand())) {
-                    List<String> authHeaders = accessor.getNativeHeader("Authorization");
-                    if (authHeaders != null && !authHeaders.isEmpty()) {
-                        String token = authHeaders.get(0);
-                        if (token.startsWith("Bearer ")) {
-                            token = token.substring(7);
-                        }
-
-                        try {
-                            if (jwtService.isTokenValid(token)) {
-                                String email = jwtService.extractEmail(token);
-                                UserDetails userDetails = userPrincipalService.loadUserByUsername(email);
-                                UsernamePasswordAuthenticationToken auth =
-                                        new UsernamePasswordAuthenticationToken(
-                                                userDetails, null, userDetails.getAuthorities());
-                                accessor.setUser(auth);
-                            }
-                        } catch (Exception e) {
-                            log.warn("WebSocket auth failed: {}", e.getMessage());
-                        }
-                    }
-                }
+                authenticateConnect(message);
                 return message;
             }
         });
+    }
+
+    private void authenticateConnect(Message<?> message) {
+        StompHeaderAccessor accessor = MessageHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        if (accessor == null || !StompCommand.CONNECT.equals(accessor.getCommand())) {
+            return;
+        }
+        String token = extractBearerToken(accessor);
+        if (token == null) {
+            return;
+        }
+        try {
+            attachUser(accessor, token);
+        } catch (Exception e) {
+            log.warn("WebSocket auth failed: {}", e.getMessage());
+        }
+    }
+
+    private String extractBearerToken(StompHeaderAccessor accessor) {
+        List<String> authHeaders = accessor.getNativeHeader("Authorization");
+        if (authHeaders == null || authHeaders.isEmpty()) {
+            return null;
+        }
+        String token = authHeaders.get(0);
+        return token.startsWith("Bearer ") ? token.substring(7) : token;
+    }
+
+    private void attachUser(StompHeaderAccessor accessor, String token) {
+        if (!jwtService.isTokenValid(token)) {
+            return;
+        }
+        String email = jwtService.extractEmail(token);
+        UserDetails userDetails = userPrincipalService.loadUserByUsername(email);
+        UsernamePasswordAuthenticationToken auth =
+                new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
+        accessor.setUser(auth);
     }
 }

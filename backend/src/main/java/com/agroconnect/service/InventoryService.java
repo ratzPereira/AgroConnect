@@ -26,6 +26,8 @@ public class InventoryService {
 
     private static final Logger log = LoggerFactory.getLogger(InventoryService.class);
 
+    private static final String ERR_INVENTORY_NOT_FOUND = "Item de inventário não encontrado.";
+
     private final InventoryItemRepository inventoryItemRepository;
     private final ProviderProfileRepository providerProfileRepository;
 
@@ -46,7 +48,7 @@ public class InventoryService {
     public InventoryItemResponse getById(Long id, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         InventoryItem item = inventoryItemRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item de inventário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_INVENTORY_NOT_FOUND));
         return InventoryMapper.toResponse(item);
     }
 
@@ -76,7 +78,7 @@ public class InventoryService {
     public InventoryItemResponse update(Long id, UpdateInventoryItemDto dto, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         InventoryItem item = inventoryItemRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item de inventário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_INVENTORY_NOT_FOUND));
 
         item.setQuantity(dto.quantity());
         item.setMinStockAlert(dto.minStockAlert());
@@ -91,7 +93,7 @@ public class InventoryService {
     public void delete(Long id, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         InventoryItem item = inventoryItemRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Item de inventário não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_INVENTORY_NOT_FOUND));
 
         inventoryItemRepository.delete(item);
         log.info("Inventory item {} deleted", id);

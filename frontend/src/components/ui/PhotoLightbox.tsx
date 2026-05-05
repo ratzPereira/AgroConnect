@@ -42,6 +42,12 @@ export function PhotoLightbox({ photos, currentIndex, onClose, onNavigate }: Pho
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/90"
       onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === 'Escape') onClose();
+      }}
+      role="button"
+      tabIndex={0}
+      aria-label="Fechar visualização"
     >
       <button
         onClick={(e) => { e.stopPropagation(); onClose(); }}
@@ -73,6 +79,7 @@ export function PhotoLightbox({ photos, currentIndex, onClose, onNavigate }: Pho
         alt={`Foto ${currentIndex + 1} de ${photos.length}`}
         className="max-h-[90vh] max-w-[90vw] object-contain"
         onClick={(e) => e.stopPropagation()}
+        onKeyDown={(e) => e.stopPropagation()}
       />
 
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-sm">

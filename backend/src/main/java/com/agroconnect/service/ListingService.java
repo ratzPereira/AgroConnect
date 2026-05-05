@@ -66,6 +66,7 @@ public class ListingService {
     private static final double KM_TO_METERS = 1000.0;
     private static final GeometryFactory GEOMETRY_FACTORY = new GeometryFactory(new PrecisionModel(), SRID_WGS84);
     private static final Set<ListingStatus> EDITABLE_STATUSES = EnumSet.of(ListingStatus.ACTIVE, ListingStatus.DRAFT);
+    private static final String ERR_USER_NOT_FOUND = "Utilizador não encontrado.";
 
     private final ListingRepository listingRepository;
     private final ListingPhotoRepository listingPhotoRepository;
@@ -90,7 +91,7 @@ public class ListingService {
     @Transactional
     public ListingResponse create(CreateListingDto dto, Long userId) {
         User seller = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_USER_NOT_FOUND));
 
         Point location = buildPoint(dto.latitude(), dto.longitude());
 
@@ -198,7 +199,7 @@ public class ListingService {
         Listing listing = findByIdOrThrow(id);
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_USER_NOT_FOUND));
 
         boolean isOwner = listing.getSeller().getId().equals(userId);
         boolean isAdmin = user.getRole() == Role.ADMIN;
@@ -353,7 +354,7 @@ public class ListingService {
                 })
                 .orElseGet(() -> {
                     User user = userRepository.findById(userId)
-                            .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado."));
+                            .orElseThrow(() -> new ResourceNotFoundException(ERR_USER_NOT_FOUND));
 
                     ListingFavorite favorite = ListingFavorite.builder()
                             .listing(listing)

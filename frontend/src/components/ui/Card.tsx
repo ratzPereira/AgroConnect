@@ -8,11 +8,28 @@ interface CardProps {
 }
 
 export function Card({ children, className, onClick }: CardProps) {
-  return (
-    <div className={cn('bg-white rounded-xl border border-neutral-200 shadow-sm', className)} onClick={onClick}>
-      {children}
-    </div>
-  );
+  const baseClasses = 'bg-white rounded-xl border border-neutral-200 shadow-sm';
+
+  if (onClick) {
+    return (
+      <div
+        className={cn(baseClasses, 'cursor-pointer', className)}
+        onClick={onClick}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onClick();
+          }
+        }}
+        role="button"
+        tabIndex={0}
+      >
+        {children}
+      </div>
+    );
+  }
+
+  return <div className={cn(baseClasses, className)}>{children}</div>;
 }
 
 interface CardSectionProps {

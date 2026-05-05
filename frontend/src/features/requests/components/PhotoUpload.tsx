@@ -159,6 +159,16 @@ export function PhotoUpload({ requestId, photos, maxPhotos = 10 }: PhotoUploadPr
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => !uploading && fileInputRef.current?.click()}
+          onKeyDown={(e) => {
+            if ((e.key === 'Enter' || e.key === ' ') && !uploading) {
+              e.preventDefault();
+              fileInputRef.current?.click();
+            }
+          }}
+          role="button"
+          tabIndex={uploading ? -1 : 0}
+          aria-label="Adicionar foto"
+          aria-disabled={uploading}
           className={cn(
             'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200',
             hasPhotos ? 'py-5' : 'py-8',

@@ -42,6 +42,8 @@ public class AdminService {
 
     private static final Logger log = LoggerFactory.getLogger(AdminService.class);
 
+    private static final String ERR_USER_NOT_FOUND = "Utilizador não encontrado.";
+
     private final UserRepository userRepository;
     private final ServiceRequestRepository requestRepository;
     private final TransactionRepository transactionRepository;
@@ -88,14 +90,14 @@ public class AdminService {
 
     public AdminUserResponse getUserDetail(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_USER_NOT_FOUND));
         return toAdminUserResponse(user);
     }
 
     @Transactional
     public void banUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_USER_NOT_FOUND));
         user.setActive(false);
         userRepository.save(user);
         log.info("User {} banned by admin", userId);
@@ -104,7 +106,7 @@ public class AdminService {
     @Transactional
     public void unbanUser(Long userId) {
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Utilizador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_USER_NOT_FOUND));
         user.setActive(true);
         userRepository.save(user);
         log.info("User {} unbanned by admin", userId);

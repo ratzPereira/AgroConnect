@@ -71,6 +71,13 @@ public class ServiceRequestService {
     private static final int MAX_PHOTOS = 10;
     private static final int PRESIGNED_URL_EXPIRY_MINUTES = 15;
 
+    private static final String RESOURCE_SERVICE_REQUEST = "ServiceRequest";
+    private static final String FIELD_NEW_STATUS = "newStatus";
+    private static final String JSON_REQUEST_ID_PREFIX = "{\"requestId\":";
+    private static final String ERR_PROVIDER_PROFILE_NOT_FOUND = "Perfil de prestador não encontrado.";
+    private static final String EVENT_DISPUTE_RESOLVED = "DISPUTE_RESOLVED";
+    private static final String LABEL_DISPUTE_RESOLVED = "Disputa resolvida";
+
     private static final Set<RequestStatus> TERMINAL_STATES = EnumSet.of(
             RequestStatus.RATED, RequestStatus.EXPIRED, RequestStatus.CANCELLED);
 
@@ -213,7 +220,7 @@ public class ServiceRequestService {
 
         String clientName = getClientName(userId);
         log.info("Service request published: {}", id);
-        auditService.log(userId, "PUBLISHED", "ServiceRequest", id, Map.of("oldStatus", "DRAFT"), Map.of("newStatus", "PUBLISHED"));
+        auditService.log(userId, "PUBLISHED", RESOURCE_SERVICE_REQUEST, id, Map.of("oldStatus", "DRAFT"), Map.of(FIELD_NEW_STATUS, "PUBLISHED"));
         return ServiceRequestMapper.toResponse(request, clientName, 0);
     }
 
@@ -244,7 +251,7 @@ public class ServiceRequestService {
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request cancelled: {}", id);
-        auditService.log(userId, "CANCELLED", "ServiceRequest", id, null, Map.of("newStatus", "CANCELLED"));
+        auditService.log(userId, "CANCELLED", RESOURCE_SERVICE_REQUEST, id, null, Map.of(FIELD_NEW_STATUS, "CANCELLED"));
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
     }
 
@@ -267,13 +274,13 @@ public class ServiceRequestService {
                 "SERVICE_CONFIRMED",
                 "Serviço confirmado",
                 "O cliente confirmou a conclusão do serviço \"" + request.getTitle() + "\". O pagamento foi liberado.",
-                "{\"requestId\":" + id + "}"
+                JSON_REQUEST_ID_PREFIX + id + "}"
         );
 
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request confirmed: {}", id);
-        auditService.log(userId, "COMPLETED", "ServiceRequest", id, Map.of("oldStatus", "AWAITING_CONFIRMATION"), Map.of("newStatus", "COMPLETED"));
+        auditService.log(userId, "COMPLETED", RESOURCE_SERVICE_REQUEST, id, Map.of("oldStatus", "AWAITING_CONFIRMATION"), Map.of(FIELD_NEW_STATUS, "COMPLETED"));
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
     }
 
@@ -294,13 +301,13 @@ public class ServiceRequestService {
                 "SERVICE_DISPUTED",
                 "Serviço disputado",
                 "O cliente abriu uma disputa para o serviço \"" + request.getTitle() + "\": " + dto.reason(),
-                "{\"requestId\":" + id + "}"
+                JSON_REQUEST_ID_PREFIX + id + "}"
         );
 
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request disputed: {} - reason: {}", id, dto.reason());
-        auditService.log(userId, "DISPUTED", "ServiceRequest", id, null, Map.of("newStatus", "DISPUTED", "reason", dto.reason()));
+        auditService.log(userId, "DISPUTED", RESOURCE_SERVICE_REQUEST, id, null, Map.of(FIELD_NEW_STATUS, "DISPUTED", "reason", dto.reason()));
         return ServiceRequestMapper.toResponse(request, clientName, proposalCount);
     }
 
@@ -319,17 +326,17 @@ public class ServiceRequestService {
 
             notificationService.create(
                     request.getClient().getId(),
-                    "DISPUTE_RESOLVED",
-                    "Disputa resolvida",
+                    EVENT_DISPUTE_RESOLVED,
+                    LABEL_DISPUTE_RESOLVED,
                     "A disputa foi resolvida a favor do prestador. O pagamento foi liberado.",
-                    "{\"requestId\":" + id + "}"
+                    JSON_REQUEST_ID_PREFIX + id + "}"
             );
             notificationService.create(
                     acceptedProposal.getProvider().getUser().getId(),
-                    "DISPUTE_RESOLVED",
-                    "Disputa resolvida",
+                    EVENT_DISPUTE_RESOLVED,
+                    LABEL_DISPUTE_RESOLVED,
                     "A disputa foi resolvida a seu favor. O pagamento foi liberado.",
-                    "{\"requestId\":" + id + "}"
+                    JSON_REQUEST_ID_PREFIX + id + "}"
             );
         } else {
             request.setStatus(RequestStatus.CANCELLED);
@@ -337,17 +344,17 @@ public class ServiceRequestService {
 
             notificationService.create(
                     request.getClient().getId(),
-                    "DISPUTE_RESOLVED",
-                    "Disputa resolvida",
+                    EVENT_DISPUTE_RESOLVED,
+                    LABEL_DISPUTE_RESOLVED,
                     "A disputa foi resolvida a seu favor. O reembolso foi processado.",
-                    "{\"requestId\":" + id + "}"
+                    JSON_REQUEST_ID_PREFIX + id + "}"
             );
             notificationService.create(
                     acceptedProposal.getProvider().getUser().getId(),
-                    "DISPUTE_RESOLVED",
-                    "Disputa resolvida",
+                    EVENT_DISPUTE_RESOLVED,
+                    LABEL_DISPUTE_RESOLVED,
                     "A disputa foi resolvida a favor do cliente. O pagamento foi reembolsado.",
-                    "{\"requestId\":" + id + "}"
+                    JSON_REQUEST_ID_PREFIX + id + "}"
             );
         }
 
@@ -386,7 +393,7 @@ public class ServiceRequestService {
 
     public Page<ServiceRequestSummaryResponse> listAvailableForProvider(Long userId, Pageable pageable) {
         var providerProfile = providerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROVIDER_PROFILE_NOT_FOUND));
 
         if (providerProfile.getLocation() == null) {
             throw new ValidationException("Deve definir a sua localização no perfil antes de ver pedidos disponíveis.");
@@ -404,7 +411,7 @@ public class ServiceRequestService {
 
     public List<RequestPinResponse> getPinsForProvider(Long userId) {
         var provider = providerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROVIDER_PROFILE_NOT_FOUND));
 
         if (provider.getLocation() == null) {
             return List.of();
@@ -449,7 +456,7 @@ public class ServiceRequestService {
 
     public List<ActiveJobResponse> getActiveJobsForProvider(Long userId) {
         var provider = providerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROVIDER_PROFILE_NOT_FOUND));
 
         var executions = executionRepository.findActiveByProviderId(provider.getId());
 
@@ -477,7 +484,7 @@ public class ServiceRequestService {
             String island, Pageable pageable) {
 
         var providerProfile = providerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROVIDER_PROFILE_NOT_FOUND));
 
         if (providerProfile.getLocation() == null) {
             throw new ValidationException("Deve definir a sua localização no perfil antes de ver pedidos disponíveis.");

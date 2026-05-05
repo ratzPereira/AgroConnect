@@ -47,6 +47,10 @@ public class ProposalService {
     private static final Set<RequestStatus> ACCEPTING_PROPOSALS = EnumSet.of(
             RequestStatus.PUBLISHED, RequestStatus.WITH_PROPOSALS);
 
+    private static final String ERR_REQUEST_NOT_FOUND = "Pedido de serviço não encontrado.";
+    private static final String ERR_PROPOSAL_NOT_FOUND = "Proposta não encontrada.";
+    private static final String ERR_PROVIDER_PROFILE_NOT_FOUND = "Perfil de prestador não encontrado.";
+
     private final ProposalRepository proposalRepository;
     private final ServiceRequestRepository requestRepository;
     private final ProviderProfileRepository providerProfileRepository;
@@ -61,14 +65,14 @@ public class ProposalService {
     @Transactional
     public ProposalResponse create(Long requestId, CreateProposalDto dto, Long userId) {
         ServiceRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido de serviço não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_REQUEST_NOT_FOUND));
 
         if (!ACCEPTING_PROPOSALS.contains(request.getStatus())) {
             throw new InvalidStateException("Este pedido não está a aceitar propostas.");
         }
 
         ProviderProfile provider = providerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROVIDER_PROFILE_NOT_FOUND));
 
         if (proposalRepository.existsByRequestIdAndProviderId(requestId, provider.getId())) {
             throw new InvalidStateException("Já submeteu uma proposta para este pedido.");
@@ -112,7 +116,7 @@ public class ProposalService {
     @Transactional
     public ProposalResponse accept(Long proposalId, Long userId) {
         Proposal proposal = proposalRepository.findById(proposalId)
-                .orElseThrow(() -> new ResourceNotFoundException("Proposta não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROPOSAL_NOT_FOUND));
 
         ServiceRequest request = proposal.getRequest();
 
@@ -198,10 +202,10 @@ public class ProposalService {
     @Transactional
     public ProposalResponse withdraw(Long proposalId, Long userId) {
         Proposal proposal = proposalRepository.findById(proposalId)
-                .orElseThrow(() -> new ResourceNotFoundException("Proposta não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROPOSAL_NOT_FOUND));
 
         ProviderProfile provider = providerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROVIDER_PROFILE_NOT_FOUND));
 
         if (!proposal.getProvider().getId().equals(provider.getId())) {
             throw new ForbiddenException("Não tem permissão para retirar esta proposta.");
@@ -220,7 +224,7 @@ public class ProposalService {
 
     public List<ProposalResponse> listByRequest(Long requestId, Long userId) {
         ServiceRequest request = requestRepository.findById(requestId)
-                .orElseThrow(() -> new ResourceNotFoundException("Pedido de serviço não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_REQUEST_NOT_FOUND));
 
         // Client who owns the request sees all proposals
         if (request.getClient().getId().equals(userId)) {
@@ -243,7 +247,7 @@ public class ProposalService {
 
     public Page<ProposalResponse> listMyProposals(Long userId, Pageable pageable) {
         ProviderProfile provider = providerProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de prestador não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_PROVIDER_PROFILE_NOT_FOUND));
 
         return proposalRepository.findByProviderIdOrderByCreatedAtDesc(provider.getId(), pageable)
                 .map(ProposalMapper::toResponse);

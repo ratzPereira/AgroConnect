@@ -27,6 +27,8 @@ public class MachineService {
 
     private static final Logger log = LoggerFactory.getLogger(MachineService.class);
 
+    private static final String ERR_MACHINE_NOT_FOUND = "Máquina não encontrada.";
+
     private final MachineRepository machineRepository;
     private final ProviderProfileRepository providerProfileRepository;
 
@@ -47,7 +49,7 @@ public class MachineService {
     public MachineResponse getById(Long id, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         Machine machine = machineRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Máquina não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_MACHINE_NOT_FOUND));
         return MachineMapper.toResponse(machine);
     }
 
@@ -74,7 +76,7 @@ public class MachineService {
     public MachineResponse update(Long id, UpdateMachineDto dto, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         Machine machine = machineRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Máquina não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_MACHINE_NOT_FOUND));
 
         machine.setName(dto.name());
         machine.setType(dto.type());
@@ -95,7 +97,7 @@ public class MachineService {
     public void delete(Long id, Long userId) {
         ProviderProfile provider = getProviderProfile(userId);
         Machine machine = machineRepository.findByIdAndProviderId(id, provider.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("Máquina não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_MACHINE_NOT_FOUND));
 
         if (machine.getStatus() != MachineStatus.RETIRED) {
             throw new InvalidStateException("Só é possível eliminar máquinas com estado RETIRED.");

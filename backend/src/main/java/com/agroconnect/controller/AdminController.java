@@ -38,6 +38,8 @@ import org.springframework.web.bind.annotation.RestController;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminController {
 
+    private static final String FIELD_CREATED_AT = "createdAt";
+
     private final AdminService adminService;
 
     @GetMapping("/dashboard")
@@ -65,7 +67,7 @@ public class AdminController {
             @Parameter(description = "Filter by role") @RequestParam(required = false) Role role,
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
-        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, FIELD_CREATED_AT));
         var result = adminService.listUsers(role, pageable);
         return ResponseEntity.ok(result);
     }
@@ -128,7 +130,7 @@ public class AdminController {
     public ResponseEntity<Page<AdminDisputeResponse>> listDisputes(
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
-        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, FIELD_CREATED_AT));
         var result = adminService.listDisputes(pageable);
         return ResponseEntity.ok(result);
     }
@@ -145,7 +147,7 @@ public class AdminController {
             @Parameter(description = "Filter by status") @RequestParam(required = false) ListingStatus status,
             @Parameter(description = "Page number (0-indexed)") @RequestParam(defaultValue = "0") int page,
             @Parameter(description = "Page size") @RequestParam(defaultValue = "20") int size) {
-        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        var pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, FIELD_CREATED_AT));
         var result = adminService.listListings(status, pageable);
         return ResponseEntity.ok(result);
     }

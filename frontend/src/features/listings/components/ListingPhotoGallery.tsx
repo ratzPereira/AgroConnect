@@ -52,6 +52,10 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
           className="group cursor-pointer rounded-2xl overflow-hidden bg-neutral-100"
           style={{ position: 'relative', height: 320 }}
           onClick={() => setLightboxOpen(true)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLightboxOpen(true); } }}
+          role="button"
+          tabIndex={0}
+          aria-label="Abrir foto"
         >
           <img
             src={photos[0]}
@@ -75,6 +79,10 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
       <div
         className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm"
         onClick={() => setLightboxOpen(false)}
+        onKeyDown={(e) => { if (e.key === 'Escape') setLightboxOpen(false); }}
+        role="button"
+        tabIndex={0}
+        aria-label="Fechar visualização"
       >
         <button
           type="button"
@@ -90,6 +98,7 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
           alt={`Foto ${activeIndex + 1}`}
           className="max-w-[90vw] max-h-[80vh] object-contain rounded-lg"
           onClick={(e) => e.stopPropagation()}
+          onKeyDown={(e) => e.stopPropagation()}
         />
 
         {photos.length > 1 && (
@@ -115,6 +124,8 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
             <div
               className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 px-4 py-2.5 rounded-full bg-black/40 backdrop-blur-sm"
               onClick={(e) => e.stopPropagation()}
+              onKeyDown={(e) => e.stopPropagation()}
+              role="presentation"
             >
               {photos.map((_, i) => (
                 <button
@@ -146,6 +157,10 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
           className="col-span-3 row-span-2 group cursor-pointer bg-neutral-100"
           style={{ position: 'relative' }}
           onClick={() => { setActiveIndex(0); setLightboxOpen(true); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveIndex(0); setLightboxOpen(true); } }}
+          role="button"
+          tabIndex={0}
+          aria-label="Abrir foto principal"
         >
           <img
             src={photos[0]}
@@ -160,6 +175,10 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
           className="group cursor-pointer bg-neutral-100"
           style={{ position: 'relative' }}
           onClick={() => { setActiveIndex(1); setLightboxOpen(true); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveIndex(1); setLightboxOpen(true); } }}
+          role="button"
+          tabIndex={0}
+          aria-label="Abrir foto 2"
         >
           <img
             src={photos[1]}
@@ -175,6 +194,10 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
             className="group cursor-pointer bg-neutral-100"
             style={{ position: 'relative' }}
             onClick={() => { setActiveIndex(2); setLightboxOpen(true); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveIndex(2); setLightboxOpen(true); } }}
+            role="button"
+            tabIndex={0}
+            aria-label="Abrir foto 3"
           >
             <img
               src={photos[2 % photos.length]}
@@ -195,6 +218,10 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
             className="group cursor-pointer bg-neutral-100"
             style={{ position: 'relative' }}
             onClick={() => { setActiveIndex(0); setLightboxOpen(true); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveIndex(0); setLightboxOpen(true); } }}
+            role="button"
+            tabIndex={0}
+            aria-label="Abrir galeria"
           >
             <div className="w-full h-full flex items-center justify-center bg-neutral-50">
               <ZoomIn className="h-6 w-6 text-neutral-300" />
@@ -209,6 +236,10 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
           className="rounded-2xl overflow-hidden bg-neutral-100 cursor-pointer"
           style={{ position: 'relative', height: 280 }}
           onClick={() => setLightboxOpen(true)}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setLightboxOpen(true); } }}
+          role="button"
+          tabIndex={0}
+          aria-label="Abrir foto"
         >
           <img
             src={photos[activeIndex]}

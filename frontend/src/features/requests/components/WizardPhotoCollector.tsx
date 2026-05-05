@@ -116,6 +116,10 @@ export function WizardPhotoCollector({ files, onChange, maxPhotos = 10 }: Wizard
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
+          role="button"
+          tabIndex={0}
+          aria-label="Adicionar foto"
           className={cn(
             'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200',
             files.length > 0 ? 'py-5' : 'py-8',

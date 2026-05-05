@@ -69,7 +69,15 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
 
   return (
     <div ref={containerRef} className={cn('relative inline-flex', className)} onKeyDown={handleKeyDown}>
-      <div onClick={() => setOpen(!open)}>{trigger}</div>
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="contents"
+        aria-haspopup="menu"
+        aria-expanded={open}
+      >
+        {trigger}
+      </button>
       <AnimatePresence>
         {open && (
           <motion.div

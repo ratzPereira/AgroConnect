@@ -38,6 +38,8 @@ public class ListingMessageService {
 
     private static final Logger log = LoggerFactory.getLogger(ListingMessageService.class);
 
+    private static final String ERR_CONVERSATION_NOT_FOUND = "Conversa não encontrada.";
+
     private final ListingMessageRepository listingMessageRepository;
     private final ListingConversationRepository listingConversationRepository;
     private final ListingRepository listingRepository;
@@ -115,7 +117,7 @@ public class ListingMessageService {
     @Transactional
     public ListingMessageResponse replyToConversation(Long conversationId, SendListingMessageDto dto, Long userId) {
         ListingConversation conversation = listingConversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Conversa não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_CONVERSATION_NOT_FOUND));
 
         validateParticipant(conversation, userId);
 
@@ -169,7 +171,7 @@ public class ListingMessageService {
 
     public Page<ListingMessageResponse> getConversationMessages(Long conversationId, Long userId, Pageable pageable) {
         ListingConversation conversation = listingConversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Conversa não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_CONVERSATION_NOT_FOUND));
 
         validateParticipant(conversation, userId);
 
@@ -180,7 +182,7 @@ public class ListingMessageService {
     @Transactional
     public void markAsRead(Long conversationId, Long userId) {
         ListingConversation conversation = listingConversationRepository.findById(conversationId)
-                .orElseThrow(() -> new ResourceNotFoundException("Conversa não encontrada."));
+                .orElseThrow(() -> new ResourceNotFoundException(ERR_CONVERSATION_NOT_FOUND));
 
         validateParticipant(conversation, userId);
 
