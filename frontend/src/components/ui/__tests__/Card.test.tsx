@@ -22,6 +22,34 @@ describe('Card', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
+  it('exposes button role and tabIndex when clickable', () => {
+    const onClick = vi.fn();
+    render(<Card onClick={onClick}>Clickable</Card>);
+    const button = screen.getByRole('button');
+    expect(button).toHaveAttribute('tabIndex', '0');
+  });
+
+  it('triggers onClick on Enter key', () => {
+    const onClick = vi.fn();
+    render(<Card onClick={onClick}>Clickable</Card>);
+    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it('triggers onClick on Space key', () => {
+    const onClick = vi.fn();
+    render(<Card onClick={onClick}>Clickable</Card>);
+    fireEvent.keyDown(screen.getByRole('button'), { key: ' ' });
+    expect(onClick).toHaveBeenCalledOnce();
+  });
+
+  it('does not trigger onClick on other keys', () => {
+    const onClick = vi.fn();
+    render(<Card onClick={onClick}>Clickable</Card>);
+    fireEvent.keyDown(screen.getByRole('button'), { key: 'Escape' });
+    expect(onClick).not.toHaveBeenCalled();
+  });
+
   it('renders CardHeader with border-bottom styling', () => {
     render(
       <Card>

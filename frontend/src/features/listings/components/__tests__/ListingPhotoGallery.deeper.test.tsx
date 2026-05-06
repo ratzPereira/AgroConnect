@@ -203,4 +203,69 @@ describe('ListingPhotoGallery — deeper coverage', () => {
     expect(screen.queryByLabelText('Foto anterior')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Próxima foto')).not.toBeInTheDocument();
   });
+
+  it('opens lightbox via Enter key on single photo', () => {
+    render(<ListingPhotoGallery photos={singlePhoto} />);
+    const trigger = screen.getByLabelText('Abrir foto');
+    fireEvent.keyDown(trigger, { key: 'Enter' });
+    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
+  });
+
+  it('opens lightbox via Space key on single photo', () => {
+    render(<ListingPhotoGallery photos={singlePhoto} />);
+    const trigger = screen.getByLabelText('Abrir foto');
+    fireEvent.keyDown(trigger, { key: ' ' });
+    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
+  });
+
+  it('ignores other keys on single photo trigger', () => {
+    render(<ListingPhotoGallery photos={singlePhoto} />);
+    const trigger = screen.getByLabelText('Abrir foto');
+    fireEvent.keyDown(trigger, { key: 'a' });
+    expect(screen.queryByLabelText('Fechar')).not.toBeInTheDocument();
+  });
+
+  it('opens lightbox via Enter key on main photo (desktop grid)', () => {
+    render(<ListingPhotoGallery photos={threePhotos} />);
+    const main = screen.getByLabelText('Abrir foto principal');
+    fireEvent.keyDown(main, { key: 'Enter' });
+    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
+  });
+
+  it('opens lightbox via Space key on side photo "Foto 2"', () => {
+    render(<ListingPhotoGallery photos={threePhotos} />);
+    const side = screen.getByLabelText('Abrir foto 2');
+    fireEvent.keyDown(side, { key: ' ' });
+    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
+  });
+
+  it('opens lightbox via Enter key on side photo "Foto 3"', () => {
+    render(<ListingPhotoGallery photos={threePhotos} />);
+    const side = screen.getByLabelText('Abrir foto 3');
+    fireEvent.keyDown(side, { key: 'Enter' });
+    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
+  });
+
+  it('opens lightbox via Enter on "see all" placeholder for 2 photos', () => {
+    const twoPhotos = threePhotos.slice(0, 2);
+    render(<ListingPhotoGallery photos={twoPhotos} />);
+    const placeholder = screen.getByLabelText('Abrir galeria');
+    fireEvent.keyDown(placeholder, { key: 'Enter' });
+    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
+  });
+
+  it('opens lightbox via Enter on mobile carousel trigger', () => {
+    render(<ListingPhotoGallery photos={threePhotos} />);
+    // There are multiple "Abrir foto" - mobile carousel + the side render of main photo. Pick the carousel one.
+    const triggers = screen.getAllByLabelText('Abrir foto');
+    fireEvent.keyDown(triggers[triggers.length - 1], { key: 'Enter' });
+    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
+  });
+
+  it('lightbox backdrop closes on Escape keyDown handler', () => {
+    openLightboxForMultiPhotos();
+    const backdrop = screen.getByLabelText('Fechar visualização');
+    fireEvent.keyDown(backdrop, { key: 'Escape' });
+    expect(screen.queryByLabelText('Fechar')).not.toBeInTheDocument();
+  });
 });

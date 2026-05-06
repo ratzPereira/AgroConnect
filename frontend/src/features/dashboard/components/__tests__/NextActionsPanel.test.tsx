@@ -90,4 +90,30 @@ describe('NextActionsPanel', () => {
     render(<NextActionsPanel requests={requests} />);
     expect(screen.getByText('Ações Pendentes')).toBeInTheDocument();
   });
+
+  it('shows stale-published action for PUBLISHED with 0 proposals older than 7 days', () => {
+    const oldDate = new Date(Date.now() - 10 * 24 * 60 * 60 * 1000).toISOString();
+    const requests = [
+      makeRequest({ id: 7, status: 'PUBLISHED', title: 'Pedido antigo', proposalCount: 0, createdAt: oldDate }),
+    ];
+    render(<NextActionsPanel requests={requests} />);
+    expect(screen.getByText(/"Pedido antigo" ainda sem propostas/)).toBeInTheDocument();
+  });
+
+  it('does not show action for WITH_PROPOSALS with 0 proposals (edge case)', () => {
+    const requests = [
+      makeRequest({ id: 8, status: 'WITH_PROPOSALS', title: 'Edge', proposalCount: 0 }),
+    ];
+    const { container } = render(<NextActionsPanel requests={requests} />);
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('caps actions at 5 entries', () => {
+    const requests = Array.from({ length: 8 }, (_, i) =>
+      makeRequest({ id: i + 100, status: 'COMPLETED', title: `Job ${i}` }),
+    );
+    render(<NextActionsPanel requests={requests} />);
+    const buttons = screen.getAllByRole('button');
+    expect(buttons.length).toBe(5);
+  });
 });

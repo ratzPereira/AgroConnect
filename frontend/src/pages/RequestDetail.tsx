@@ -249,13 +249,19 @@ export function RequestDetail() {
                 ) : (
                   <div className="grid grid-cols-3 gap-3">
                     {request.photos.map((photo, i) => (
-                      <img
+                      <button
                         key={photo.id}
-                        src={photo.photoUrl}
-                        alt="Foto do pedido"
-                        className="w-full h-32 object-cover rounded-lg border border-neutral-200 cursor-pointer hover:opacity-90 transition-opacity"
+                        type="button"
                         onClick={() => setLightboxIndex(i)}
-                      />
+                        className="rounded-lg border border-neutral-200 overflow-hidden cursor-pointer hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-primary-500"
+                        aria-label={`Abrir foto ${i + 1}`}
+                      >
+                        <img
+                          src={photo.photoUrl}
+                          alt="Foto do pedido"
+                          className="w-full h-32 object-cover"
+                        />
+                      </button>
                     ))}
                   </div>
                 )}

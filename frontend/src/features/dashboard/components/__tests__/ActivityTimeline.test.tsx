@@ -85,4 +85,40 @@ describe('ActivityTimeline', () => {
     const link = screen.getByText('Ver tudo');
     expect(link.closest('a')).toHaveAttribute('href', '/notifications');
   });
+
+  it('navigates on Enter key when notification has a link', () => {
+    render(<ActivityTimeline notifications={mockNotifications} />);
+    const item = screen.getByText('Serviço concluído').closest('[role="button"]') as HTMLElement;
+    expect(item).toBeTruthy();
+    fireEvent.keyDown(item, { key: 'Enter' });
+    expect(mockNavigate).toHaveBeenCalledWith('/requests/2');
+  });
+
+  it('navigates on Space key when notification has a link', () => {
+    render(<ActivityTimeline notifications={mockNotifications} />);
+    const item = screen.getByText('Serviço concluído').closest('[role="button"]') as HTMLElement;
+    fireEvent.keyDown(item, { key: ' ' });
+    expect(mockNavigate).toHaveBeenCalledWith('/requests/2');
+  });
+
+  it('does not navigate on other keys', () => {
+    render(<ActivityTimeline notifications={mockNotifications} />);
+    const item = screen.getByText('Serviço concluído').closest('[role="button"]') as HTMLElement;
+    fireEvent.keyDown(item, { key: 'a' });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
+  it('does not set role="button" or tabIndex when notification has no link', () => {
+    render(<ActivityTimeline notifications={mockNotifications} />);
+    const noLinkItem = screen.getByText('Nova mensagem').closest('div.flex');
+    expect(noLinkItem).not.toHaveAttribute('role', 'button');
+    expect(noLinkItem).not.toHaveAttribute('tabindex');
+  });
+
+  it('does not call navigate when clicking notification without a link', () => {
+    render(<ActivityTimeline notifications={mockNotifications} />);
+    const noLinkItem = screen.getByText('Nova mensagem').closest('div.flex') as HTMLElement;
+    fireEvent.click(noLinkItem);
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
 });
