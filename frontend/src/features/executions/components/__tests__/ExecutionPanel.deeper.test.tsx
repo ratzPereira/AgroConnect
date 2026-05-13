@@ -19,6 +19,9 @@ vi.mock('../DistanceIndicator', () => ({
 vi.mock('../CheckinMap', () => ({
   CheckinMap: () => <div data-testid="checkin-map" />,
 }));
+vi.mock('../JobCostingPanel', () => ({
+  JobCostingPanel: () => <div data-testid="job-costing-panel" />,
+}));
 
 // ── Mock date-fns ──────────────────────────────────────────────────────────
 vi.mock('date-fns', () => ({

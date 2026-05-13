@@ -16,6 +16,10 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Optional<Transaction> findByRequestId(Long requestId);
 
+    Optional<Transaction> findByStripePaymentIntentId(String stripePaymentIntentId);
+
+    Optional<Transaction> findByStripeTransferId(String stripeTransferId);
+
     @Query("""
             SELECT t FROM Transaction t
             WHERE t.request.client.id = :userId
@@ -58,6 +62,41 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     BigDecimal sumReleasedPayoutByProviderIdAndPeriod(@Param("providerId") Long providerId,
                                                       @Param("from") Instant from,
                                                       @Param("to") Instant to);
+
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0)
+            FROM Transaction t
+            WHERE t.proposal.provider.id = :providerId
+            AND t.status = com.agroconnect.model.enums.TransactionStatus.RELEASED
+            AND t.releasedAt >= :from
+            AND t.releasedAt < :to
+            """)
+    BigDecimal sumReleasedAmountByProviderIdAndPeriod(@Param("providerId") Long providerId,
+                                                      @Param("from") Instant from,
+                                                      @Param("to") Instant to);
+
+    @Query("""
+            SELECT COALESCE(SUM(t.commissionAmount), 0)
+            FROM Transaction t
+            WHERE t.proposal.provider.id = :providerId
+            AND t.status = com.agroconnect.model.enums.TransactionStatus.RELEASED
+            AND t.releasedAt >= :from
+            AND t.releasedAt < :to
+            """)
+    BigDecimal sumCommissionsByProviderIdAndPeriod(@Param("providerId") Long providerId,
+                                                   @Param("from") Instant from,
+                                                   @Param("to") Instant to);
+
+    @Query("""
+            SELECT COUNT(t) FROM Transaction t
+            WHERE t.proposal.provider.id = :providerId
+            AND t.status = com.agroconnect.model.enums.TransactionStatus.RELEASED
+            AND t.releasedAt >= :from
+            AND t.releasedAt < :to
+            """)
+    long countReleasedByProviderIdAndPeriod(@Param("providerId") Long providerId,
+                                            @Param("from") Instant from,
+                                            @Param("to") Instant to);
 
     @Query("""
             SELECT COALESCE(SUM(t.commissionAmount), 0)

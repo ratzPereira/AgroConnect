@@ -68,6 +68,9 @@ public class Transaction {
     @Column(name = "stripe_payment_intent_id", length = 255)
     private String stripePaymentIntentId;
 
+    @Column(name = "stripe_charge_id", length = 255)
+    private String stripeChargeId;
+
     @Column(name = "stripe_transfer_id", length = 255)
     private String stripeTransferId;
 

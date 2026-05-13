@@ -8,11 +8,16 @@ import com.agroconnect.dto.request.CreateServiceRequestDto;
 import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
 import com.agroconnect.dto.request.UpdateProviderProfileRequest;
+import com.agroconnect.fixture.StripeTestHelper;
 import com.agroconnect.fixture.TestContainersConfig;
 import com.agroconnect.model.User;
 import com.agroconnect.model.enums.PricingModel;
 import com.agroconnect.model.enums.Urgency;
+import com.agroconnect.repository.ProviderProfileRepository;
+import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.repository.UserRepository;
+import com.agroconnect.service.ProposalService;
+import com.agroconnect.service.StripeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -21,6 +26,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -47,6 +53,18 @@ class ReviewControllerIT extends TestContainersConfig {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ProviderProfileRepository providerProfileRepository;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @Autowired
+    private ProposalService proposalService;
+
+    @MockBean
+    private StripeService stripeService;
 
     private static String clientToken;
     private static String providerToken;
@@ -91,6 +109,8 @@ class ReviewControllerIT extends TestContainersConfig {
         User providerUser = userRepository.findByEmail("rev-provider@test.pt").orElseThrow();
         providerUser.setEmailVerified(true);
         userRepository.save(providerUser);
+
+        StripeTestHelper.markProviderStripeReady(providerProfileRepository, providerUser.getId());
 
         MvcResult providerResult = mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -137,9 +157,13 @@ class ReviewControllerIT extends TestContainersConfig {
                 .andExpect(status().isCreated()).andReturn();
         proposalId = objectMapper.readTree(propResult.getResponse().getContentAsString()).get("id").asLong();
 
+        StripeTestHelper.stubCreatePaymentIntent(stripeService, "pi_test_review", "pi_test_review_secret");
         mockMvc.perform(post("/v1/proposals/" + proposalId + "/accept")
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk());
+
+        // Replay payment_intent.succeeded webhook side effects (Stripe is mocked).
+        StripeTestHelper.simulateWebhookCascade(transactionRepository, proposalService, requestId);
 
         // Get execution ID
         MvcResult execResult = mockMvc.perform(get("/v1/executions/request/" + requestId)
@@ -161,7 +185,8 @@ class ReviewControllerIT extends TestContainersConfig {
                         .content(objectMapper.writeValueAsString(new CompleteExecutionDto("Tudo concluído", null))))
                 .andExpect(status().isOk());
 
-        // Confirm
+        // Confirm — triggers release Transfer
+        StripeTestHelper.stubCreateTransfer(stripeService, "tr_test_review_release");
         mockMvc.perform(post("/v1/requests/" + requestId + "/confirm")
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk())

@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.SQLRestriction;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.math.BigDecimal;
@@ -30,8 +31,9 @@ import java.time.Instant;
         uniqueConstraints = @UniqueConstraint(name = "uq_inventory_provider_product",
                 columnNames = {"provider_id", "product_name"}),
         indexes = {
-                @Index(name = "idx_inventory_provider", columnList = "provider_id")
+                @Index(name = "idx_inventory_provider_active", columnList = "provider_id")
         })
+@SQLRestriction("deleted_at IS NULL")
 @Getter
 @Setter
 @Builder
@@ -54,15 +56,18 @@ public class InventoryItem {
     @Column(name = "unit", nullable = false, length = 20)
     private InventoryUnit unit;
 
-    @Column(name = "quantity", nullable = false)
+    @Column(name = "quantity", nullable = false, precision = 14, scale = 3)
     @Builder.Default
-    private double quantity = 0;
+    private BigDecimal quantity = BigDecimal.ZERO;
 
-    @Column(name = "min_stock_alert")
-    private Double minStockAlert;
+    @Column(name = "min_stock_alert", precision = 14, scale = 3)
+    private BigDecimal minStockAlert;
 
-    @Column(name = "cost_per_unit", precision = 10, scale = 2)
+    @Column(name = "cost_per_unit", precision = 10, scale = 4)
     private BigDecimal costPerUnit;
+
+    @Column(name = "deleted_at")
+    private Instant deletedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

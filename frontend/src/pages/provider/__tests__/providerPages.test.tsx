@@ -159,7 +159,7 @@ describe('Provider Pages', () => {
   it('Machines page renders', async () => {
     const { Machines } = await import('../Machines');
     renderWithProviders(<Machines />, { route: '/provider/machines' });
-    expect(screen.getByText('Maquinas')).toBeInTheDocument();
+    expect(screen.getByText('Máquinas')).toBeInTheDocument();
   });
 
   it('Inventory page renders', async () => {

@@ -9,7 +9,7 @@ public final class InventoryMapper {
 
     public static InventoryItemResponse toResponse(InventoryItem item) {
         boolean lowStock = item.getMinStockAlert() != null
-                && item.getQuantity() <= item.getMinStockAlert();
+                && item.getQuantity().compareTo(item.getMinStockAlert()) <= 0;
 
         return new InventoryItemResponse(
                 item.getId(),

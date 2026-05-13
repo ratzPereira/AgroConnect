@@ -18,6 +18,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -54,4 +55,15 @@ public class ExecutionAssignment {
     @CreationTimestamp
     @Column(name = "assigned_at", nullable = false, updatable = false)
     private Instant assignedAt;
+
+    @Column(name = "hours_worked", precision = 6, scale = 2)
+    private BigDecimal hoursWorked;
+
+    @Column(name = "machine_hours", precision = 6, scale = 2)
+    private BigDecimal machineHours;
+
+    // Snapshotted from teamMember.hourlyRate when execution is completed
+    // so historical labor cost is immutable to later rate edits.
+    @Column(name = "hourly_rate_snapshot", precision = 8, scale = 2)
+    private BigDecimal hourlyRateSnapshot;
 }

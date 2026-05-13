@@ -8,6 +8,7 @@ import { CheckinButton } from './CheckinButton';
 import { ExecutionPhotoUpload } from './ExecutionPhotoUpload';
 import { DistanceIndicator } from './DistanceIndicator';
 import { CheckinMap } from './CheckinMap';
+import { JobCostingPanel } from './JobCostingPanel';
 import { Loader2, Users, MapPinCheck, Camera, CheckCircle2 } from 'lucide-react';
 import { cn } from '@/utils/cn';
 import { format } from 'date-fns';
@@ -103,6 +104,7 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
   const isCompleted = execution.completedAt !== null;
 
   return (
+    <>
     <Card className="mb-6">
       <CardHeader>
         <h2 className="font-semibold text-neutral-900 text-sm">Execução do Serviço</h2>
@@ -333,6 +335,15 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
         )}
       </CardBody>
     </Card>
+    {isProvider && (
+      <JobCostingPanel
+        executionId={execution.id}
+        requestId={requestId}
+        isProvider={isProvider}
+        canEdit={isProvider}
+      />
+    )}
+    </>
   );
 }
 

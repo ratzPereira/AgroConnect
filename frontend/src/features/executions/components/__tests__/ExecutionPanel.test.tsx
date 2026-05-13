@@ -61,6 +61,10 @@ vi.mock('../CheckinMap', () => ({
   CheckinMap: () => <div data-testid="checkin-map" />,
 }));
 
+vi.mock('../JobCostingPanel', () => ({
+  JobCostingPanel: () => <div data-testid="job-costing-panel" />,
+}));
+
 vi.mock('date-fns', () => ({
   format: vi.fn(() => '15/03/2026 14:30'),
 }));

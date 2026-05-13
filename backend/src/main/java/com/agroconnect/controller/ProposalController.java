@@ -1,6 +1,7 @@
 package com.agroconnect.controller;
 
 import com.agroconnect.dto.request.CreateProposalDto;
+import com.agroconnect.dto.response.ProposalAcceptResponse;
 import com.agroconnect.dto.response.ProposalResponse;
 import com.agroconnect.exception.GlobalExceptionHandler.ErrorResponse;
 import com.agroconnect.security.UserPrincipal;
@@ -95,17 +96,25 @@ public class ProposalController {
 
     @PostMapping("/proposals/{id}/accept")
     @PreAuthorize("hasRole('CLIENT')")
-    @Operation(summary = "Accept a proposal", description = "Accepts a proposal, rejects all others, transitions request to AWARDED, and creates escrow transaction.")
-    @ApiResponse(responseCode = "200", description = "Proposal accepted successfully")
+    @Operation(
+            summary = "Initiate proposal acceptance",
+            description = "Validates the proposal, creates an escrow transaction in PENDING state, and " +
+                    "returns a Stripe PaymentIntent client secret. The frontend confirms the payment with " +
+                    "Stripe.js; only then does the platform finalise the acceptance (proposal → ACCEPTED, " +
+                    "request → AWARDED, others → REJECTED) via the payment_intent.succeeded webhook."
+    )
+    @ApiResponse(responseCode = "200", description = "PaymentIntent created — confirm via Stripe.js")
     @ApiResponse(responseCode = "401", description = "Not authenticated",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "403", description = "Not the owner of the associated request",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Proposal not found",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    @ApiResponse(responseCode = "409", description = "Proposal or request in invalid state",
+    @ApiResponse(responseCode = "409", description = "Proposal or request in invalid state, or provider has no Stripe account",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-    public ResponseEntity<ProposalResponse> accept(
+    @ApiResponse(responseCode = "502", description = "Stripe API error",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<ProposalAcceptResponse> accept(
             @Parameter(description = "Proposal ID") @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         var response = proposalService.accept(id, principal.getId());

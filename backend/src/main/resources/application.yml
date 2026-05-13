@@ -84,7 +84,10 @@ agroconnect:
     bucket: ${MINIO_BUCKET:agroconnect}
   stripe:
     secret-key: ${STRIPE_SECRET_KEY:sk_test_placeholder}
+    publishable-key: ${STRIPE_PUBLISHABLE_KEY:pk_test_placeholder}
     webhook-secret: ${STRIPE_WEBHOOK_SECRET:whsec_placeholder}
+    onboarding-return-url: ${STRIPE_ONBOARDING_RETURN_URL:http://localhost:5173/provider/stripe/return}
+    onboarding-refresh-url: ${STRIPE_ONBOARDING_REFRESH_URL:http://localhost:5173/provider/stripe/refresh}
   mail:
     from: ${MAIL_FROM:noreply@agroconnect.pt}
     base-url: ${APP_BASE_URL:http://localhost:8000}

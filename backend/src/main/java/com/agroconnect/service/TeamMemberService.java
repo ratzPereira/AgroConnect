@@ -62,6 +62,7 @@ public class TeamMemberService {
                 .role(dto.role())
                 .active(true)
                 .invitedAt(Instant.now())
+                .hourlyRate(dto.hourlyRate())
                 .build();
 
         member = teamMemberRepository.save(member);
@@ -80,6 +81,7 @@ public class TeamMemberService {
         if (dto.role() != null) {
             member.setRole(dto.role());
         }
+        member.setHourlyRate(dto.hourlyRate());
 
         member = teamMemberRepository.save(member);
         log.info("Team member {} updated", member.getId());

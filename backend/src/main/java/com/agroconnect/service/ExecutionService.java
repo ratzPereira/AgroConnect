@@ -284,6 +284,18 @@ public class ExecutionService {
         execution.setMaterialsUsed(dto.materialsUsed());
         execution.setCompletedAt(Instant.now());
         execution.setCheckoutTime(Instant.now());
+
+        // Snapshot hourly rate on every assignment BEFORE we save the
+        // execution. After completedAt is set, costing data is frozen, so
+        // later edits to teamMember.hourlyRate must not retroactively change
+        // historical labor cost.
+        for (ExecutionAssignment assignment : assignmentRepository.findByExecutionId(executionId)) {
+            if (assignment.getHourlyRateSnapshot() == null) {
+                assignment.setHourlyRateSnapshot(assignment.getTeamMember().getHourlyRate());
+                assignmentRepository.save(assignment);
+            }
+        }
+
         executionRepository.save(execution);
 
         // Transition request IN_PROGRESS → AWAITING_CONFIRMATION

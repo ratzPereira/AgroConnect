@@ -8,6 +8,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { RequestStatusBadge } from '@/features/requests/components/RequestStatusBadge';
 import { ProposalCard } from '@/features/proposals/components/ProposalCard';
 import { CreateProposalModal } from '@/features/proposals/components/CreateProposalModal';
+import { PaymentModal } from '@/features/proposals/components/PaymentModal';
 import { ExecutionPanel } from '@/features/executions/components/ExecutionPanel';
 import { ConfirmationPanel } from '@/features/requests/components/ConfirmationPanel';
 import { ReviewForm } from '@/features/reviews/components/ReviewForm';
@@ -23,6 +24,7 @@ import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { MapPin, Layers, Clock, X } from 'lucide-react';
 import type { CreateProposalDto } from '@/types/proposal';
+import type { ProposalAcceptResponse } from '@/types/stripe';
 
 const urgencyLabels: Record<string, string> = {
   LOW: 'Baixa',
@@ -77,6 +79,7 @@ export function RequestDetail() {
   const { user } = useAuthStore();
   const [showProposalModal, setShowProposalModal] = useState(false);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
+  const [paymentAcceptance, setPaymentAcceptance] = useState<ProposalAcceptResponse | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
 
   const requestId = Number(id);
@@ -119,14 +122,27 @@ export function RequestDetail() {
 
   const acceptMutation = useMutation({
     mutationFn: (proposalId: number) => acceptProposal(proposalId),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['proposals', requestId] });
-      queryClient.invalidateQueries({ queryKey: ['request', requestId] });
-      queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
-      queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+    onSuccess: (response) => {
+      setPaymentAcceptance(response);
+    },
+    onError: () => {
       setAcceptingId(null);
     },
   });
+
+  function handlePaymentSucceeded() {
+    setPaymentAcceptance(null);
+    setAcceptingId(null);
+    queryClient.invalidateQueries({ queryKey: ['proposals', requestId] });
+    queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+    queryClient.invalidateQueries({ queryKey: ['client-dashboard'] });
+    queryClient.invalidateQueries({ queryKey: ['my-requests'] });
+  }
+
+  function handlePaymentClose() {
+    setPaymentAcceptance(null);
+    setAcceptingId(null);
+  }
 
   const isProvider = user?.role === 'PROVIDER_MANAGER' || user?.role === 'PROVIDER_LEAD' || user?.role === 'PROVIDER_OPERATOR';
   const isOwner = request && request.clientId === user?.id;
@@ -366,6 +382,14 @@ export function RequestDetail() {
           await createProposalMutation.mutateAsync(data);
         }}
         loading={createProposalMutation.isPending}
+      />
+
+      {/* Payment Modal — opens after accept returns clientSecret */}
+      <PaymentModal
+        open={paymentAcceptance !== null}
+        onClose={handlePaymentClose}
+        acceptance={paymentAcceptance}
+        onSucceeded={handlePaymentSucceeded}
       />
 
       {/* Photo Lightbox */}

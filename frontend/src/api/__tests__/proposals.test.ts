@@ -54,7 +54,14 @@ describe('proposals API', () => {
   });
 
   it('acceptProposal calls POST /proposals/{id}/accept', async () => {
-    const mockResponse = { id: 10, status: 'ACCEPTED' };
+    const mockResponse = {
+      transactionId: 7,
+      proposalId: 10,
+      paymentIntentId: 'pi_test_123',
+      clientSecret: 'pi_test_123_secret_xyz',
+      amount: 300.0,
+      publishableKey: 'pk_test_abc',
+    };
     vi.mocked(apiClient.post).mockResolvedValue({ data: mockResponse });
 
     const result = await acceptProposal(10);

@@ -2,9 +2,12 @@ package com.agroconnect.controller;
 
 import com.agroconnect.dto.request.CreateTeamMemberDto;
 import com.agroconnect.dto.request.UpdateTeamMemberDto;
+import com.agroconnect.dto.response.OperatorAnalyticsResponse;
+import com.agroconnect.dto.response.OperatorJobResponse;
 import com.agroconnect.dto.response.TeamMemberResponse;
 import com.agroconnect.exception.GlobalExceptionHandler.ErrorResponse;
 import com.agroconnect.security.UserPrincipal;
+import com.agroconnect.service.TeamAnalyticsService;
 import com.agroconnect.service.TeamMemberService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +17,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -25,9 +33,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -38,6 +48,7 @@ import java.util.List;
 public class TeamMemberController {
 
     private final TeamMemberService teamMemberService;
+    private final TeamAnalyticsService teamAnalyticsService;
 
     @GetMapping
     @Operation(summary = "List active team members",
@@ -122,5 +133,50 @@ public class TeamMemberController {
             @AuthenticationPrincipal UserPrincipal principal) {
         teamMemberService.deactivate(id, principal.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    // ─────────────────────── Analytics ───────────────────────
+
+    @GetMapping("/{id}/details")
+    @Operation(summary = "Get aggregated analytics for an operator",
+            description = "Aggregates jobs done, hours worked, labor cost, attributed revenue and profit over the period. " +
+                    "Revenue is attributed equal-split (proposal.price / number of operators on that execution). " +
+                    "Defaults to the current year if no range is provided.")
+    @ApiResponse(responseCode = "200", description = "Operator analytics summary")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider manager",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Team member not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<OperatorAnalyticsResponse> getAnalytics(
+            @Parameter(description = "Team member ID") @PathVariable Long id,
+            @Parameter(description = "Inclusive period start (defaults to first day of the current year)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive period end (defaults to today)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(teamAnalyticsService.getAnalytics(id, principal.getId(), from, to));
+    }
+
+    @GetMapping("/{id}/jobs")
+    @Operation(summary = "List jobs for an operator",
+            description = "Paginated list of completed jobs in which this operator participated during the given period.")
+    @ApiResponse(responseCode = "200", description = "Page of jobs")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider manager",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Team member not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Page<OperatorJobResponse>> listJobs(
+            @Parameter(description = "Team member ID") @PathVariable Long id,
+            @Parameter(description = "Inclusive period start") @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive period end") @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(teamAnalyticsService.listJobs(id, principal.getId(), from, to, pageable));
     }
 }

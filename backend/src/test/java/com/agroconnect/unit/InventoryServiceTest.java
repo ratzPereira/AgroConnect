@@ -3,7 +3,9 @@ package com.agroconnect.unit;
 import com.agroconnect.dto.request.CreateInventoryItemDto;
 import com.agroconnect.dto.request.UpdateInventoryItemDto;
 import com.agroconnect.dto.response.InventoryItemResponse;
+import com.agroconnect.exception.ForbiddenException;
 import com.agroconnect.exception.InvalidStateException;
+import com.agroconnect.exception.ResourceNotFoundException;
 import com.agroconnect.fixture.InventoryFixture;
 import com.agroconnect.fixture.UserFixture;
 import com.agroconnect.model.InventoryItem;
@@ -12,10 +14,12 @@ import com.agroconnect.model.User;
 import com.agroconnect.model.enums.InventoryUnit;
 import com.agroconnect.repository.InventoryItemRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
+import com.agroconnect.service.InventoryMovementService;
 import com.agroconnect.service.InventoryService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -25,6 +29,7 @@ import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -36,6 +41,7 @@ class InventoryServiceTest {
 
     @Mock private InventoryItemRepository inventoryItemRepository;
     @Mock private ProviderProfileRepository providerProfileRepository;
+    @Mock private InventoryMovementService inventoryMovementService;
 
     private InventoryService service;
 
@@ -45,7 +51,7 @@ class InventoryServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new InventoryService(inventoryItemRepository, providerProfileRepository);
+        service = new InventoryService(inventoryItemRepository, providerProfileRepository, inventoryMovementService);
 
         providerUser = UserFixture.aProviderUser().build();
         providerProfile = UserFixture.aProviderProfile().user(providerUser).build();
@@ -54,7 +60,9 @@ class InventoryServiceTest {
 
     @Test
     void create_givenValidData_shouldCreateItem() {
-        CreateInventoryItemDto dto = new CreateInventoryItemDto("Gasóleo", InventoryUnit.L, 500.0, 50.0, new BigDecimal("1.45"));
+        CreateInventoryItemDto dto = new CreateInventoryItemDto(
+                "Gasóleo", InventoryUnit.L,
+                new BigDecimal("500.000"), new BigDecimal("50.000"), new BigDecimal("1.4500"));
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(inventoryItemRepository.existsByProviderIdAndProductName(1L, "Gasóleo")).thenReturn(false);
@@ -67,8 +75,27 @@ class InventoryServiceTest {
     }
 
     @Test
+    void create_givenNullCost_shouldDefaultToZero() {
+        CreateInventoryItemDto dto = new CreateInventoryItemDto(
+                "Adubo", InventoryUnit.KG,
+                new BigDecimal("100.000"), null, null);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.existsByProviderIdAndProductName(1L, "Adubo")).thenReturn(false);
+        when(inventoryItemRepository.save(any(InventoryItem.class))).thenReturn(item);
+
+        ArgumentCaptor<InventoryItem> captor = ArgumentCaptor.forClass(InventoryItem.class);
+        service.create(dto, 2L);
+
+        verify(inventoryItemRepository).save(captor.capture());
+        assertEquals(0, captor.getValue().getCostPerUnit().compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
     void create_givenDuplicateName_shouldThrowInvalidState() {
-        CreateInventoryItemDto dto = new CreateInventoryItemDto("Gasóleo", InventoryUnit.L, 500.0, null, null);
+        CreateInventoryItemDto dto = new CreateInventoryItemDto(
+                "Gasóleo", InventoryUnit.L,
+                new BigDecimal("500.000"), null, null);
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(inventoryItemRepository.existsByProviderIdAndProductName(1L, "Gasóleo")).thenReturn(true);
@@ -77,8 +104,8 @@ class InventoryServiceTest {
     }
 
     @Test
-    void update_givenNewQuantity_shouldUpdate() {
-        UpdateInventoryItemDto dto = new UpdateInventoryItemDto(300.0, 50.0, new BigDecimal("1.50"));
+    void update_givenNewAlertThreshold_shouldUpdate() {
+        UpdateInventoryItemDto dto = new UpdateInventoryItemDto(null, new BigDecimal("75.000"));
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(inventoryItemRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(item));
@@ -87,7 +114,45 @@ class InventoryServiceTest {
         InventoryItemResponse response = service.update(1L, dto, 2L);
 
         assertNotNull(response);
-        assertEquals(300.0, item.getQuantity());
+        assertEquals(new BigDecimal("75.000"), item.getMinStockAlert());
+    }
+
+    @Test
+    void update_givenNullAlert_shouldClearThreshold() {
+        UpdateInventoryItemDto dto = new UpdateInventoryItemDto(null, null);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(item));
+        when(inventoryItemRepository.save(any(InventoryItem.class))).thenReturn(item);
+
+        service.update(1L, dto, 2L);
+
+        assertNull(item.getMinStockAlert());
+    }
+
+    @Test
+    void update_givenRenameToFreeName_shouldRename() {
+        UpdateInventoryItemDto dto = new UpdateInventoryItemDto("Gasóleo verde", new BigDecimal("50.000"));
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(item));
+        when(inventoryItemRepository.existsByProviderIdAndProductName(1L, "Gasóleo verde")).thenReturn(false);
+        when(inventoryItemRepository.save(any(InventoryItem.class))).thenReturn(item);
+
+        service.update(1L, dto, 2L);
+
+        assertEquals("Gasóleo verde", item.getProductName());
+    }
+
+    @Test
+    void update_givenRenameToTakenName_shouldThrowInvalidState() {
+        UpdateInventoryItemDto dto = new UpdateInventoryItemDto("Outro produto", new BigDecimal("50.000"));
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(item));
+        when(inventoryItemRepository.existsByProviderIdAndProductName(1L, "Outro produto")).thenReturn(true);
+
+        assertThrows(InvalidStateException.class, () -> service.update(1L, dto, 2L));
     }
 
     @Test
@@ -104,13 +169,26 @@ class InventoryServiceTest {
     }
 
     @Test
-    void delete_givenValidItem_shouldDelete() {
+    void delete_givenZeroStockItem_shouldSoftDelete() {
+        item.setQuantity(BigDecimal.ZERO);
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(inventoryItemRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(item));
+        when(inventoryItemRepository.save(any(InventoryItem.class))).thenReturn(item);
 
         service.delete(1L, 2L);
 
-        verify(inventoryItemRepository).delete(item);
+        verify(inventoryItemRepository).save(item);
+        assertNotNull(item.getDeletedAt());
+    }
+
+    @Test
+    void delete_givenItemWithStock_shouldThrowInvalidState() {
+        // item fixture has quantity=500 by default — must refuse soft-delete
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(inventoryItemRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(item));
+
+        assertThrows(InvalidStateException.class, () -> service.delete(1L, 2L));
+        assertNull(item.getDeletedAt());
     }
 
     @Test
@@ -138,8 +216,7 @@ class InventoryServiceTest {
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(inventoryItemRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
 
-        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
-                () -> service.getById(999L, 2L));
+        assertThrows(ResourceNotFoundException.class, () -> service.getById(999L, 2L));
     }
 
     @Test
@@ -147,16 +224,14 @@ class InventoryServiceTest {
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(inventoryItemRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
 
-        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
-                () -> service.delete(999L, 2L));
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(999L, 2L));
     }
 
     @Test
     void listByProvider_givenWrongProvider_shouldThrowForbidden() {
         when(providerProfileRepository.findByUserId(99L)).thenReturn(Optional.empty());
 
-        assertThrows(com.agroconnect.exception.ForbiddenException.class,
-                () -> service.listByProvider(99L));
+        assertThrows(ForbiddenException.class, () -> service.listByProvider(99L));
     }
 
     @Test
@@ -164,8 +239,7 @@ class InventoryServiceTest {
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(inventoryItemRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
 
-        UpdateInventoryItemDto dto = new UpdateInventoryItemDto(100.0, 10.0, new BigDecimal("2.00"));
-        assertThrows(com.agroconnect.exception.ResourceNotFoundException.class,
-                () -> service.update(999L, dto, 2L));
+        UpdateInventoryItemDto dto = new UpdateInventoryItemDto(null, new BigDecimal("10.000"));
+        assertThrows(ResourceNotFoundException.class, () -> service.update(999L, dto, 2L));
     }
 }

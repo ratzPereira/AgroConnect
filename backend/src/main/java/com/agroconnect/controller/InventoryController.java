@@ -1,10 +1,15 @@
 package com.agroconnect.controller;
 
 import com.agroconnect.dto.request.CreateInventoryItemDto;
+import com.agroconnect.dto.request.RecordAdjustmentInDto;
+import com.agroconnect.dto.request.RecordAdjustmentOutDto;
+import com.agroconnect.dto.request.RecordPurchaseDto;
 import com.agroconnect.dto.request.UpdateInventoryItemDto;
 import com.agroconnect.dto.response.InventoryItemResponse;
+import com.agroconnect.dto.response.InventoryMovementResponse;
 import com.agroconnect.exception.GlobalExceptionHandler.ErrorResponse;
 import com.agroconnect.security.UserPrincipal;
+import com.agroconnect.service.InventoryMovementService;
 import com.agroconnect.service.InventoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -14,6 +19,11 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -32,22 +42,22 @@ import java.util.List;
 @RestController
 @RequestMapping("/v1/providers/me/inventory")
 @RequiredArgsConstructor
-@Tag(name = "Inventory", description = "Manage provider inventory items")
+@Tag(name = "Inventory", description = "Manage provider inventory items and stock movements")
 public class InventoryController {
 
     private final InventoryService inventoryService;
+    private final InventoryMovementService inventoryMovementService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
     @Operation(summary = "List inventory items",
-            description = "Returns all inventory items for the authenticated provider.")
+            description = "Returns all inventory items for the authenticated provider (soft-deleted items excluded).")
     @ApiResponse(responseCode = "200", description = "List of inventory items")
     @ApiResponse(responseCode = "401", description = "Not authenticated",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public ResponseEntity<List<InventoryItemResponse>> list(
             @AuthenticationPrincipal UserPrincipal principal) {
-        var result = inventoryService.listByProvider(principal.getId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(inventoryService.listByProvider(principal.getId()));
     }
 
     @GetMapping("/low-stock")
@@ -59,8 +69,7 @@ public class InventoryController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public ResponseEntity<List<InventoryItemResponse>> lowStock(
             @AuthenticationPrincipal UserPrincipal principal) {
-        var result = inventoryService.getLowStockItems(principal.getId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(inventoryService.getLowStockItems(principal.getId()));
     }
 
     @GetMapping("/{id}")
@@ -74,13 +83,13 @@ public class InventoryController {
     public ResponseEntity<InventoryItemResponse> getById(
             @Parameter(description = "Inventory item ID") @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
-        var result = inventoryService.getById(id, principal.getId());
-        return ResponseEntity.ok(result);
+        return ResponseEntity.ok(inventoryService.getById(id, principal.getId()));
     }
 
     @PostMapping
     @PreAuthorize("hasRole('PROVIDER_MANAGER')")
-    @Operation(summary = "Create inventory item")
+    @Operation(summary = "Create inventory item",
+            description = "Creates a new item. If quantity > 0, an INITIAL movement is appended to the ledger.")
     @ApiResponse(responseCode = "201", description = "Item created")
     @ApiResponse(responseCode = "400", description = "Invalid input",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -100,7 +109,8 @@ public class InventoryController {
 
     @PutMapping("/{id}")
     @PreAuthorize("hasRole('PROVIDER_MANAGER')")
-    @Operation(summary = "Update inventory item")
+    @Operation(summary = "Update inventory item metadata",
+            description = "Updates rename / alert threshold. Quantity and cost are derived from the movement ledger.")
     @ApiResponse(responseCode = "200", description = "Item updated")
     @ApiResponse(responseCode = "400", description = "Invalid input",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -110,17 +120,19 @@ public class InventoryController {
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     @ApiResponse(responseCode = "404", description = "Item not found",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Duplicate product name on rename",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     public ResponseEntity<InventoryItemResponse> update(
             @Parameter(description = "Inventory item ID") @PathVariable Long id,
             @Valid @RequestBody UpdateInventoryItemDto dto,
             @AuthenticationPrincipal UserPrincipal principal) {
-        var response = inventoryService.update(id, dto, principal.getId());
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok(inventoryService.update(id, dto, principal.getId()));
     }
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('PROVIDER_MANAGER')")
-    @Operation(summary = "Delete inventory item")
+    @Operation(summary = "Soft-delete inventory item",
+            description = "Marks the item as deleted. The ledger history is preserved.")
     @ApiResponse(responseCode = "204", description = "Item deleted")
     @ApiResponse(responseCode = "401", description = "Not authenticated",
             content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
@@ -133,5 +145,92 @@ public class InventoryController {
             @AuthenticationPrincipal UserPrincipal principal) {
         inventoryService.delete(id, principal.getId());
         return ResponseEntity.noContent().build();
+    }
+
+    // ─── Movement endpoints ────────────────────────────────────────────────
+
+    @GetMapping("/{id}/movements")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
+    @Operation(summary = "List movements for an item",
+            description = "Returns the ledger of movements (most recent first) for the given item.")
+    @ApiResponse(responseCode = "200", description = "Page of movements")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Item not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Page<InventoryMovementResponse>> listMovements(
+            @Parameter(description = "Inventory item ID") @PathVariable Long id,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(inventoryMovementService.listForItem(id, principal.getId(), pageable));
+    }
+
+    @PostMapping("/{id}/movements/purchase")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD')")
+    @Operation(summary = "Record a PURCHASE movement",
+            description = "Adds stock at a paid unit cost and recomputes the weighted-average cost.")
+    @ApiResponse(responseCode = "201", description = "Movement recorded")
+    @ApiResponse(responseCode = "400", description = "Invalid input",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Insufficient role",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Item not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Item is deleted",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<InventoryMovementResponse> recordPurchase(
+            @Parameter(description = "Inventory item ID") @PathVariable Long id,
+            @Valid @RequestBody RecordPurchaseDto dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = inventoryMovementService.recordPurchase(id, dto, principal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{id}/movements/adjustment-in")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD')")
+    @Operation(summary = "Record an ADJUSTMENT_IN movement",
+            description = "Manual addition (correction, gift, found stock). Optionally updates WAC if unit cost is provided.")
+    @ApiResponse(responseCode = "201", description = "Movement recorded")
+    @ApiResponse(responseCode = "400", description = "Invalid input",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Insufficient role",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Item not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Item is deleted",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<InventoryMovementResponse> recordAdjustmentIn(
+            @Parameter(description = "Inventory item ID") @PathVariable Long id,
+            @Valid @RequestBody RecordAdjustmentInDto dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = inventoryMovementService.recordAdjustmentIn(id, dto, principal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @PostMapping("/{id}/movements/adjustment-out")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD')")
+    @Operation(summary = "Record an ADJUSTMENT_OUT movement",
+            description = "Manual removal (spoilage, theft, write-off). Preserves the weighted-average cost.")
+    @ApiResponse(responseCode = "201", description = "Movement recorded")
+    @ApiResponse(responseCode = "400", description = "Invalid input",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Insufficient role",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Item not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "409", description = "Insufficient stock or item is deleted",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<InventoryMovementResponse> recordAdjustmentOut(
+            @Parameter(description = "Inventory item ID") @PathVariable Long id,
+            @Valid @RequestBody RecordAdjustmentOutDto dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = inventoryMovementService.recordAdjustmentOut(id, dto, principal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

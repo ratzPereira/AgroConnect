@@ -16,7 +16,8 @@ public final class TeamMemberMapper {
                 member.getRole(),
                 member.isActive(),
                 member.getInvitedAt(),
-                member.getJoinedAt()
+                member.getJoinedAt(),
+                member.getHourlyRate()
         );
     }
 }

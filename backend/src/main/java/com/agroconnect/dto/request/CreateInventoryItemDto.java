@@ -2,6 +2,8 @@ package com.agroconnect.dto.request;
 
 import com.agroconnect.model.enums.InventoryUnit;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -23,12 +25,18 @@ public record CreateInventoryItemDto(
 
         @NotNull
         @PositiveOrZero
-        @Schema(description = "Current quantity", example = "500.0")
-        Double quantity,
+        @Digits(integer = 11, fraction = 3)
+        @Schema(description = "Initial quantity", example = "500.000")
+        BigDecimal quantity,
 
-        @Schema(description = "Minimum stock alert threshold", example = "50.0")
-        Double minStockAlert,
+        @PositiveOrZero
+        @Digits(integer = 11, fraction = 3)
+        @Schema(description = "Minimum stock alert threshold", example = "50.000")
+        BigDecimal minStockAlert,
 
-        @Schema(description = "Cost per unit in EUR", example = "1.45")
+        @DecimalMin("0.0")
+        @Digits(integer = 6, fraction = 4)
+        @Schema(description = "Cost per unit in EUR (optional; sets the initial weighted-average cost)",
+                example = "1.4500")
         BigDecimal costPerUnit
 ) {}

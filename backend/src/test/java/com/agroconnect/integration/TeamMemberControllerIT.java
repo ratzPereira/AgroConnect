@@ -88,7 +88,7 @@ class TeamMemberControllerIT extends TestContainersConfig {
     @Test
     @Order(2)
     void create_givenValidData_shouldReturn201() throws Exception {
-        CreateTeamMemberDto dto = new CreateTeamMemberDto("Carlos Mendes", "carlos@agro.pt", "+351913000001", TeamMemberRole.OPERATOR);
+        CreateTeamMemberDto dto = new CreateTeamMemberDto("Carlos Mendes", "carlos@agro.pt", "+351913000001", TeamMemberRole.OPERATOR, new java.math.BigDecimal("12.50"));
 
         MvcResult result = mockMvc.perform(post("/v1/providers/me/team")
                         .header("Authorization", "Bearer " + providerToken)
@@ -98,28 +98,137 @@ class TeamMemberControllerIT extends TestContainersConfig {
                 .andExpect(jsonPath("$.id", notNullValue()))
                 .andExpect(jsonPath("$.name").value("Carlos Mendes"))
                 .andExpect(jsonPath("$.role").value("OPERATOR"))
+                .andExpect(jsonPath("$.hourlyRate").value(12.50))
                 .andReturn();
         memberId = objectMapper.readTree(result.getResponse().getContentAsString()).get("id").asLong();
     }
 
     @Test
     @Order(3)
-    void list_shouldReturnTeamMembers() throws Exception {
+    void list_shouldReturnTeamMembersWithHourlyRate() throws Exception {
         mockMvc.perform(get("/v1/providers/me/team")
                         .header("Authorization", "Bearer " + providerToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].name").value("Carlos Mendes"));
+                .andExpect(jsonPath("$[0].name").value("Carlos Mendes"))
+                .andExpect(jsonPath("$[0].hourlyRate").value(12.50));
     }
 
     @Test
     @Order(4)
     void create_givenClientRole_shouldReturn403() throws Exception {
-        CreateTeamMemberDto dto = new CreateTeamMemberDto("Hacker", "hack@test.pt", null, TeamMemberRole.OPERATOR);
+        CreateTeamMemberDto dto = new CreateTeamMemberDto("Hacker", "hack@test.pt", null, TeamMemberRole.OPERATOR, null);
 
         mockMvc.perform(post("/v1/providers/me/team")
                         .header("Authorization", "Bearer " + clientToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Order(5)
+    void update_shouldChangeHourlyRate() throws Exception {
+        var dto = new com.agroconnect.dto.request.UpdateTeamMemberDto(
+                "Carlos Mendes", "+351913000001", TeamMemberRole.LEAD,
+                new java.math.BigDecimal("15.00"));
+
+        mockMvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put(
+                                "/v1/providers/me/team/" + memberId)
+                        .header("Authorization", "Bearer " + providerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.hourlyRate").value(15.00))
+                .andExpect(jsonPath("$.role").value("LEAD"));
+    }
+
+    @Test
+    @Order(6)
+    void create_givenNegativeHourlyRate_shouldReturn400() throws Exception {
+        CreateTeamMemberDto dto = new CreateTeamMemberDto(
+                "Invalid Rate", "bad@test.pt", null, TeamMemberRole.OPERATOR,
+                new java.math.BigDecimal("-1.00"));
+
+        mockMvc.perform(post("/v1/providers/me/team")
+                        .header("Authorization", "Bearer " + providerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(dto)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Order(7)
+    void getAnalytics_givenNoActivity_shouldReturnZeros() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/" + memberId + "/details")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operatorId").value(memberId))
+                .andExpect(jsonPath("$.operatorName").value("Carlos Mendes"))
+                .andExpect(jsonPath("$.jobsDone").value(0))
+                .andExpect(jsonPath("$.hoursWorked").value(0))
+                .andExpect(jsonPath("$.laborCost").value(0))
+                .andExpect(jsonPath("$.revenueAttributed").value(0))
+                .andExpect(jsonPath("$.profit").value(0))
+                .andExpect(jsonPath("$.topMachines").isArray());
+    }
+
+    @Test
+    @Order(8)
+    void getAnalytics_withExplicitRange_shouldEchoRange() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/" + memberId + "/details")
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-05-12")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.from").value("2026-01-01"))
+                .andExpect(jsonPath("$.to").value("2026-05-12"));
+    }
+
+    @Test
+    @Order(9)
+    void getAnalytics_givenNonExistentOperator_shouldReturn404() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/9999999/details")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @Order(10)
+    void getAnalytics_givenNoToken_shouldReturn401() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/" + memberId + "/details"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @Order(11)
+    void getAnalytics_givenClientToken_shouldReturn403() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/" + memberId + "/details")
+                        .header("Authorization", "Bearer " + clientToken))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Order(12)
+    void listJobs_givenNoActivity_shouldReturnEmptyPage() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/" + memberId + "/jobs")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.totalElements").value(0));
+    }
+
+    @Test
+    @Order(13)
+    void listJobs_givenNonExistentOperator_shouldReturn404() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/9999999/jobs")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @Order(14)
+    void listJobs_givenNoToken_shouldReturn401() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/team/" + memberId + "/jobs"))
+                .andExpect(status().isUnauthorized());
     }
 }

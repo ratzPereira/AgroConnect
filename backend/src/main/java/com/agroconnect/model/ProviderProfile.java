@@ -84,6 +84,21 @@ public class ProviderProfile {
     @Builder.Default
     private boolean verified = false;
 
+    @Column(name = "stripe_account_id", length = 255)
+    private String stripeAccountId;
+
+    @Column(name = "stripe_charges_enabled", nullable = false)
+    @Builder.Default
+    private boolean stripeChargesEnabled = false;
+
+    @Column(name = "stripe_payouts_enabled", nullable = false)
+    @Builder.Default
+    private boolean stripePayoutsEnabled = false;
+
+    @Column(name = "stripe_details_submitted", nullable = false)
+    @Builder.Default
+    private boolean stripeDetailsSubmitted = false;
+
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;

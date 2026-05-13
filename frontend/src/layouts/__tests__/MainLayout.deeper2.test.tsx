@@ -71,6 +71,7 @@ vi.mock('lucide-react', () => {
     User: iconFactory('User'),
     CalendarRange: iconFactory('CalendarRange'),
     Store: iconFactory('Store'),
+    Banknote: iconFactory('Banknote'),
   };
 });
 

@@ -13,6 +13,8 @@ public interface ProviderProfileRepository extends JpaRepository<ProviderProfile
 
     Optional<ProviderProfile> findByUserId(Long userId);
 
+    Optional<ProviderProfile> findByStripeAccountId(String stripeAccountId);
+
     @Query(value = """
             SELECT pp.* FROM provider_profiles pp
             WHERE pp.location IS NOT NULL

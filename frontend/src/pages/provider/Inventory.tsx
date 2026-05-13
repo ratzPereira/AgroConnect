@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { listInventory, getLowStockItems, createInventoryItem, deleteInventoryItem } from '@/api/inventory';
+import { listInventory, getLowStockItems, createInventoryItem } from '@/api/inventory';
 import { Card, CardBody } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { AnimatedPage } from '@/components/AnimatedPage';
@@ -8,13 +9,14 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { EmptyTransactions } from '@/components/illustrations/EmptyTransactions';
 import { Alert } from '@/components/ui/Alert';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, ChevronRight } from 'lucide-react';
 import type { InventoryUnit, CreateInventoryItemRequest } from '@/types/inventory';
 
 const unitLabels: Record<InventoryUnit, string> = { KG: 'kg', L: 'L', UNIT: 'un' };
 
 export function Inventory() {
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [showForm, setShowForm] = useState(false);
 
   const { data: items, isLoading } = useQuery({
@@ -29,12 +31,11 @@ export function Inventory() {
 
   const createMut = useMutation({
     mutationFn: (data: CreateInventoryItemRequest) => createInventoryItem(data),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['inventory'] }); queryClient.invalidateQueries({ queryKey: ['low-stock'] }); setShowForm(false); },
-  });
-
-  const deleteMut = useMutation({
-    mutationFn: (id: number) => deleteInventoryItem(id),
-    onSuccess: () => { queryClient.invalidateQueries({ queryKey: ['inventory'] }); queryClient.invalidateQueries({ queryKey: ['low-stock'] }); },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['low-stock'] });
+      setShowForm(false);
+    },
   });
 
   return (
@@ -68,12 +69,15 @@ export function Inventory() {
               <select name="unit" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm">
                 <option value="KG">Kg</option><option value="L">Litros</option><option value="UNIT">Unidades</option>
               </select>
-              <input name="quantity" type="number" step="0.01" min="0" placeholder="Quantidade" required className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              <input name="quantity" type="number" step="0.001" min="0" placeholder="Quantidade inicial" required className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <input name="minStockAlert" type="number" step="0.01" placeholder="Alerta mín. stock" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
-              <input name="costPerUnit" type="number" step="0.01" placeholder="Custo/unidade (€)" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              <input name="minStockAlert" type="number" step="0.001" placeholder="Alerta mín. stock" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
+              <input name="costPerUnit" type="number" step="0.0001" placeholder="Custo inicial/unidade (€)" className="rounded-lg border border-neutral-300 px-3 py-2 text-sm" />
             </div>
+            <p className="text-xs text-neutral-500">
+              A quantidade inicial fica registada como movimento INITIAL no histórico. Para ajustar stock depois, use os movimentos.
+            </p>
             <div className="flex gap-2">
               <Button type="submit" size="sm" loading={createMut.isPending}>Guardar</Button>
               <Button type="button" size="sm" variant="ghost" onClick={() => setShowForm(false)}>Cancelar</Button>
@@ -99,7 +103,11 @@ export function Inventory() {
               </tr></thead>
               <tbody>
                 {items.map((item) => (
-                  <tr key={item.id} className="border-b border-neutral-100">
+                  <tr
+                    key={item.id}
+                    className="border-b border-neutral-100 hover:bg-neutral-50 cursor-pointer transition-colors"
+                    onClick={() => navigate(`/provider/inventory/${item.id}`)}
+                  >
                     <td className="px-3 sm:px-6 py-3 font-medium text-neutral-900">{item.productName}</td>
                     <td className="hidden sm:table-cell px-6 py-3 text-neutral-600">{unitLabels[item.unit]}</td>
                     <td className="px-3 sm:px-6 py-3 text-neutral-600">{item.quantity}</td>
@@ -109,8 +117,8 @@ export function Inventory() {
                       ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning-100 text-warning-700">Baixo</span>
                       : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-leaf-100 text-leaf-700">OK</span>}
                     </td>
-                    <td className="px-3 sm:px-6 py-3">
-                      <Button size="sm" variant="ghost" onClick={() => deleteMut.mutate(item.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <td className="px-3 sm:px-6 py-3 text-neutral-400">
+                      <ChevronRight className="h-4 w-4" />
                     </td>
                   </tr>
                 ))}

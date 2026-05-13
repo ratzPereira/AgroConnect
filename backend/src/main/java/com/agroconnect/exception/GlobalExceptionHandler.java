@@ -1,6 +1,8 @@
 package com.agroconnect.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -11,6 +13,7 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 import java.time.Instant;
 import java.util.Map;
@@ -59,6 +62,21 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", message, request);
     }
 
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+        String message = ex.getConstraintViolations().stream()
+                .map(ConstraintViolation::getMessage)
+                .collect(Collectors.joining("; "));
+        return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", message, request);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
+        String paramName = ex.getName();
+        String message = "Valor inválido para o parâmetro '" + paramName + "'.";
+        return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", message, request);
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.FORBIDDEN, "Acesso negado", "Não tem permissão para aceder a este recurso.", request);
@@ -67,6 +85,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TooManyAttemptsException.class)
     public ResponseEntity<ErrorResponse> handleTooManyAttempts(TooManyAttemptsException ex, HttpServletRequest request) {
         return buildResponse(HttpStatus.TOO_MANY_REQUESTS, "Demasiadas tentativas", ex.getMessage(), request);
+    }
+
+    @ExceptionHandler(StripeIntegrationException.class)
+    public ResponseEntity<ErrorResponse> handleStripe(StripeIntegrationException ex, HttpServletRequest request) {
+        log.error("Stripe integration error on {} {}: {}", request.getMethod(), request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_GATEWAY, "Erro de pagamento", ex.getMessage(), request);
     }
 
     @ExceptionHandler(Exception.class)

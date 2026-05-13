@@ -21,6 +21,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -55,7 +56,7 @@ class TeamMemberServiceTest {
 
     @Test
     void create_givenValidData_shouldCreateTeamMember() {
-        CreateTeamMemberDto dto = new CreateTeamMemberDto("Carlos Mendes", "carlos@agro.pt", "+351912345678", TeamMemberRole.OPERATOR);
+        CreateTeamMemberDto dto = new CreateTeamMemberDto("Carlos Mendes", "carlos@agro.pt", "+351912345678", TeamMemberRole.OPERATOR, new BigDecimal("12.50"));
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(teamMemberRepository.existsByProviderIdAndEmail(1L, "carlos@agro.pt")).thenReturn(false);
@@ -69,7 +70,7 @@ class TeamMemberServiceTest {
 
     @Test
     void create_givenDuplicateEmail_shouldThrowInvalidState() {
-        CreateTeamMemberDto dto = new CreateTeamMemberDto("Carlos Mendes", "carlos@agro.pt", null, TeamMemberRole.OPERATOR);
+        CreateTeamMemberDto dto = new CreateTeamMemberDto("Carlos Mendes", "carlos@agro.pt", null, TeamMemberRole.OPERATOR, null);
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(teamMemberRepository.existsByProviderIdAndEmail(1L, "carlos@agro.pt")).thenReturn(true);
@@ -79,7 +80,7 @@ class TeamMemberServiceTest {
 
     @Test
     void update_givenValidData_shouldUpdateFields() {
-        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("Manuel Santos Jr", "+351913111111", TeamMemberRole.LEAD);
+        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("Manuel Santos Jr", "+351913111111", TeamMemberRole.LEAD, new BigDecimal("15.00"));
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(teamMember));
@@ -140,7 +141,7 @@ class TeamMemberServiceTest {
     @Test
     void update_givenNullRole_shouldNotChangeRole() {
         teamMember.setRole(TeamMemberRole.OPERATOR);
-        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("New Name", "+351910000000", null);
+        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("New Name", "+351910000000", null, null);
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(teamMember));
@@ -162,7 +163,7 @@ class TeamMemberServiceTest {
 
     @Test
     void create_givenWrongProvider_shouldThrowForbidden() {
-        CreateTeamMemberDto dto = new CreateTeamMemberDto("Test", "test@test.pt", null, TeamMemberRole.OPERATOR);
+        CreateTeamMemberDto dto = new CreateTeamMemberDto("Test", "test@test.pt", null, TeamMemberRole.OPERATOR, null);
         when(providerProfileRepository.findByUserId(99L)).thenReturn(Optional.empty());
 
         assertThrows(ForbiddenException.class, () -> service.create(dto, 99L));
@@ -170,7 +171,7 @@ class TeamMemberServiceTest {
 
     @Test
     void update_givenNonExistentMember_shouldThrowNotFound() {
-        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("New Name", null, null);
+        UpdateTeamMemberDto dto = new UpdateTeamMemberDto("New Name", null, null, null);
 
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(teamMemberRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());

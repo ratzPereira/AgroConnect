@@ -1,6 +1,8 @@
 package com.agroconnect.service;
 
+import com.agroconnect.config.StripeProperties;
 import com.agroconnect.dto.request.CreateProposalDto;
+import com.agroconnect.dto.response.ProposalAcceptResponse;
 import com.agroconnect.dto.response.ProposalResponse;
 import com.agroconnect.exception.ForbiddenException;
 import com.agroconnect.exception.InvalidStateException;
@@ -19,6 +21,7 @@ import com.agroconnect.repository.ProposalRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.repository.TransactionRepository;
+import com.stripe.model.PaymentIntent;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.LockModeType;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +60,8 @@ public class ProposalService {
     private final TransactionRepository transactionRepository;
     private final NotificationService notificationService;
     private final ExecutionService executionService;
+    private final StripeService stripeService;
+    private final StripeProperties stripeProperties;
     private final EntityManager entityManager;
 
     @Value("${agroconnect.commission.rate}")
@@ -113,14 +118,20 @@ public class ProposalService {
         return ProposalMapper.toResponse(proposal);
     }
 
+    /**
+     * Initiates acceptance: validates, creates an escrow transaction in PENDING state and a
+     * Stripe PaymentIntent. The acceptance only completes — proposal moves to ACCEPTED, request
+     * to AWARDED, other proposals to REJECTED, execution row created — when the
+     * {@code payment_intent.succeeded} webhook fires and invokes
+     * {@link #completeAcceptanceAfterPayment(Long)}.
+     */
     @Transactional
-    public ProposalResponse accept(Long proposalId, Long userId) {
+    public ProposalAcceptResponse accept(Long proposalId, Long userId) {
         Proposal proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new ResourceNotFoundException(ERR_PROPOSAL_NOT_FOUND));
 
         ServiceRequest request = proposal.getRequest();
 
-        // Acquire pessimistic lock to prevent concurrent acceptance
         entityManager.lock(request, LockModeType.PESSIMISTIC_WRITE);
 
         if (!request.getClient().getId().equals(userId)) {
@@ -135,23 +146,21 @@ public class ProposalService {
             throw new InvalidStateException("Só é possível aceitar propostas pendentes.");
         }
 
-        // Check if proposal has expired
         if (proposal.getValidUntil() != null && proposal.getValidUntil().isBefore(Instant.now())) {
             throw new InvalidStateException("Esta proposta expirou e não pode ser aceite.");
         }
 
-        // Accept proposal
-        proposal.setStatus(ProposalStatus.ACCEPTED);
-        proposalRepository.save(proposal);
+        ProviderProfile provider = proposal.getProvider();
+        if (provider.getStripeAccountId() == null || !provider.isStripeChargesEnabled()) {
+            throw new InvalidStateException(
+                    "O prestador ainda não concluiu a configuração de pagamentos. Tente outra proposta.");
+        }
 
-        // Reject all other pending proposals
-        proposalRepository.rejectAllPendingExcept(request.getId(), proposalId);
+        if (transactionRepository.findByRequestId(request.getId()).isPresent()) {
+            throw new InvalidStateException(
+                    "Já existe um pagamento em curso para este pedido. Conclua-o ou cancele-o antes de aceitar outra proposta.");
+        }
 
-        // Transition request to AWARDED
-        request.setStatus(RequestStatus.AWARDED);
-        requestRepository.save(request);
-
-        // Create transaction (escrow)
         BigDecimal amount = proposal.getPrice();
         BigDecimal commission = amount.multiply(commissionRate).setScale(2, RoundingMode.HALF_UP);
         BigDecimal payout = amount.subtract(commission);
@@ -163,25 +172,73 @@ public class ProposalService {
                 .commissionRate(commissionRate)
                 .commissionAmount(commission)
                 .providerPayout(payout)
-                .status(TransactionStatus.HELD)
-                .heldAt(Instant.now())
+                .status(TransactionStatus.PENDING)
                 .build();
+        transaction = transactionRepository.save(transaction);
 
+        PaymentIntent intent = stripeService.createPaymentIntent(
+                transaction.getId(),
+                amount,
+                request.getClient().getEmail(),
+                request.getId(),
+                proposal.getId()
+        );
+
+        transaction.setStripePaymentIntentId(intent.getId());
         transactionRepository.save(transaction);
 
-        // Create execution for the accepted proposal
+        log.info("Proposal {} acceptance initiated: transaction={}, paymentIntent={}",
+                proposalId, transaction.getId(), intent.getId());
+
+        return new ProposalAcceptResponse(
+                transaction.getId(),
+                proposal.getId(),
+                intent.getId(),
+                intent.getClientSecret(),
+                amount,
+                stripeProperties.publishableKey()
+        );
+    }
+
+    /**
+     * Completes the acceptance cascade after Stripe confirms the payment. Idempotent:
+     * if the request is no longer in WITH_PROPOSALS, this is a duplicate webhook delivery
+     * and the method returns silently.
+     */
+    @Transactional
+    public void completeAcceptanceAfterPayment(Long transactionId) {
+        Transaction transaction = transactionRepository.findById(transactionId)
+                .orElseThrow(() -> new ResourceNotFoundException("Transação não encontrada."));
+
+        Proposal proposal = transaction.getProposal();
+        ServiceRequest request = transaction.getRequest();
+
+        entityManager.lock(request, LockModeType.PESSIMISTIC_WRITE);
+
+        if (request.getStatus() != RequestStatus.WITH_PROPOSALS) {
+            log.info("completeAcceptanceAfterPayment: request {} already in {} — skipping cascade",
+                    request.getId(), request.getStatus());
+            return;
+        }
+
+        proposal.setStatus(ProposalStatus.ACCEPTED);
+        proposalRepository.save(proposal);
+
+        proposalRepository.rejectAllPendingExcept(request.getId(), proposal.getId());
+
+        request.setStatus(RequestStatus.AWARDED);
+        requestRepository.save(request);
+
         executionService.createForProposal(proposal);
 
-        // Notify accepted provider
         notificationService.create(
                 proposal.getProvider().getUser().getId(),
                 "PROPOSAL_ACCEPTED",
                 "Proposta aceite",
-                "A sua proposta para o pedido \"" + request.getTitle() + "\" foi aceite!",
+                "A sua proposta para o pedido \"" + request.getTitle() + "\" foi aceite e o pagamento está em escrow.",
                 "{\"requestId\":" + request.getId() + "}"
         );
 
-        // Notify rejected providers
         List<Proposal> rejected = proposalRepository.findByRequestId(request.getId()).stream()
                 .filter(p -> p.getStatus() == ProposalStatus.REJECTED)
                 .toList();
@@ -195,8 +252,8 @@ public class ProposalService {
             );
         }
 
-        log.info("Proposal accepted: {} for request {}. Transaction created.", proposalId, request.getId());
-        return ProposalMapper.toResponse(proposal);
+        log.info("Acceptance cascade completed for proposal {} (transaction {})",
+                proposal.getId(), transactionId);
     }
 
     @Transactional

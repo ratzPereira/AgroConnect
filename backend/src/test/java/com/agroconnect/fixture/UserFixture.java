@@ -55,7 +55,11 @@ public final class UserFixture {
                 .serviceRadiusKm(25)
                 .avgRating(0)
                 .totalReviews(0)
-                .verified(false);
+                .verified(false)
+                .stripeAccountId("acct_test_default")
+                .stripeChargesEnabled(true)
+                .stripePayoutsEnabled(true)
+                .stripeDetailsSubmitted(true);
     }
 
     public static RefreshToken.RefreshTokenBuilder aRefreshToken() {

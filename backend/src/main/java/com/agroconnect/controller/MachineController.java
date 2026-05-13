@@ -1,11 +1,20 @@
 package com.agroconnect.controller;
 
 import com.agroconnect.dto.request.CreateMachineDto;
+import com.agroconnect.dto.request.CreateMachineExpenseDto;
+import com.agroconnect.dto.request.CreateMaintenanceLogDto;
 import com.agroconnect.dto.request.UpdateMachineDto;
+import com.agroconnect.dto.response.MachineAnalyticsResponse;
+import com.agroconnect.dto.response.MachineExpenseResponse;
+import com.agroconnect.dto.response.MachineJobResponse;
+import com.agroconnect.dto.response.MachineMaintenanceLogResponse;
 import com.agroconnect.dto.response.MachineResponse;
 import com.agroconnect.exception.GlobalExceptionHandler.ErrorResponse;
 import com.agroconnect.model.enums.MachineStatus;
 import com.agroconnect.security.UserPrincipal;
+import com.agroconnect.service.MachineAnalyticsService;
+import com.agroconnect.service.MachineExpenseService;
+import com.agroconnect.service.MachineMaintenanceService;
 import com.agroconnect.service.MachineService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -15,6 +24,12 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springdoc.core.annotations.ParameterObject;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -29,6 +44,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -38,6 +54,9 @@ import java.util.List;
 public class MachineController {
 
     private final MachineService machineService;
+    private final MachineAnalyticsService machineAnalyticsService;
+    private final MachineMaintenanceService machineMaintenanceService;
+    private final MachineExpenseService machineExpenseService;
 
     @GetMapping
     @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
@@ -130,6 +149,165 @@ public class MachineController {
             @Parameter(description = "Machine ID") @PathVariable Long id,
             @AuthenticationPrincipal UserPrincipal principal) {
         machineService.delete(id, principal.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ─────────────────────── Analytics ───────────────────────
+
+    @GetMapping("/{id}/details")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
+    @Operation(summary = "Get aggregated analytics for a machine",
+            description = "Aggregates jobs done, machine hours, revenue, maintenance and operating expenses over the period. " +
+                    "Defaults to the current year if no range is provided.")
+    @ApiResponse(responseCode = "200", description = "Analytics summary")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<MachineAnalyticsResponse> getAnalytics(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @Parameter(description = "Inclusive period start (defaults to first day of the current year)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive period end (defaults to today)")
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(machineAnalyticsService.getAnalytics(id, principal.getId(), from, to));
+    }
+
+    @GetMapping("/{id}/jobs")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
+    @Operation(summary = "List jobs for a machine",
+            description = "Paginated list of completed jobs in which this machine was used during the given period.")
+    @ApiResponse(responseCode = "200", description = "Page of jobs")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Page<MachineJobResponse>> listJobs(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @Parameter(description = "Inclusive period start") @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @Parameter(description = "Inclusive period end") @RequestParam(required = false)
+                @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to,
+            @ParameterObject @PageableDefault(size = 20) Pageable pageable,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(machineAnalyticsService.listJobs(id, principal.getId(), from, to, pageable));
+    }
+
+    // ─────────────────────── Maintenance ledger ───────────────────────
+
+    @GetMapping("/{id}/maintenance")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
+    @Operation(summary = "List maintenance log entries for a machine")
+    @ApiResponse(responseCode = "200", description = "List of maintenance entries (most recent first)")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<List<MachineMaintenanceLogResponse>> listMaintenance(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(machineMaintenanceService.list(id, principal.getId()));
+    }
+
+    @PostMapping("/{id}/maintenance")
+    @PreAuthorize("hasRole('PROVIDER_MANAGER')")
+    @Operation(summary = "Record a maintenance log entry",
+            description = "Creates an immutable maintenance entry and updates the machine's last/next maintenance dates.")
+    @ApiResponse(responseCode = "201", description = "Maintenance entry created")
+    @ApiResponse(responseCode = "400", description = "Invalid input",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider manager",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<MachineMaintenanceLogResponse> createMaintenance(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @Valid @RequestBody CreateMaintenanceLogDto dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = machineMaintenanceService.create(id, dto, principal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @DeleteMapping("/{id}/maintenance/{logId}")
+    @PreAuthorize("hasRole('PROVIDER_MANAGER')")
+    @Operation(summary = "Delete a maintenance log entry")
+    @ApiResponse(responseCode = "204", description = "Entry deleted")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider manager",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine or log not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Void> deleteMaintenance(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @Parameter(description = "Maintenance log ID") @PathVariable Long logId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        machineMaintenanceService.delete(id, logId, principal.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    // ─────────────────────── Expense ledger ───────────────────────
+
+    @GetMapping("/{id}/expenses")
+    @PreAuthorize("hasAnyRole('PROVIDER_MANAGER', 'PROVIDER_LEAD', 'PROVIDER_OPERATOR')")
+    @Operation(summary = "List operating expenses for a machine")
+    @ApiResponse(responseCode = "200", description = "List of expenses (most recent first)")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<List<MachineExpenseResponse>> listExpenses(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        return ResponseEntity.ok(machineExpenseService.list(id, principal.getId()));
+    }
+
+    @PostMapping("/{id}/expenses")
+    @PreAuthorize("hasRole('PROVIDER_MANAGER')")
+    @Operation(summary = "Record an operating expense")
+    @ApiResponse(responseCode = "201", description = "Expense created")
+    @ApiResponse(responseCode = "400", description = "Invalid input",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider manager",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<MachineExpenseResponse> createExpense(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @Valid @RequestBody CreateMachineExpenseDto dto,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        var response = machineExpenseService.create(id, dto, principal.getId());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @DeleteMapping("/{id}/expenses/{expenseId}")
+    @PreAuthorize("hasRole('PROVIDER_MANAGER')")
+    @Operation(summary = "Delete an operating expense")
+    @ApiResponse(responseCode = "204", description = "Expense deleted")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider manager",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "404", description = "Machine or expense not found",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<Void> deleteExpense(
+            @Parameter(description = "Machine ID") @PathVariable Long id,
+            @Parameter(description = "Expense ID") @PathVariable Long expenseId,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        machineExpenseService.delete(id, expenseId, principal.getId());
         return ResponseEntity.noContent().build();
     }
 }

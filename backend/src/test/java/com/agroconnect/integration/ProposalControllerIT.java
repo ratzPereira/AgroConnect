@@ -5,11 +5,14 @@ import com.agroconnect.dto.request.CreateServiceRequestDto;
 import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
 import com.agroconnect.dto.request.UpdateProviderProfileRequest;
+import com.agroconnect.fixture.StripeTestHelper;
 import com.agroconnect.fixture.TestContainersConfig;
 import com.agroconnect.model.User;
 import com.agroconnect.model.enums.PricingModel;
 import com.agroconnect.model.enums.Urgency;
+import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.UserRepository;
+import com.agroconnect.service.StripeService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
@@ -18,6 +21,7 @@ import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -44,6 +48,12 @@ class ProposalControllerIT extends TestContainersConfig {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private ProviderProfileRepository providerProfileRepository;
+
+    @MockBean
+    private StripeService stripeService;
 
     private static String clientToken;
     private static String providerToken;
@@ -88,6 +98,9 @@ class ProposalControllerIT extends TestContainersConfig {
         User providerUser = userRepository.findByEmail("prop-provider@test.pt").orElseThrow();
         providerUser.setEmailVerified(true);
         userRepository.save(providerUser);
+
+        // Mark provider as Stripe-ready (charges enabled) so accept can create a PaymentIntent
+        StripeTestHelper.markProviderStripeReady(providerProfileRepository, providerUser.getId());
 
         MvcResult providerResult = mockMvc.perform(post("/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -197,22 +210,31 @@ class ProposalControllerIT extends TestContainersConfig {
 
     @Test
     @Order(7)
-    void acceptProposal_shouldAwardRequestAndCreateTransaction() throws Exception {
+    void acceptProposal_shouldCreatePaymentIntentAndKeepRequestWithProposals() throws Exception {
+        StripeTestHelper.stubCreatePaymentIntent(stripeService, "pi_test_it_accept", "pi_test_it_accept_secret_xyz");
+
         mockMvc.perform(post("/v1/proposals/" + proposalId + "/accept")
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("ACCEPTED"));
+                .andExpect(jsonPath("$.proposalId").value(proposalId))
+                .andExpect(jsonPath("$.transactionId", notNullValue()))
+                .andExpect(jsonPath("$.paymentIntentId").value("pi_test_it_accept"))
+                .andExpect(jsonPath("$.clientSecret").value("pi_test_it_accept_secret_xyz"))
+                .andExpect(jsonPath("$.amount").value(350.00))
+                .andExpect(jsonPath("$.publishableKey", notNullValue()));
 
-        // Verify request is now AWARDED
+        // Cascade is deferred to payment_intent.succeeded webhook — request must remain WITH_PROPOSALS
         mockMvc.perform(get("/v1/requests/" + requestId)
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.status").value("AWARDED"));
+                .andExpect(jsonPath("$.status").value("WITH_PROPOSALS"));
     }
 
     @Test
     @Order(8)
-    void acceptProposal_givenAlreadyAccepted_shouldReturn409() throws Exception {
+    void acceptProposal_givenPaymentInProgress_shouldReturn409() throws Exception {
+        // Payment was initiated in Order(7) — a second accept must be rejected even before
+        // the webhook fires, because a transaction row already exists for this request.
         mockMvc.perform(post("/v1/proposals/" + proposalId + "/accept")
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isConflict());

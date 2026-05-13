@@ -693,6 +693,54 @@ class ExecutionServiceTest {
 
             assertThrows(ResourceNotFoundException.class, () -> service.complete(999L, dto, 2L));
         }
+
+        @Test
+        void complete_givenAssignmentWithoutSnapshot_shouldCaptureMembersCurrentRate() {
+            CompleteExecutionDto dto = new CompleteExecutionDto("Concluído", null);
+            TeamMember memberWithRate = ExecutionFixture.aTeamMember()
+                    .provider(providerProfile)
+                    .hourlyRate(new java.math.BigDecimal("12.50"))
+                    .build();
+            ExecutionAssignment unsnapped = ExecutionFixture.anAssignment()
+                    .id(50L).execution(checkedInExecution).teamMember(memberWithRate)
+                    .build();
+
+            when(executionRepository.findById(1L)).thenReturn(Optional.of(checkedInExecution));
+            when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+            when(assignmentRepository.findByExecutionId(1L)).thenReturn(java.util.List.of(unsnapped));
+            when(assignmentRepository.save(any(ExecutionAssignment.class))).thenAnswer(inv -> inv.getArgument(0));
+            when(executionRepository.save(any(ServiceExecution.class))).thenReturn(checkedInExecution);
+            when(requestRepository.save(any(ServiceRequest.class))).thenReturn(inProgressRequest);
+
+            service.complete(1L, dto, 2L);
+
+            assertEquals(new java.math.BigDecimal("12.50"), unsnapped.getHourlyRateSnapshot());
+            verify(assignmentRepository).save(unsnapped);
+        }
+
+        @Test
+        void complete_givenAssignmentAlreadySnapshot_shouldNotOverwrite() {
+            CompleteExecutionDto dto = new CompleteExecutionDto("Concluído", null);
+            TeamMember member = ExecutionFixture.aTeamMember()
+                    .provider(providerProfile)
+                    .hourlyRate(new java.math.BigDecimal("20.00"))
+                    .build();
+            ExecutionAssignment preSnapped = ExecutionFixture.anAssignment()
+                    .id(60L).execution(checkedInExecution).teamMember(member)
+                    .hourlyRateSnapshot(new java.math.BigDecimal("8.00"))
+                    .build();
+
+            when(executionRepository.findById(1L)).thenReturn(Optional.of(checkedInExecution));
+            when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+            when(assignmentRepository.findByExecutionId(1L)).thenReturn(java.util.List.of(preSnapped));
+            when(executionRepository.save(any(ServiceExecution.class))).thenReturn(checkedInExecution);
+            when(requestRepository.save(any(ServiceRequest.class))).thenReturn(inProgressRequest);
+
+            service.complete(1L, dto, 2L);
+
+            assertEquals(new java.math.BigDecimal("8.00"), preSnapped.getHourlyRateSnapshot());
+            verify(assignmentRepository, never()).save(preSnapped);
+        }
     }
 
     // =========================================================================

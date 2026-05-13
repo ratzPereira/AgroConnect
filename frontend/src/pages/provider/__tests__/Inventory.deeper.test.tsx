@@ -6,9 +6,15 @@ import {
   listInventory,
   getLowStockItems,
   createInventoryItem,
-  deleteInventoryItem,
 } from '@/api/inventory';
 import type { InventoryItem } from '@/types/inventory';
+
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return { ...actual, useNavigate: () => navigateMock };
+});
 
 vi.mock('@/components/AnimatedPage', () => ({
   AnimatedPage: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -24,7 +30,6 @@ vi.mock('@/api/inventory', () => ({
   listInventory: vi.fn(),
   getLowStockItems: vi.fn(),
   createInventoryItem: vi.fn(),
-  deleteInventoryItem: vi.fn(),
 }));
 
 const normalItem: InventoryItem = {
@@ -73,6 +78,7 @@ async function renderInventoryPage() {
 describe('Inventory Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigateMock.mockReset();
   });
 
   it('renders loading skeleton while data is being fetched', async () => {
@@ -84,7 +90,6 @@ describe('Inventory Page', () => {
 
     await renderInventoryPage();
 
-    // Skeleton.Table renders a container with border
     const skeletonTable = document.querySelector('.rounded-xl.border.overflow-hidden');
     expect(skeletonTable).toBeTruthy();
 
@@ -118,16 +123,13 @@ describe('Inventory Page', () => {
       expect(screen.getByText('Fertilizante NPK')).toBeInTheDocument();
     });
 
-    // Product names
     expect(screen.getByText('Herbicida Glifosato')).toBeInTheDocument();
     expect(screen.getByText('Sacos de ração')).toBeInTheDocument();
 
-    // Unit labels
     expect(screen.getByText('kg')).toBeInTheDocument();
     expect(screen.getByText('L')).toBeInTheDocument();
     expect(screen.getByText('un')).toBeInTheDocument();
 
-    // Quantities
     expect(screen.getByText('50')).toBeInTheDocument();
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('20')).toBeInTheDocument();
@@ -143,10 +145,7 @@ describe('Inventory Page', () => {
       expect(screen.getByText('Fertilizante NPK')).toBeInTheDocument();
     });
 
-    // lowStockItem (Herbicida) should have "Baixo"
     expect(screen.getByText('Baixo')).toBeInTheDocument();
-
-    // normalItem + itemWithNulls should have "OK"
     const okBadges = screen.getAllByText('OK');
     expect(okBadges).toHaveLength(2);
   });
@@ -161,7 +160,6 @@ describe('Inventory Page', () => {
       expect(screen.getByText('Stock baixo')).toBeInTheDocument();
     });
 
-    // Singular form: "1 item com stock baixo"
     expect(screen.getByText('1 item com stock baixo')).toBeInTheDocument();
   });
 
@@ -183,9 +181,9 @@ describe('Inventory Page', () => {
     await user.click(addButton!);
 
     expect(screen.getByPlaceholderText('Nome do produto')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Quantidade')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Quantidade inicial')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Alerta mín. stock')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Custo/unidade (€)')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Custo inicial/unidade (€)')).toBeInTheDocument();
   });
 
   it('submitting the form calls createInventoryItem with correct data', async () => {
@@ -210,14 +208,13 @@ describe('Inventory Page', () => {
       expect(screen.getByText('Inventário vazio')).toBeInTheDocument();
     });
 
-    // Open form via header button
     const addButton = screen.getAllByRole('button').find(
       (btn) => btn.textContent?.includes('Adicionar') && !btn.textContent?.includes('item'),
     );
     await user.click(addButton!);
 
     await user.type(screen.getByPlaceholderText('Nome do produto'), 'Adubo orgânico');
-    await user.type(screen.getByPlaceholderText('Quantidade'), '100');
+    await user.type(screen.getByPlaceholderText('Quantidade inicial'), '100');
 
     await user.click(screen.getByText('Guardar'));
 
@@ -243,22 +240,19 @@ describe('Inventory Page', () => {
       expect(screen.getByText('Fertilizante NPK')).toBeInTheDocument();
     });
 
-    // Open form
     const addButton = screen.getAllByRole('button').find(
       (btn) => btn.textContent?.includes('Adicionar'),
     );
     await user.click(addButton!);
     expect(screen.getByPlaceholderText('Nome do produto')).toBeInTheDocument();
 
-    // Cancel
     await user.click(screen.getByText('Cancelar'));
     expect(screen.queryByPlaceholderText('Nome do produto')).not.toBeInTheDocument();
   });
 
-  it('clicking delete button calls deleteInventoryItem with correct ID', async () => {
+  it('clicking a row navigates to the item detail page', async () => {
     (listInventory as Mock).mockResolvedValue(allItems);
     (getLowStockItems as Mock).mockResolvedValue([]);
-    (deleteInventoryItem as Mock).mockResolvedValue(undefined);
     const user = userEvent.setup();
 
     await renderInventoryPage();
@@ -267,17 +261,13 @@ describe('Inventory Page', () => {
       expect(screen.getByText('Fertilizante NPK')).toBeInTheDocument();
     });
 
-    // Each row has a delete button (ghost button with Trash2 icon)
-    // Find the delete buttons in the table rows
     const table = screen.getByRole('table');
     const rows = within(table).getAllByRole('row');
-    // First row is thead, data rows start at index 1
     const firstDataRow = rows[1];
-    const deleteBtn = within(firstDataRow).getByRole('button');
-    await user.click(deleteBtn);
+    await user.click(firstDataRow);
 
     await waitFor(() => {
-      expect(deleteInventoryItem).toHaveBeenCalledWith(1);
+      expect(navigateMock).toHaveBeenCalledWith('/provider/inventory/1');
     });
   });
 
@@ -291,15 +281,12 @@ describe('Inventory Page', () => {
       expect(screen.getByText('Fertilizante NPK')).toBeInTheDocument();
     });
 
-    // normalItem has costPerUnit=2.5 and minStockAlert=10
     expect(screen.getByText('€2.5')).toBeInTheDocument();
     expect(screen.getByText('10')).toBeInTheDocument();
 
-    // lowStockItem has costPerUnit=12 and minStockAlert=5
     expect(screen.getByText('€12')).toBeInTheDocument();
     expect(screen.getByText('5')).toBeInTheDocument();
 
-    // itemWithNulls has null for both — should show dashes
     const dashes = screen.getAllByText('—');
     expect(dashes.length).toBeGreaterThanOrEqual(2);
   });

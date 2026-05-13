@@ -2,8 +2,18 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
-import { listTeamMembers, createTeamMember, deactivateTeamMember } from '@/api/teamMembers';
+import { listTeamMembers, createTeamMember } from '@/api/teamMembers';
 import type { TeamMember } from '@/types/teamMember';
+
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -34,7 +44,6 @@ vi.mock('@/components/illustrations/EmptyTeam', () => ({
 vi.mock('@/api/teamMembers', () => ({
   listTeamMembers: vi.fn(),
   createTeamMember: vi.fn(),
-  deactivateTeamMember: vi.fn(),
 }));
 
 const mockMembers: TeamMember[] = [
@@ -44,6 +53,7 @@ const mockMembers: TeamMember[] = [
     email: 'carlos@example.com',
     phone: '+351 912 345 678',
     role: 'MANAGER',
+    hourlyRate: 18.5,
     active: true,
     invitedAt: '2026-01-10T10:00:00Z',
     joinedAt: '2026-01-12T08:00:00Z',
@@ -54,6 +64,7 @@ const mockMembers: TeamMember[] = [
     email: 'ana@example.com',
     phone: null,
     role: 'LEAD',
+    hourlyRate: null,
     active: true,
     invitedAt: '2026-02-01T10:00:00Z',
     joinedAt: '2026-02-03T08:00:00Z',
@@ -64,6 +75,7 @@ const mockMembers: TeamMember[] = [
     email: 'pedro@example.com',
     phone: '+351 923 456 789',
     role: 'OPERATOR',
+    hourlyRate: 12.5,
     active: true,
     invitedAt: '2026-03-01T10:00:00Z',
     joinedAt: null,
@@ -78,6 +90,7 @@ async function renderTeamPage() {
 describe('Team Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigateMock.mockReset();
   });
 
   it('renders loading skeletons while data is being fetched', async () => {
@@ -134,7 +147,6 @@ describe('Team Page', () => {
       expect(screen.getByText('+351 912 345 678')).toBeInTheDocument();
     });
     expect(screen.getByText('+351 923 456 789')).toBeInTheDocument();
-    // Ana has no phone, verify her email exists but no extra phone text
     expect(screen.getByText('ana@example.com')).toBeInTheDocument();
   });
 
@@ -150,6 +162,35 @@ describe('Team Page', () => {
     expect(screen.getByText('Operador')).toBeInTheDocument();
   });
 
+  it('shows hourly rate when set and placeholder when null', async () => {
+    (listTeamMembers as Mock).mockResolvedValue(mockMembers);
+
+    await renderTeamPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('18.50 €/h')).toBeInTheDocument();
+    });
+    expect(screen.getByText('12.50 €/h')).toBeInTheDocument();
+    expect(screen.getByText('Sem taxa horária')).toBeInTheDocument();
+  });
+
+  it('clicking a member card navigates to its detail page', async () => {
+    (listTeamMembers as Mock).mockResolvedValue([mockMembers[0]]);
+    const user = userEvent.setup();
+
+    await renderTeamPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('Carlos Silva')).toBeInTheDocument();
+    });
+
+    const card = screen.getByText('Carlos Silva').closest('div[class*="cursor-pointer"]');
+    expect(card).toBeTruthy();
+    await user.click(card as Element);
+
+    expect(navigateMock).toHaveBeenCalledWith('/provider/team/1');
+  });
+
   it('clicking "Adicionar" button shows the inline form', async () => {
     (listTeamMembers as Mock).mockResolvedValue([]);
     const user = userEvent.setup();
@@ -160,22 +201,21 @@ describe('Team Page', () => {
       expect(screen.getByText('A sua equipa está vazia')).toBeInTheDocument();
     });
 
-    // The header "Adicionar" button
     const addButton = screen.getAllByRole('button').find(
       (btn) => btn.textContent?.includes('Adicionar') && !btn.textContent?.includes('membro'),
     );
     expect(addButton).toBeDefined();
     await user.click(addButton!);
 
-    // Form should now be visible with placeholders
     expect(screen.getByPlaceholderText('Nome')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Telefone')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('12.50')).toBeInTheDocument();
     expect(screen.getByText('Guardar')).toBeInTheDocument();
     expect(screen.getByText('Cancelar')).toBeInTheDocument();
   });
 
-  it('submitting the form calls createTeamMember with entered data', async () => {
+  it('submitting the form without hourly rate calls createTeamMember with undefined hourlyRate', async () => {
     (listTeamMembers as Mock).mockResolvedValue([]);
     (createTeamMember as Mock).mockResolvedValue({
       id: 4,
@@ -183,6 +223,7 @@ describe('Team Page', () => {
       email: 'maria@example.com',
       phone: null,
       role: 'OPERATOR',
+      hourlyRate: null,
       active: true,
       invitedAt: '2026-03-29T10:00:00Z',
       joinedAt: null,
@@ -195,17 +236,14 @@ describe('Team Page', () => {
       expect(screen.getByText('A sua equipa está vazia')).toBeInTheDocument();
     });
 
-    // Open form via header button
     const addButton = screen.getAllByRole('button').find(
       (btn) => btn.textContent?.includes('Adicionar') && !btn.textContent?.includes('membro'),
     );
     await user.click(addButton!);
 
-    // Fill form
     await user.type(screen.getByPlaceholderText('Nome'), 'Maria Ferreira');
     await user.type(screen.getByPlaceholderText('Email'), 'maria@example.com');
 
-    // Submit
     await user.click(screen.getByText('Guardar'));
 
     await waitFor(() => {
@@ -214,6 +252,50 @@ describe('Team Page', () => {
         email: 'maria@example.com',
         phone: undefined,
         role: 'OPERATOR',
+        hourlyRate: undefined,
+      });
+    });
+  });
+
+  it('submitting the form with hourly rate forwards it as a number', async () => {
+    (listTeamMembers as Mock).mockResolvedValue([]);
+    (createTeamMember as Mock).mockResolvedValue({
+      id: 5,
+      name: 'Joana Lopes',
+      email: 'joana@example.com',
+      phone: null,
+      role: 'LEAD',
+      hourlyRate: 15.75,
+      active: true,
+      invitedAt: '2026-03-29T10:00:00Z',
+      joinedAt: null,
+    });
+    const user = userEvent.setup();
+
+    await renderTeamPage();
+
+    await waitFor(() => {
+      expect(screen.getByText('A sua equipa está vazia')).toBeInTheDocument();
+    });
+
+    const addButton = screen.getAllByRole('button').find(
+      (btn) => btn.textContent?.includes('Adicionar') && !btn.textContent?.includes('membro'),
+    );
+    await user.click(addButton!);
+
+    await user.type(screen.getByPlaceholderText('Nome'), 'Joana Lopes');
+    await user.type(screen.getByPlaceholderText('Email'), 'joana@example.com');
+    await user.type(screen.getByPlaceholderText('12.50'), '15.75');
+
+    await user.click(screen.getByText('Guardar'));
+
+    await waitFor(() => {
+      expect(createTeamMember).toHaveBeenCalledWith({
+        name: 'Joana Lopes',
+        email: 'joana@example.com',
+        phone: undefined,
+        role: 'OPERATOR',
+        hourlyRate: 15.75,
       });
     });
   });
@@ -228,40 +310,14 @@ describe('Team Page', () => {
       expect(screen.getByText('Carlos Silva')).toBeInTheDocument();
     });
 
-    // Open form
     const addButton = screen.getAllByRole('button').find(
       (btn) => btn.textContent?.includes('Adicionar'),
     );
     await user.click(addButton!);
     expect(screen.getByPlaceholderText('Nome')).toBeInTheDocument();
 
-    // Cancel
     await user.click(screen.getByText('Cancelar'));
     expect(screen.queryByPlaceholderText('Nome')).not.toBeInTheDocument();
-  });
-
-  it('clicking "Desativar" calls deactivateTeamMember with member ID', async () => {
-    (listTeamMembers as Mock).mockResolvedValue(mockMembers);
-    (deactivateTeamMember as Mock).mockResolvedValue(undefined);
-    const user = userEvent.setup();
-
-    await renderTeamPage();
-
-    await waitFor(() => {
-      expect(screen.getByText('Carlos Silva')).toBeInTheDocument();
-    });
-
-    const deactivateButtons = screen.getAllByRole('button').filter(
-      (btn) => btn.textContent?.includes('Desativar'),
-    );
-    expect(deactivateButtons).toHaveLength(3);
-
-    // Deactivate the first member (Carlos, id=1)
-    await user.click(deactivateButtons[0]);
-
-    await waitFor(() => {
-      expect(deactivateTeamMember).toHaveBeenCalledWith(1);
-    });
   });
 
   it('form fields name and email are required (have required attribute)', async () => {

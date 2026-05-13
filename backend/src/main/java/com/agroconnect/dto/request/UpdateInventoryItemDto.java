@@ -1,22 +1,26 @@
 package com.agroconnect.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
-import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Digits;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 
-@Schema(description = "Update an inventory item (quantity, alert threshold, cost)")
+/**
+ * Update metadata on an inventory item. Quantity and cost are NOT mutable
+ * here — they are derived from the movement ledger. Use the movement
+ * endpoints (purchase / adjustment-in / adjustment-out) to change stock.
+ */
+@Schema(description = "Update inventory item metadata (name, alert threshold)")
 public record UpdateInventoryItemDto(
 
-        @NotNull
+        @Size(max = 255)
+        @Schema(description = "Product name (optional rename)", example = "Gasóleo agrícola")
+        String productName,
+
         @PositiveOrZero
-        @Schema(description = "New quantity", example = "300.0")
-        Double quantity,
-
-        @Schema(description = "Minimum stock alert threshold", example = "50.0")
-        Double minStockAlert,
-
-        @Schema(description = "Cost per unit in EUR", example = "1.50")
-        BigDecimal costPerUnit
+        @Digits(integer = 11, fraction = 3)
+        @Schema(description = "Minimum stock alert threshold (null clears the alert)", example = "50.000")
+        BigDecimal minStockAlert
 ) {}

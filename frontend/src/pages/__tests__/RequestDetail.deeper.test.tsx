@@ -155,6 +155,10 @@ vi.mock('@/features/proposals/components/CreateProposalModal', () => ({
   CreateProposalModal: () => null,
 }));
 
+vi.mock('@/features/proposals/components/PaymentModal', () => ({
+  PaymentModal: () => null,
+}));
+
 vi.mock('@/features/executions/components/ExecutionPanel', () => ({
   ExecutionPanel: () => <div data-testid="execution-panel">ExecutionPanel</div>,
 }));

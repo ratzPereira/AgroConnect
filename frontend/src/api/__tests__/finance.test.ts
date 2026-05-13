@@ -1,6 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { apiClient } from '../client';
-import { getFinanceSummary, getFinanceTransactions, exportFinanceCsv } from '../finance';
+import {
+  getFinanceSummary,
+  getFinanceTransactions,
+  getMonthlyBreakdown,
+  getYearlyComparison,
+  exportFinanceCsv,
+} from '../finance';
 
 vi.mock('../client', () => ({
   apiClient: {
@@ -13,7 +19,7 @@ describe('finance API', () => {
     vi.clearAllMocks();
   });
 
-  it('getFinanceSummary calls GET /providers/me/finance/summary', async () => {
+  it('getFinanceSummary calls GET /providers/me/finance/summary without params when no year', async () => {
     const mockData = {
       totalRevenue: 5000,
       totalCommissions: 500,
@@ -22,12 +28,79 @@ describe('finance API', () => {
       thisMonthEarnings: 1000,
       completedJobs: 15,
       avgJobValue: 333,
+      year: 2026,
+      yearRevenue: 2000,
+      yearCommissions: 200,
+      yearPayouts: 1800,
+      yearMaterialsCost: 100,
+      yearLaborCost: 200,
+      yearMachineExpenses: 50,
+      yearNetProfit: 1450,
+      yearMargin: 72.5,
+      yearCompletedJobs: 5,
+      yearAvgJobValue: 400,
+      yearAvgJobProfit: 290,
     };
     vi.mocked(apiClient.get).mockResolvedValue({ data: mockData });
 
     const result = await getFinanceSummary();
 
-    expect(apiClient.get).toHaveBeenCalledWith('/providers/me/finance/summary');
+    expect(apiClient.get).toHaveBeenCalledWith('/providers/me/finance/summary', {
+      params: undefined,
+    });
+    expect(result).toEqual(mockData);
+  });
+
+  it('getFinanceSummary forwards explicit year as query param', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: {} });
+
+    await getFinanceSummary(2024);
+
+    expect(apiClient.get).toHaveBeenCalledWith('/providers/me/finance/summary', {
+      params: { year: 2024 },
+    });
+  });
+
+  it('getMonthlyBreakdown calls GET with year param when provided', async () => {
+    const mockData = { year: 2025, months: [] };
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockData });
+
+    const result = await getMonthlyBreakdown(2025);
+
+    expect(apiClient.get).toHaveBeenCalledWith('/providers/me/finance/monthly-breakdown', {
+      params: { year: 2025 },
+    });
+    expect(result).toEqual(mockData);
+  });
+
+  it('getMonthlyBreakdown calls GET without params when no year', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ data: { year: 2026, months: [] } });
+
+    await getMonthlyBreakdown();
+
+    expect(apiClient.get).toHaveBeenCalledWith('/providers/me/finance/monthly-breakdown', {
+      params: undefined,
+    });
+  });
+
+  it('getYearlyComparison calls GET /providers/me/finance/yearly-comparison', async () => {
+    const mockData = {
+      currentYear: 2026,
+      previousYear: 2025,
+      currentRevenue: 1000,
+      previousRevenue: 800,
+      revenueDeltaPct: 25,
+      currentProfit: 700,
+      previousProfit: 500,
+      profitDeltaPct: 40,
+      currentJobs: 5,
+      previousJobs: 4,
+    };
+    vi.mocked(apiClient.get).mockResolvedValue({ data: mockData });
+
+    const result = await getYearlyComparison();
+
+    expect(apiClient.get).toHaveBeenCalledWith('/providers/me/finance/yearly-comparison');
     expect(result).toEqual(mockData);
   });
 

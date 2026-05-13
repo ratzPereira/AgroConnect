@@ -1,6 +1,8 @@
 package com.agroconnect.unit;
 
+import com.agroconnect.config.StripeProperties;
 import com.agroconnect.dto.request.CreateProposalDto;
+import com.agroconnect.dto.response.ProposalAcceptResponse;
 import com.agroconnect.dto.response.ProposalResponse;
 import com.agroconnect.exception.ForbiddenException;
 import com.agroconnect.exception.InvalidStateException;
@@ -25,6 +27,8 @@ import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.service.ExecutionService;
 import com.agroconnect.service.NotificationService;
 import com.agroconnect.service.ProposalService;
+import com.agroconnect.service.StripeService;
+import com.stripe.model.PaymentIntent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -65,6 +69,8 @@ class ProposalServiceTest {
     @Mock private TransactionRepository transactionRepository;
     @Mock private NotificationService notificationService;
     @Mock private ExecutionService executionService;
+    @Mock private StripeService stripeService;
+    @Mock private StripeProperties stripeProperties;
     @Mock private jakarta.persistence.EntityManager entityManager;
 
     private ProposalService service;
@@ -82,7 +88,8 @@ class ProposalServiceTest {
         service = new ProposalService(
                 proposalRepository, requestRepository,
                 providerProfileRepository, transactionRepository,
-                notificationService, executionService, entityManager);
+                notificationService, executionService,
+                stripeService, stripeProperties, entityManager);
         ReflectionTestUtils.setField(service, "commissionRate", new BigDecimal("0.1200"));
 
         clientUser = UserFixture.aClientUser().build();
@@ -295,35 +302,96 @@ class ProposalServiceTest {
         assertEquals(PricingModel.FIXED, captor.getValue().getPricingModel());
     }
 
-    // ── ACCEPT ──
+    // ── ACCEPT (initiates payment) ──
+
+    private PaymentIntent buildPaymentIntent(String id, String secret) {
+        PaymentIntent intent = org.mockito.Mockito.mock(PaymentIntent.class);
+        org.mockito.Mockito.lenient().when(intent.getId()).thenReturn(id);
+        org.mockito.Mockito.lenient().when(intent.getClientSecret()).thenReturn(secret);
+        return intent;
+    }
+
+    private void stubAcceptHappyPath(Proposal proposal, ServiceRequest request) {
+        PaymentIntent fakeIntent = buildPaymentIntent("pi_test_123", "pi_test_123_secret_xyz");
+        Transaction stubbedTx = ProposalFixture.aTransaction()
+                .request(request).proposal(proposal).build();
+
+        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
+        when(transactionRepository.findByRequestId(request.getId())).thenReturn(Optional.empty());
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(stubbedTx);
+        when(stripeService.createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong()))
+                .thenReturn(fakeIntent);
+        when(stripeProperties.publishableKey()).thenReturn("pk_test_dummy");
+    }
 
     @Test
-    void accept_givenPendingProposal_shouldSetStatusAccepted() {
+    void accept_givenPendingProposal_shouldCreatePaymentIntentAndReturnClientSecret() {
         ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
                 .client(clientUser).category(category).build();
-
         Proposal proposal = ProposalFixture.aProposal()
                 .request(requestWithProposals).provider(providerProfile).build();
 
-        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal));
+        stubAcceptHappyPath(proposal, requestWithProposals);
+
+        ProposalAcceptResponse response = service.accept(1L, 1L);
+
+        assertNotNull(response);
+        assertEquals("pi_test_123", response.paymentIntentId());
+        assertEquals("pi_test_123_secret_xyz", response.clientSecret());
+        assertEquals("pk_test_dummy", response.publishableKey());
+        assertEquals(proposal.getPrice(), response.amount());
+        verify(stripeService).createPaymentIntent(anyLong(), eq(proposal.getPrice()),
+                eq(clientUser.getEmail()), eq(requestWithProposals.getId()), eq(proposal.getId()));
+    }
+
+    @Test
+    void accept_shouldCreatePendingTransactionWithComputedAmounts() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .price(new BigDecimal("250.00"))
+                .request(requestWithProposals).provider(providerProfile).build();
+
+        stubAcceptHappyPath(proposal, requestWithProposals);
 
         service.accept(1L, 1L);
 
-        ArgumentCaptor<Proposal> captor = ArgumentCaptor.forClass(Proposal.class);
-        verify(proposalRepository).save(captor.capture());
-        assertEquals(ProposalStatus.ACCEPTED, captor.getValue().getStatus());
+        ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
+        verify(transactionRepository, org.mockito.Mockito.atLeastOnce()).save(captor.capture());
+        Transaction transaction = captor.getAllValues().get(0);
+
+        assertEquals(new BigDecimal("250.00"), transaction.getAmount());
+        assertEquals(new BigDecimal("0.1200"), transaction.getCommissionRate());
+        assertEquals(new BigDecimal("30.00"), transaction.getCommissionAmount());
+        assertEquals(new BigDecimal("220.00"), transaction.getProviderPayout());
+        assertEquals(TransactionStatus.PENDING, transaction.getStatus());
+    }
+
+    @Test
+    void accept_shouldNotCascadeMarketplaceState() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+
+        stubAcceptHappyPath(proposal, requestWithProposals);
+
+        service.accept(1L, 1L);
+
+        // Cascade-related work happens only on payment_intent.succeeded:
+        verify(proposalRepository, never()).rejectAllPendingExcept(anyLong(), anyLong());
+        verify(executionService, never()).createForProposal(any());
+        verify(notificationService, never()).create(anyLong(), eq("PROPOSAL_ACCEPTED"),
+                anyString(), anyString(), anyString());
+        verify(notificationService, never()).create(anyLong(), eq("PROPOSAL_REJECTED"),
+                anyString(), anyString(), anyString());
+        verify(requestRepository, never()).save(any(ServiceRequest.class));
     }
 
     @Test
     void accept_givenNonPendingProposal_shouldThrowInvalidState() {
         ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
                 .client(clientUser).category(category).build();
-
         Proposal acceptedProposal = ProposalFixture.aProposal()
                 .status(ProposalStatus.ACCEPTED)
                 .request(requestWithProposals).provider(providerProfile).build();
@@ -331,97 +399,26 @@ class ProposalServiceTest {
         when(proposalRepository.findById(1L)).thenReturn(Optional.of(acceptedProposal));
 
         assertThrows(InvalidStateException.class, () -> service.accept(1L, 1L));
-    }
-
-    @Test
-    void accept_shouldRejectAllOtherProposals() {
-        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
-                .client(clientUser).category(category).build();
-
-        Proposal proposal = ProposalFixture.aProposal()
-                .request(requestWithProposals).provider(providerProfile).build();
-
-        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal));
-
-        service.accept(1L, 1L);
-
-        verify(proposalRepository).rejectAllPendingExcept(1L, 1L);
-    }
-
-    @Test
-    void accept_shouldCreateTransaction() {
-        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
-                .client(clientUser).category(category).build();
-
-        Proposal proposal = ProposalFixture.aProposal()
-                .price(new BigDecimal("250.00"))
-                .request(requestWithProposals).provider(providerProfile).build();
-
-        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal));
-
-        service.accept(1L, 1L);
-
-        ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
-        verify(transactionRepository).save(captor.capture());
-        Transaction transaction = captor.getValue();
-
-        assertEquals(new BigDecimal("250.00"), transaction.getAmount());
-        assertEquals(new BigDecimal("0.1200"), transaction.getCommissionRate());
-        assertEquals(new BigDecimal("30.00"), transaction.getCommissionAmount());
-        assertEquals(new BigDecimal("220.00"), transaction.getProviderPayout());
-        assertEquals(TransactionStatus.HELD, transaction.getStatus());
-    }
-
-    @Test
-    void accept_shouldTransitionRequestToAwarded() {
-        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
-                .client(clientUser).category(category).build();
-
-        Proposal proposal = ProposalFixture.aProposal()
-                .request(requestWithProposals).provider(providerProfile).build();
-
-        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal));
-
-        service.accept(1L, 1L);
-
-        ArgumentCaptor<ServiceRequest> captor = ArgumentCaptor.forClass(ServiceRequest.class);
-        verify(requestRepository).save(captor.capture());
-        assertEquals(RequestStatus.AWARDED, captor.getValue().getStatus());
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
     }
 
     @Test
     void accept_givenNonRequestOwner_shouldThrowForbidden() {
         ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
                 .client(clientUser).category(category).build();
-
         Proposal proposal = ProposalFixture.aProposal()
                 .request(requestWithProposals).provider(providerProfile).build();
 
         when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
 
         assertThrows(ForbiddenException.class, () -> service.accept(1L, 999L));
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
     }
 
     @Test
     void accept_givenExpiredProposal_shouldThrowInvalidState() {
         ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
                 .client(clientUser).category(category).build();
-
         Proposal expiredProposal = ProposalFixture.aProposal()
                 .validUntil(Instant.now().minus(1, ChronoUnit.DAYS))
                 .request(requestWithProposals).provider(providerProfile).build();
@@ -429,119 +426,66 @@ class ProposalServiceTest {
         when(proposalRepository.findById(1L)).thenReturn(Optional.of(expiredProposal));
 
         assertThrows(InvalidStateException.class, () -> service.accept(1L, 1L));
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
     }
 
     @Test
     void accept_givenWrongRequestStatus_shouldThrowInvalidState() {
         ServiceRequest draftRequest = ServiceRequestFixture.aRequest()
                 .client(clientUser).category(category).build();
-
         Proposal proposal = ProposalFixture.aProposal()
                 .request(draftRequest).provider(providerProfile).build();
 
         when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
 
         assertThrows(InvalidStateException.class, () -> service.accept(1L, 1L));
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
     }
 
     @Test
-    void accept_shouldCreateExecution() {
+    void accept_givenProviderWithoutStripeAccount_shouldThrowInvalidState() {
         ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
                 .client(clientUser).category(category).build();
+        ProviderProfile noStripe = UserFixture.aProviderProfile()
+                .user(providerUser).stripeAccountId(null).stripeChargesEnabled(false).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(noStripe).build();
 
+        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
+
+        assertThrows(InvalidStateException.class, () -> service.accept(1L, 1L));
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
+    }
+
+    @Test
+    void accept_givenProviderStripeChargesDisabled_shouldThrowInvalidState() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        ProviderProfile pendingStripe = UserFixture.aProviderProfile()
+                .user(providerUser).stripeAccountId("acct_pending").stripeChargesEnabled(false).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(pendingStripe).build();
+
+        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
+
+        assertThrows(InvalidStateException.class, () -> service.accept(1L, 1L));
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
+    }
+
+    @Test
+    void accept_givenExistingTransactionForRequest_shouldThrowInvalidState() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
         Proposal proposal = ProposalFixture.aProposal()
                 .request(requestWithProposals).provider(providerProfile).build();
 
         when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal));
+        when(transactionRepository.findByRequestId(requestWithProposals.getId()))
+                .thenReturn(Optional.of(ProposalFixture.aTransaction()
+                        .request(requestWithProposals).proposal(proposal).build()));
 
-        service.accept(1L, 1L);
-
-        verify(executionService).createForProposal(proposal);
-    }
-
-    @Test
-    void accept_shouldNotifyAcceptedProvider() {
-        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
-                .client(clientUser).category(category).build();
-
-        Proposal proposal = ProposalFixture.aProposal()
-                .request(requestWithProposals).provider(providerProfile).build();
-
-        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal));
-
-        service.accept(1L, 1L);
-
-        verify(notificationService).create(
-                eq(providerUser.getId()), eq("PROPOSAL_ACCEPTED"), anyString(), anyString(), anyString());
-    }
-
-    @Test
-    void accept_shouldNotifyRejectedProviders() {
-        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
-                .client(clientUser).category(category).build();
-
-        Proposal proposal = ProposalFixture.aProposal()
-                .id(1L)
-                .request(requestWithProposals).provider(providerProfile).build();
-
-        Proposal rejectedProposal = ProposalFixture.aProposal()
-                .id(2L)
-                .status(ProposalStatus.REJECTED)
-                .request(requestWithProposals).provider(otherProviderProfile).build();
-
-        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal, rejectedProposal));
-
-        service.accept(1L, 1L);
-
-        // Should notify the rejected provider
-        verify(notificationService).create(
-                eq(otherProviderUser.getId()), eq("PROPOSAL_REJECTED"), anyString(), anyString(), anyString());
-    }
-
-    @Test
-    void accept_shouldCalculateCommissionCorrectly() {
-        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
-                .client(clientUser).category(category).build();
-
-        BigDecimal price = new BigDecimal("1000.00");
-        Proposal proposal = ProposalFixture.aProposal()
-                .price(price)
-                .request(requestWithProposals).provider(providerProfile).build();
-
-        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
-        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
-        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
-        when(transactionRepository.save(any())).thenReturn(ProposalFixture.aTransaction()
-                .request(requestWithProposals).proposal(proposal).build());
-        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal));
-
-        service.accept(1L, 1L);
-
-        ArgumentCaptor<Transaction> captor = ArgumentCaptor.forClass(Transaction.class);
-        verify(transactionRepository).save(captor.capture());
-        Transaction transaction = captor.getValue();
-
-        BigDecimal expectedCommission = price.multiply(new BigDecimal("0.1200")).setScale(2, RoundingMode.HALF_UP);
-        BigDecimal expectedPayout = price.subtract(expectedCommission);
-
-        assertEquals(price, transaction.getAmount());
-        assertEquals(expectedCommission, transaction.getCommissionAmount());
-        assertEquals(expectedPayout, transaction.getProviderPayout());
+        assertThrows(InvalidStateException.class, () -> service.accept(1L, 1L));
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
     }
 
     @Test
@@ -549,6 +493,143 @@ class ProposalServiceTest {
         when(proposalRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.accept(999L, 1L));
+    }
+
+    // ── COMPLETE ACCEPTANCE AFTER PAYMENT (webhook-driven cascade) ──
+
+    private Transaction stubTransactionForCompletion(Proposal proposal, ServiceRequest request) {
+        Transaction tx = ProposalFixture.aTransaction()
+                .request(request).proposal(proposal).build();
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
+        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(request);
+        when(proposalRepository.findByRequestId(request.getId())).thenReturn(List.of(proposal));
+        return tx;
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_shouldSetProposalAccepted() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+        Transaction tx = stubTransactionForCompletion(proposal, requestWithProposals);
+
+        service.completeAcceptanceAfterPayment(tx.getId());
+
+        ArgumentCaptor<Proposal> captor = ArgumentCaptor.forClass(Proposal.class);
+        verify(proposalRepository).save(captor.capture());
+        assertEquals(ProposalStatus.ACCEPTED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_shouldRejectAllOtherProposals() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+        Transaction tx = stubTransactionForCompletion(proposal, requestWithProposals);
+
+        service.completeAcceptanceAfterPayment(tx.getId());
+
+        verify(proposalRepository).rejectAllPendingExcept(requestWithProposals.getId(), proposal.getId());
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_shouldTransitionRequestToAwarded() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+        Transaction tx = stubTransactionForCompletion(proposal, requestWithProposals);
+
+        service.completeAcceptanceAfterPayment(tx.getId());
+
+        ArgumentCaptor<ServiceRequest> captor = ArgumentCaptor.forClass(ServiceRequest.class);
+        verify(requestRepository).save(captor.capture());
+        assertEquals(RequestStatus.AWARDED, captor.getValue().getStatus());
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_shouldCreateExecution() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+        Transaction tx = stubTransactionForCompletion(proposal, requestWithProposals);
+
+        service.completeAcceptanceAfterPayment(tx.getId());
+
+        verify(executionService).createForProposal(proposal);
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_shouldNotifyAcceptedProvider() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+        Transaction tx = stubTransactionForCompletion(proposal, requestWithProposals);
+
+        service.completeAcceptanceAfterPayment(tx.getId());
+
+        verify(notificationService).create(
+                eq(providerUser.getId()), eq("PROPOSAL_ACCEPTED"),
+                anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_shouldNotifyRejectedProviders() {
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .id(1L).request(requestWithProposals).provider(providerProfile).build();
+        Proposal rejectedProposal = ProposalFixture.aProposal()
+                .id(2L).status(ProposalStatus.REJECTED)
+                .request(requestWithProposals).provider(otherProviderProfile).build();
+
+        Transaction tx = ProposalFixture.aTransaction()
+                .request(requestWithProposals).proposal(proposal).build();
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+        when(proposalRepository.save(any(Proposal.class))).thenReturn(proposal);
+        when(requestRepository.save(any(ServiceRequest.class))).thenReturn(requestWithProposals);
+        when(proposalRepository.findByRequestId(requestWithProposals.getId()))
+                .thenReturn(List.of(proposal, rejectedProposal));
+
+        service.completeAcceptanceAfterPayment(tx.getId());
+
+        verify(notificationService).create(
+                eq(otherProviderUser.getId()), eq("PROPOSAL_REJECTED"),
+                anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_givenAlreadyAwarded_shouldBeIdempotent() {
+        ServiceRequest awardedRequest = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).status(RequestStatus.AWARDED).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .status(ProposalStatus.ACCEPTED)
+                .request(awardedRequest).provider(providerProfile).build();
+        Transaction tx = ProposalFixture.aTransaction()
+                .request(awardedRequest).proposal(proposal).build();
+
+        when(transactionRepository.findById(tx.getId())).thenReturn(Optional.of(tx));
+
+        service.completeAcceptanceAfterPayment(tx.getId());
+
+        verify(proposalRepository, never()).save(any(Proposal.class));
+        verify(requestRepository, never()).save(any(ServiceRequest.class));
+        verify(executionService, never()).createForProposal(any());
+        verify(notificationService, never()).create(anyLong(), anyString(),
+                anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void completeAcceptanceAfterPayment_givenMissingTransaction_shouldThrowNotFound() {
+        when(transactionRepository.findById(999L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> service.completeAcceptanceAfterPayment(999L));
     }
 
     // ── REJECT / WITHDRAW ──

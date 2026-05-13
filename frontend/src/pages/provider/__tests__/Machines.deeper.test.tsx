@@ -2,8 +2,18 @@ import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { renderWithProviders } from '@/test/utils';
-import { listMachines, createMachine, updateMachine } from '@/api/machines';
+import { listMachines, createMachine } from '@/api/machines';
 import type { Machine } from '@/types/machine';
+
+const navigateMock = vi.fn();
+
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -36,8 +46,6 @@ vi.mock('@/components/illustrations/EmptyRequests', () => ({
 vi.mock('@/api/machines', () => ({
   listMachines: vi.fn(),
   createMachine: vi.fn(),
-  updateMachine: vi.fn(),
-  deleteMachine: vi.fn(),
 }));
 
 const availableMachine: Machine = {
@@ -86,6 +94,7 @@ async function renderMachinesPage() {
 describe('Machines Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    navigateMock.mockReset();
   });
 
   it('renders loading skeletons while data is being fetched', async () => {
@@ -105,16 +114,16 @@ describe('Machines Page', () => {
     });
   });
 
-  it('renders empty state with correct text when no machines exist', async () => {
+  it('renders empty state when no machines exist', async () => {
     (listMachines as Mock).mockResolvedValue([]);
 
     await renderMachinesPage();
 
     await waitFor(() => {
-      expect(screen.getByText('Sem maquinas registadas')).toBeInTheDocument();
+      expect(screen.getByText('Sem máquinas registadas')).toBeInTheDocument();
     });
     expect(
-      screen.getByText('Registe as suas maquinas para acompanhar a disponibilidade e manutencao.'),
+      screen.getByText('Registe as suas máquinas para acompanhar a disponibilidade e manutenção.'),
     ).toBeInTheDocument();
   });
 
@@ -127,16 +136,13 @@ describe('Machines Page', () => {
       expect(screen.getByText('Trator John Deere 5075')).toBeInTheDocument();
     });
 
-    // Names
     expect(screen.getByText('Pulverizador Stihl')).toBeInTheDocument();
     expect(screen.getByText('Motocultivador antigo')).toBeInTheDocument();
 
-    // Types (where available)
     expect(screen.getByText('Trator')).toBeInTheDocument();
     expect(screen.getByText('Pulverizador')).toBeInTheDocument();
 
-    // Status badges
-    expect(screen.getByText('Disponivel')).toBeInTheDocument();
+    expect(screen.getByText('Disponível')).toBeInTheDocument();
     expect(screen.getByText('Em uso')).toBeInTheDocument();
     expect(screen.getByText('Retirada')).toBeInTheDocument();
   });
@@ -150,20 +156,16 @@ describe('Machines Page', () => {
       expect(screen.getByText('Trator John Deere 5075')).toBeInTheDocument();
     });
 
-    // Description
     expect(screen.getByText('Trator compacto para trabalho em terrenos pequenos')).toBeInTheDocument();
     expect(screen.getByText('Avariado, para abate')).toBeInTheDocument();
-
-    // License plates
-    expect(screen.getByText('Matricula: AA-12-BB')).toBeInTheDocument();
-    expect(screen.getByText('Matricula: CC-34-DD')).toBeInTheDocument();
-
-    // Next maintenance date
-    expect(screen.getByText('Prox. manutencao: 2026-06-15')).toBeInTheDocument();
+    expect(screen.getByText('Matrícula: AA-12-BB')).toBeInTheDocument();
+    expect(screen.getByText('Matrícula: CC-34-DD')).toBeInTheDocument();
+    expect(screen.getByText('Próx. manutenção: 2026-06-15')).toBeInTheDocument();
   });
 
-  it('shows delete button only for RETIRED machines', async () => {
-    (listMachines as Mock).mockResolvedValue(allMachines);
+  it('clicking a machine card navigates to its detail page', async () => {
+    (listMachines as Mock).mockResolvedValue([availableMachine]);
+    const user = userEvent.setup();
 
     await renderMachinesPage();
 
@@ -171,17 +173,12 @@ describe('Machines Page', () => {
       expect(screen.getByText('Trator John Deere 5075')).toBeInTheDocument();
     });
 
-    // Only 1 "Eliminar" button (for the retired machine)
-    const deleteButtons = screen.getAllByRole('button').filter(
-      (btn) => btn.textContent?.includes('Eliminar'),
-    );
-    expect(deleteButtons).toHaveLength(1);
+    const card = screen.getByText('Trator John Deere 5075').closest('button, [role="button"]')
+      ?? screen.getByText('Trator John Deere 5075').closest('div[class*="cursor-pointer"]');
+    expect(card).toBeTruthy();
+    await user.click(card as Element);
 
-    // All machines have "Editar" button
-    const editButtons = screen.getAllByRole('button').filter(
-      (btn) => btn.textContent?.includes('Editar'),
-    );
-    expect(editButtons).toHaveLength(3);
+    expect(navigateMock).toHaveBeenCalledWith('/provider/machines/1');
   });
 
   it('clicking "Adicionar" shows the create form', async () => {
@@ -191,7 +188,7 @@ describe('Machines Page', () => {
     await renderMachinesPage();
 
     await waitFor(() => {
-      expect(screen.getByText('Sem maquinas registadas')).toBeInTheDocument();
+      expect(screen.getByText('Sem máquinas registadas')).toBeInTheDocument();
     });
 
     const addButton = screen.getAllByRole('button').find(
@@ -200,10 +197,10 @@ describe('Machines Page', () => {
     expect(addButton).toBeDefined();
     await user.click(addButton!);
 
-    expect(screen.getByPlaceholderText('Nome da maquina')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Nome da máquina')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Tipo (ex: Trator)')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Matricula')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('Descricao')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Matrícula')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('Descrição')).toBeInTheDocument();
     expect(screen.getByText('Guardar')).toBeInTheDocument();
     expect(screen.getByText('Cancelar')).toBeInTheDocument();
   });
@@ -214,9 +211,9 @@ describe('Machines Page', () => {
       id: 10,
       name: 'Nova Ceifeira',
       type: 'Ceifeira',
-      description: undefined,
+      description: null,
       status: 'AVAILABLE',
-      licensePlate: undefined,
+      licensePlate: null,
       lastMaintenanceDate: null,
       nextMaintenanceDate: null,
       createdAt: '2026-03-29T10:00:00Z',
@@ -226,16 +223,15 @@ describe('Machines Page', () => {
     await renderMachinesPage();
 
     await waitFor(() => {
-      expect(screen.getByText('Sem maquinas registadas')).toBeInTheDocument();
+      expect(screen.getByText('Sem máquinas registadas')).toBeInTheDocument();
     });
 
-    // Open form
     const addButton = screen.getAllByRole('button').find(
       (btn) => btn.textContent?.includes('Adicionar') && !btn.textContent?.includes('maquina'),
     );
     await user.click(addButton!);
 
-    await user.type(screen.getByPlaceholderText('Nome da maquina'), 'Nova Ceifeira');
+    await user.type(screen.getByPlaceholderText('Nome da máquina'), 'Nova Ceifeira');
     await user.type(screen.getByPlaceholderText('Tipo (ex: Trator)'), 'Ceifeira');
 
     await user.click(screen.getByText('Guardar'));
@@ -248,83 +244,5 @@ describe('Machines Page', () => {
         licensePlate: undefined,
       });
     });
-  });
-
-  it('clicking "Editar" on a card shows the inline edit form', async () => {
-    (listMachines as Mock).mockResolvedValue([availableMachine]);
-    const user = userEvent.setup();
-
-    await renderMachinesPage();
-
-    await waitFor(() => {
-      expect(screen.getByText('Trator John Deere 5075')).toBeInTheDocument();
-    });
-
-    const editButton = screen.getByRole('button', { name: /Editar/i });
-    await user.click(editButton);
-
-    // Edit form should now be visible with pre-filled values
-    const nameInput = screen.getByDisplayValue('Trator John Deere 5075');
-    expect(nameInput).toBeInTheDocument();
-
-    const typeInput = screen.getByDisplayValue('Trator');
-    expect(typeInput).toBeInTheDocument();
-
-    const plateInput = screen.getByDisplayValue('AA-12-BB');
-    expect(plateInput).toBeInTheDocument();
-  });
-
-  it('submitting the edit form calls updateMachine and cancel hides it', async () => {
-    (listMachines as Mock).mockResolvedValue([availableMachine]);
-    (updateMachine as Mock).mockResolvedValue({ ...availableMachine, name: 'Trator Atualizado' });
-    const user = userEvent.setup();
-
-    await renderMachinesPage();
-
-    await waitFor(() => {
-      expect(screen.getByText('Trator John Deere 5075')).toBeInTheDocument();
-    });
-
-    // Open edit
-    await user.click(screen.getByRole('button', { name: /Editar/i }));
-
-    // Clear name and type new value
-    const nameInput = screen.getByDisplayValue('Trator John Deere 5075');
-    await user.clear(nameInput);
-    await user.type(nameInput, 'Trator Atualizado');
-
-    // Submit
-    await user.click(screen.getByText('Guardar'));
-
-    await waitFor(() => {
-      expect(updateMachine).toHaveBeenCalledWith(1, expect.objectContaining({
-        name: 'Trator Atualizado',
-      }));
-    });
-  });
-
-  it('clicking cancel on the edit form hides it and restores card view', async () => {
-    (listMachines as Mock).mockResolvedValue([availableMachine]);
-    const user = userEvent.setup();
-
-    await renderMachinesPage();
-
-    await waitFor(() => {
-      expect(screen.getByText('Trator John Deere 5075')).toBeInTheDocument();
-    });
-
-    // Open edit
-    await user.click(screen.getByRole('button', { name: /Editar/i }));
-    expect(screen.getByDisplayValue('Trator John Deere 5075')).toBeInTheDocument();
-
-    // Cancel edit
-    await user.click(screen.getByText('Cancelar'));
-
-    // Card view should be restored
-    await waitFor(() => {
-      expect(screen.getByText('Trator John Deere 5075')).toBeInTheDocument();
-    });
-    expect(screen.getByText('Disponivel')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Editar/i })).toBeInTheDocument();
   });
 });

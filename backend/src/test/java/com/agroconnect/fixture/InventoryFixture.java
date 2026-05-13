@@ -15,9 +15,9 @@ public final class InventoryFixture {
                 .id(1L)
                 .productName("Gasóleo agrícola")
                 .unit(InventoryUnit.L)
-                .quantity(500.0)
-                .minStockAlert(50.0)
-                .costPerUnit(new BigDecimal("1.45"))
+                .quantity(new BigDecimal("500.000"))
+                .minStockAlert(new BigDecimal("50.000"))
+                .costPerUnit(new BigDecimal("1.4500"))
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now());
     }
@@ -27,9 +27,9 @@ public final class InventoryFixture {
                 .id(2L)
                 .productName("Herbicida glifosato")
                 .unit(InventoryUnit.L)
-                .quantity(5.0)
-                .minStockAlert(10.0)
-                .costPerUnit(new BigDecimal("12.00"))
+                .quantity(new BigDecimal("5.000"))
+                .minStockAlert(new BigDecimal("10.000"))
+                .costPerUnit(new BigDecimal("12.0000"))
                 .createdAt(Instant.now())
                 .updatedAt(Instant.now());
     }

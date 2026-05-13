@@ -1,6 +1,7 @@
 import { apiClient } from './client';
 import type { CreateProposalDto, ProposalResponse } from '@/types/proposal';
 import type { Page } from '@/types/request';
+import type { ProposalAcceptResponse } from '@/types/stripe';
 
 export async function createProposal(
   requestId: number,
@@ -30,8 +31,8 @@ export async function getMyProposals(
   return response.data;
 }
 
-export async function acceptProposal(proposalId: number): Promise<ProposalResponse> {
-  const response = await apiClient.post<ProposalResponse>(`/proposals/${proposalId}/accept`);
+export async function acceptProposal(proposalId: number): Promise<ProposalAcceptResponse> {
+  const response = await apiClient.post<ProposalAcceptResponse>(`/proposals/${proposalId}/accept`);
   return response.data;
 }
 

@@ -52,6 +52,7 @@ public class SecurityConfig {
             "/v1/categories/**",
             "/v1/providers/*/reviews",
             "/v1/health",
+            "/v1/webhooks/stripe",
             "/ws/**",
             "/v3/api-docs/**",
             "/swagger-ui/**",

@@ -47,10 +47,16 @@ const ProviderOnboarding = lazyWithReload(() => import('@/pages/ProviderOnboardi
 const NotFound = lazyWithReload(() => import('@/pages/NotFound').then(m => ({ default: m.NotFound })));
 
 const Team = lazyWithReload(() => import('@/pages/provider/Team').then(m => ({ default: m.Team })));
+const TeamMemberDetail = lazyWithReload(() => import('@/pages/provider/TeamMemberDetail').then(m => ({ default: m.TeamMemberDetail })));
 const Machines = lazyWithReload(() => import('@/pages/provider/Machines').then(m => ({ default: m.Machines })));
+const MachineDetail = lazyWithReload(() => import('@/pages/provider/MachineDetail').then(m => ({ default: m.MachineDetail })));
 const Inventory = lazyWithReload(() => import('@/pages/provider/Inventory').then(m => ({ default: m.Inventory })));
+const InventoryDetail = lazyWithReload(() => import('@/pages/provider/InventoryDetail').then(m => ({ default: m.InventoryDetail })));
 const Finance = lazyWithReload(() => import('@/pages/provider/Finance').then(m => ({ default: m.Finance })));
 const ProviderCalendar = lazyWithReload(() => import('@/pages/provider/Calendar').then(m => ({ default: m.ProviderCalendar })));
+const StripePayments = lazyWithReload(() => import('@/pages/provider/StripePayments').then(m => ({ default: m.StripePayments })));
+const StripeReturn = lazyWithReload(() => import('@/pages/provider/StripeReturn').then(m => ({ default: m.StripeReturn })));
+const StripeRefresh = lazyWithReload(() => import('@/pages/provider/StripeRefresh').then(m => ({ default: m.StripeRefresh })));
 const AdminDashboard = lazyWithReload(() => import('@/pages/admin/Dashboard').then(m => ({ default: m.AdminDashboard })));
 const AdminUsers = lazyWithReload(() => import('@/pages/admin/Users').then(m => ({ default: m.AdminUsers })));
 const Marketplace = lazyWithReload(() => import('@/pages/Marketplace').then(m => ({ default: m.Marketplace })));
@@ -99,10 +105,16 @@ export const router = createBrowserRouter([
                 children: [
 
                   { path: '/provider/team', element: <PageSuspense><Team /></PageSuspense>, handle: { breadcrumb: 'Equipa' } },
+                  { path: '/provider/team/:id', element: <PageSuspense><TeamMemberDetail /></PageSuspense>, handle: { breadcrumb: 'Detalhes' } },
                   { path: '/provider/machines', element: <PageSuspense><Machines /></PageSuspense>, handle: { breadcrumb: 'Máquinas' } },
+                  { path: '/provider/machines/:id', element: <PageSuspense><MachineDetail /></PageSuspense>, handle: { breadcrumb: 'Detalhes' } },
                   { path: '/provider/inventory', element: <PageSuspense><Inventory /></PageSuspense>, handle: { breadcrumb: 'Inventário' } },
+                  { path: '/provider/inventory/:id', element: <PageSuspense><InventoryDetail /></PageSuspense>, handle: { breadcrumb: 'Detalhes' } },
                   { path: '/provider/finance', element: <PageSuspense><Finance /></PageSuspense>, handle: { breadcrumb: 'Finanças' } },
                   { path: '/provider/calendar', element: <PageSuspense><ProviderCalendar /></PageSuspense>, handle: { breadcrumb: 'Calendário' } },
+                  { path: '/provider/payments', element: <PageSuspense><StripePayments /></PageSuspense>, handle: { breadcrumb: 'Pagamentos' } },
+                  { path: '/provider/stripe/return', element: <PageSuspense><StripeReturn /></PageSuspense>, handle: { breadcrumb: 'Stripe' } },
+                  { path: '/provider/stripe/refresh', element: <PageSuspense><StripeRefresh /></PageSuspense>, handle: { breadcrumb: 'Stripe' } },
                 ],
               },
               {

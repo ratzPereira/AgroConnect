@@ -12,9 +12,9 @@ public record InventoryItemResponse(
         @Schema(description = "Item ID") Long id,
         @Schema(description = "Product name") String productName,
         @Schema(description = "Unit of measurement") InventoryUnit unit,
-        @Schema(description = "Current quantity") double quantity,
-        @Schema(description = "Minimum stock alert threshold") Double minStockAlert,
-        @Schema(description = "Cost per unit in EUR") BigDecimal costPerUnit,
+        @Schema(description = "Current quantity") BigDecimal quantity,
+        @Schema(description = "Minimum stock alert threshold") BigDecimal minStockAlert,
+        @Schema(description = "Weighted-average cost per unit in EUR") BigDecimal costPerUnit,
         @Schema(description = "Whether the item is below the stock alert threshold") boolean lowStock,
         @Schema(description = "Created at") Instant createdAt,
         @Schema(description = "Updated at") Instant updatedAt

@@ -56,7 +56,10 @@ public final class ExecutionMapper {
                 assignment.getTeamMember().getRole().name(),
                 assignment.getMachine() != null ? assignment.getMachine().getId() : null,
                 assignment.getMachine() != null ? assignment.getMachine().getName() : null,
-                assignment.getAssignedAt()
+                assignment.getAssignedAt(),
+                assignment.getHoursWorked(),
+                assignment.getMachineHours(),
+                assignment.getHourlyRateSnapshot()
         );
     }
 

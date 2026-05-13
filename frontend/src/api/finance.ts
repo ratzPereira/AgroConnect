@@ -9,6 +9,47 @@ export interface FinanceSummary {
   thisMonthEarnings: number;
   completedJobs: number;
   avgJobValue: number;
+  year: number;
+  yearRevenue: number;
+  yearCommissions: number;
+  yearPayouts: number;
+  yearMaterialsCost: number;
+  yearLaborCost: number;
+  yearMachineExpenses: number;
+  yearNetProfit: number;
+  yearMargin: number;
+  yearCompletedJobs: number;
+  yearAvgJobValue: number;
+  yearAvgJobProfit: number;
+}
+
+export interface MonthlyBreakdownEntry {
+  month: number;
+  revenue: number;
+  payouts: number;
+  materialsCost: number;
+  laborCost: number;
+  machineExpenses: number;
+  netProfit: number;
+  completedJobs: number;
+}
+
+export interface MonthlyBreakdown {
+  year: number;
+  months: MonthlyBreakdownEntry[];
+}
+
+export interface YearlyComparison {
+  currentYear: number;
+  previousYear: number;
+  currentRevenue: number;
+  previousRevenue: number;
+  revenueDeltaPct: number | null;
+  currentProfit: number;
+  previousProfit: number;
+  profitDeltaPct: number | null;
+  currentJobs: number;
+  previousJobs: number;
 }
 
 export interface TransactionItem {
@@ -26,8 +67,22 @@ export interface TransactionItem {
   createdAt: string;
 }
 
-export async function getFinanceSummary(): Promise<FinanceSummary> {
-  const response = await apiClient.get<FinanceSummary>('/providers/me/finance/summary');
+export async function getFinanceSummary(year?: number): Promise<FinanceSummary> {
+  const response = await apiClient.get<FinanceSummary>('/providers/me/finance/summary', {
+    params: year ? { year } : undefined,
+  });
+  return response.data;
+}
+
+export async function getMonthlyBreakdown(year?: number): Promise<MonthlyBreakdown> {
+  const response = await apiClient.get<MonthlyBreakdown>('/providers/me/finance/monthly-breakdown', {
+    params: year ? { year } : undefined,
+  });
+  return response.data;
+}
+
+export async function getYearlyComparison(): Promise<YearlyComparison> {
+  const response = await apiClient.get<YearlyComparison>('/providers/me/finance/yearly-comparison');
   return response.data;
 }
 

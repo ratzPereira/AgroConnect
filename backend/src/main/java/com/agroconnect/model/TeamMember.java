@@ -20,6 +20,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.Instant;
 
 @Entity
@@ -71,4 +72,7 @@ public class TeamMember {
 
     @Column(name = "joined_at")
     private Instant joinedAt;
+
+    @Column(name = "hourly_rate", precision = 8, scale = 2)
+    private BigDecimal hourlyRate;
 }

@@ -10,7 +10,7 @@ import { cn } from '@/utils/cn';
 import {
   LayoutDashboard, FileText, CreditCard, Bell, LogOut,
   Users, Wrench, Package, DollarSign, Shield, UserCog,
-  User as UserIcon, CalendarRange, Store,
+  User as UserIcon, CalendarRange, Store, Banknote,
 } from 'lucide-react';
 import type { Role } from '@/types/auth';
 
@@ -38,12 +38,19 @@ function buildNavItems(role?: Role): NavItem[] {
     { to: '/provider/finance', label: 'Finanças', icon: DollarSign },
   ];
 
+  const providerManagerItems: NavItem[] = [
+    { to: '/provider/payments', label: 'Pagamentos', icon: Banknote },
+  ];
+
   const adminItems: NavItem[] = [
     { to: '/admin/dashboard', label: 'Administração', icon: Shield },
     { to: '/admin/users', label: 'Utilizadores', icon: UserCog },
   ];
 
-  if (role === 'PROVIDER_MANAGER' || role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR') {
+  if (role === 'PROVIDER_MANAGER') {
+    return [...common, ...providerItems, ...providerManagerItems];
+  }
+  if (role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR') {
     return [...common, ...providerItems];
   }
   if (role === 'ADMIN') {

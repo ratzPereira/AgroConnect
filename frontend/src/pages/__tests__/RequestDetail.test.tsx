@@ -77,6 +77,10 @@ vi.mock('@/features/proposals/components/CreateProposalModal', () => ({
   CreateProposalModal: () => null,
 }));
 
+vi.mock('@/features/proposals/components/PaymentModal', () => ({
+  PaymentModal: () => null,
+}));
+
 vi.mock('@/components/ui/PhotoLightbox', () => ({
   PhotoLightbox: () => null,
 }));
