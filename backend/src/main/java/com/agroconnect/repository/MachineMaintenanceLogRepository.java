@@ -44,4 +44,17 @@ public interface MachineMaintenanceLogRepository extends JpaRepository<MachineMa
     BigDecimal sumCostByProviderInPeriod(@Param("providerId") Long providerId,
                                          @Param("from") LocalDate from,
                                          @Param("to") LocalDate to);
+
+    @Query("""
+            SELECT m FROM MachineMaintenanceLog m
+            JOIN FETCH m.machine ma
+            WHERE ma.provider.id = :providerId
+              AND m.nextDueAt IS NOT NULL
+              AND m.nextDueAt >= :from
+              AND m.nextDueAt <= :to
+            ORDER BY m.nextDueAt ASC
+            """)
+    List<MachineMaintenanceLog> findUpcomingByProviderInRange(@Param("providerId") Long providerId,
+                                                              @Param("from") LocalDate from,
+                                                              @Param("to") LocalDate to);
 }

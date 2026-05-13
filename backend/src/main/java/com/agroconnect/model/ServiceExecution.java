@@ -22,6 +22,7 @@ import org.locationtech.jts.geom.Point;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -64,6 +65,16 @@ public class ServiceExecution {
 
     @Column(name = "scheduled_end_date")
     private LocalDate scheduledEndDate;
+
+    @Column(name = "scheduled_start_time")
+    private LocalTime scheduledStartTime;
+
+    @Column(name = "scheduled_end_time")
+    private LocalTime scheduledEndTime;
+
+    @Column(name = "scheduled_all_day", nullable = false)
+    @Builder.Default
+    private boolean scheduledAllDay = true;
 
     @Column(name = "completed_at")
     private Instant completedAt;

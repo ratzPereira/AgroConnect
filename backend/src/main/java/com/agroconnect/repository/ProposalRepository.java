@@ -39,4 +39,19 @@ public interface ProposalRepository extends JpaRepository<Proposal, Long> {
             )
             """)
     long countActiveProposalsByClientId(@Param("clientId") Long clientId);
+
+    @Query("""
+            SELECT p FROM Proposal p
+            JOIN FETCH p.request r
+            WHERE p.provider.id = :providerId
+              AND p.status = com.agroconnect.model.enums.ProposalStatus.PENDING
+              AND r.status IN (
+                  com.agroconnect.model.enums.RequestStatus.PUBLISHED,
+                  com.agroconnect.model.enums.RequestStatus.WITH_PROPOSALS
+              )
+            ORDER BY p.createdAt DESC
+            """)
+    List<Proposal> findPendingByProviderId(@Param("providerId") Long providerId);
+
+    long countByRequestIdAndStatus(Long requestId, com.agroconnect.model.enums.ProposalStatus status);
 }

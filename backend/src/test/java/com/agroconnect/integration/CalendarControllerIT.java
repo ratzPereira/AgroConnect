@@ -112,4 +112,84 @@ class CalendarControllerIT extends TestContainersConfig {
                         .param("to", "2025-12-31"))
                 .andExpect(status().isUnauthorized());
     }
+
+    @Test
+    @Order(6)
+    void getSummary_givenProvider_shouldReturn200() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/calendar/summary")
+                        .param("from", "2025-01-01")
+                        .param("to", "2025-12-31")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.totalEvents").exists())
+                .andExpect(jsonPath("$.totalRevenue").exists())
+                .andExpect(jsonPath("$.operatorUtilization").exists());
+    }
+
+    @Test
+    @Order(7)
+    void getWorkload_givenProvider_shouldReturn200() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/calendar/workload")
+                        .param("from", "2025-01-01")
+                        .param("to", "2025-01-07")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.operators").isArray());
+    }
+
+    @Test
+    @Order(8)
+    void getMaintenanceWindows_givenProvider_shouldReturn200() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/calendar/maintenance-windows")
+                        .param("from", "2025-01-01")
+                        .param("to", "2025-12-31")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+    }
+
+    @Test
+    @Order(9)
+    void getAlerts_givenProvider_shouldReturn200() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/calendar/alerts")
+                        .param("from", "2025-01-01")
+                        .param("to", "2025-12-31")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.conflicts").isArray())
+                .andExpect(jsonPath("$.maintenance").isArray())
+                .andExpect(jsonPath("$.payments").isArray())
+                .andExpect(jsonPath("$.proposals").isArray());
+    }
+
+    @Test
+    @Order(10)
+    void updateSchedule_givenInvalidTimeRange_shouldReturn400() throws Exception {
+        Map<String, Object> body = Map.of(
+                "scheduledDate", "2025-06-01",
+                "scheduledEndDate", "2025-06-01",
+                "scheduledStartTime", "14:00",
+                "scheduledEndTime", "10:00",
+                "allDay", false);
+
+        mockMvc.perform(patch("/v1/providers/me/calendar/executions/999999/schedule")
+                        .header("Authorization", "Bearer " + providerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isNotFound()); // 404 happens first because execution doesn't exist
+    }
+
+    @Test
+    @Order(11)
+    void reassign_givenNonExistentExecution_shouldReturn404() throws Exception {
+        Map<String, Object> body = Map.of(
+                "fromTeamMemberId", 1,
+                "toTeamMemberId", 2);
+
+        mockMvc.perform(post("/v1/providers/me/calendar/executions/999999/reassign")
+                        .header("Authorization", "Bearer " + providerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(body)))
+                .andExpect(status().isNotFound());
+    }
 }

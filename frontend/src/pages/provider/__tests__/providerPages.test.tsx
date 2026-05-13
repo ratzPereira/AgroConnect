@@ -133,10 +133,20 @@ vi.mock('@/features/transactions/components/TransactionDetailModal', () => ({
 vi.mock('@/features/calendar/hooks/useCalendar', () => ({
   useCalendarEvents: vi.fn(() => ({ data: [], isLoading: false })),
   useCalendarConflicts: vi.fn(() => ({ data: [], isLoading: false })),
+  useCalendarSummary: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useCalendarWorkload: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useCalendarAlerts: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useCalendarMaintenance: vi.fn(() => ({ data: undefined, isLoading: false })),
+  useUpdateSchedule: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
+  useReassignExecution: vi.fn(() => ({ mutateAsync: vi.fn(), isPending: false })),
 }));
 
 vi.mock('@/features/calendar/components/GanttChart', () => ({
   GanttChart: () => <div data-testid="gantt-chart" />,
+}));
+
+vi.mock('@/features/calendar/components/views/MonthView', () => ({
+  MonthView: () => <div data-testid="month-view" />,
 }));
 
 // --- Tests ---

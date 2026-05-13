@@ -39,8 +39,11 @@ const mockEvent: CalendarEvent = {
   requestId: 10,
   requestTitle: 'Lavoura de terreno',
   categoryName: 'Preparação de Solo',
-  scheduledDate: '2026-04-01T09:00:00',
-  scheduledEndDate: '2026-04-01T17:00:00',
+  scheduledDate: '2026-04-01',
+  scheduledEndDate: '2026-04-01',
+  scheduledStartTime: null,
+  scheduledEndTime: null,
+  scheduledAllDay: true,
   status: 'IN_PROGRESS',
   island: 'Terceira',
   parish: 'Angra do Heroísmo',
@@ -163,7 +166,7 @@ describe('useUpdateSchedule', () => {
       scheduledDate: '2026-04-02T09:00:00',
       scheduledEndDate: '2026-04-02T17:00:00',
     });
-    expect(toast.success).toHaveBeenCalledWith('Agenda atualizada com sucesso');
+    expect(toast.success).toHaveBeenCalledWith('Agenda atualizada');
   });
 
   it('should show error toast when mutation fails', async () => {
