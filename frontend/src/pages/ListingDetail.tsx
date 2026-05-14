@@ -496,7 +496,7 @@ export function ListingDetail() {
 
 /* ─── Sub-components ──────────────────────────────────────────── */
 
-function DetailItem({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function DetailItem({ icon, label, value }: { readonly icon: React.ReactNode; readonly label: string; readonly value: string }) {
   return (
     <div className="flex items-start gap-2.5 p-3 rounded-xl bg-neutral-50/80 border border-neutral-100">
       <span className="text-neutral-400 mt-0.5">{icon}</span>

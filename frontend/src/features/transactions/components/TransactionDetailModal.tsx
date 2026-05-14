@@ -79,7 +79,7 @@ export function TransactionDetailModal({ transaction, open, onClose }: Transacti
   );
 }
 
-function TimelineEntry({ label, date }: { label: string; date: string }) {
+function TimelineEntry({ label, date }: { readonly label: string; readonly date: string }) {
   return (
     <div className="flex items-center gap-3">
       <ArrowRight className="h-3.5 w-3.5 text-neutral-400 shrink-0" />

@@ -354,9 +354,9 @@ function StepIndicator({
   icon,
   active,
 }: {
-  label: string;
-  icon: ReactNode;
-  active: boolean;
+  readonly label: string;
+  readonly icon: ReactNode;
+  readonly active: boolean;
 }) {
   return (
     <div className="flex flex-col items-center gap-1">

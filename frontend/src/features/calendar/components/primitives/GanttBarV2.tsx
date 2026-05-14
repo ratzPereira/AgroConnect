@@ -85,6 +85,7 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
   return (
     <div
       ref={setRefs}
+      // NOSONAR: bar contains nested resize buttons, so <button> tag would be invalid HTML
       role="button"
       tabIndex={0}
       data-execution-id={event.executionId}

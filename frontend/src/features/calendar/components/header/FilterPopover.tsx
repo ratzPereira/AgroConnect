@@ -31,7 +31,7 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
   useEffect(() => {
     if (!open) return;
     function onDocClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      if (e.target instanceof Node && ref.current && !ref.current.contains(e.target)) setOpen(false);
     }
     document.addEventListener('mousedown', onDocClick);
     return () => document.removeEventListener('mousedown', onDocClick);
@@ -175,10 +175,10 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
 }
 
 interface FilterGroupProps<T extends string | number> {
-  title: string;
-  items: Array<{ id: T; label: string }>;
-  selected: T[];
-  onToggle: (id: T) => void;
+  readonly title: string;
+  readonly items: ReadonlyArray<{ id: T; label: string }>;
+  readonly selected: readonly T[];
+  readonly onToggle: (id: T) => void;
 }
 
 function FilterGroup<T extends string | number>({ title, items, selected, onToggle }: FilterGroupProps<T>) {

@@ -32,7 +32,7 @@ export function TimeAxis({
         >
           {Array.from({ length: days }).map((_, dayIdx) => (
             <div
-              key={dayIdx}
+              key={`day-label-${dayIdx}`}
               className={cn(
                 'px-2 py-1.5 text-xs font-semibold text-neutral-700',
                 dayIdx > 0 && 'border-l border-neutral-200',
@@ -63,7 +63,7 @@ export function TimeAxis({
           >
             {Array.from({ length: hoursPerDay }).map((_, hourIdx) => (
               <div
-                key={hourIdx}
+                key={`hour-${dayIdx}-${hourIdx}`}
                 className={cn(
                   'flex items-center justify-start px-1 text-[10px] font-medium text-neutral-500',
                   hourIdx > 0 && 'border-l border-neutral-200',
@@ -94,7 +94,7 @@ export function TimeGridBackground({ days = 1, className }: TimeGridBackgroundPr
     >
       {Array.from({ length: days }).map((_, dayIdx) => (
         <div
-          key={dayIdx}
+          key={`bg-day-${dayIdx}`}
           className={cn('grid', dayIdx > 0 && 'border-l border-neutral-300')}
           style={{ gridTemplateColumns: `repeat(${hoursPerDay * SLOTS_PER_HOUR}, 1fr)` }}
         >
@@ -102,7 +102,7 @@ export function TimeGridBackground({ days = 1, className }: TimeGridBackgroundPr
             const isHour = slotIdx % SLOTS_PER_HOUR === 0;
             return (
               <div
-                key={slotIdx}
+                key={`bg-slot-${dayIdx}-${slotIdx}`}
                 className={cn(
                   'h-full',
                   slotIdx > 0 && (isHour ? 'border-l border-neutral-200' : 'border-l border-neutral-100'),

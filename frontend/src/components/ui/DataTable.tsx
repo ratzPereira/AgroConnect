@@ -14,18 +14,18 @@ interface Column<T> {
 }
 
 interface DataTableProps<T> {
-  columns: Column<T>[];
-  data: T[];
-  keyExtractor: (row: T) => string | number;
-  loading?: boolean;
-  emptyTitle?: string;
-  emptyDescription?: string;
-  emptyIllustration?: ReactNode;
-  onRowClick?: (row: T) => void;
-  page?: number;
-  totalPages?: number;
-  onPageChange?: (page: number) => void;
-  className?: string;
+  readonly columns: ReadonlyArray<Column<T>>;
+  readonly data: readonly T[];
+  readonly keyExtractor: (row: T) => string | number;
+  readonly loading?: boolean;
+  readonly emptyTitle?: string;
+  readonly emptyDescription?: string;
+  readonly emptyIllustration?: ReactNode;
+  readonly onRowClick?: (row: T) => void;
+  readonly page?: number;
+  readonly totalPages?: number;
+  readonly onPageChange?: (page: number) => void;
+  readonly className?: string;
 }
 
 type SortDirection = 'asc' | 'desc';

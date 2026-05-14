@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useRef } from 'react';
 import { X, ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PhotoLightboxProps {
@@ -9,6 +9,7 @@ interface PhotoLightboxProps {
 }
 
 export function PhotoLightbox({ photos, currentIndex, onClose, onNavigate }: PhotoLightboxProps) {
+  const dialogRef = useRef<HTMLDialogElement>(null);
   const hasPrev = currentIndex > 0;
   const hasNext = currentIndex < photos.length - 1;
 
@@ -39,9 +40,10 @@ export function PhotoLightbox({ photos, currentIndex, onClose, onNavigate }: Pho
   }, []);
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center"
-      role="dialog"
+    <dialog
+      ref={dialogRef}
+      open
+      className="fixed inset-0 z-50 flex items-center justify-center m-0 max-w-none max-h-none w-screen h-screen bg-transparent p-0"
       aria-modal="true"
       aria-label="Visualização de foto"
     >
@@ -89,6 +91,6 @@ export function PhotoLightbox({ photos, currentIndex, onClose, onNavigate }: Pho
       <div className="absolute bottom-6 left-1/2 -translate-x-1/2 text-white/70 text-sm">
         {currentIndex + 1} / {photos.length}
       </div>
-    </div>
+    </dialog>
   );
 }

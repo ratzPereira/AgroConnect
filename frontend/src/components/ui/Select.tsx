@@ -45,7 +45,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
 
     useEffect(() => {
       const handleClickOutside = (e: MouseEvent) => {
-        if (containerRef.current && !containerRef.current.contains(e.target as Node)) close();
+        if (e.target instanceof Node && containerRef.current && !containerRef.current.contains(e.target)) close();
       };
       if (open) {
         document.addEventListener('mousedown', handleClickOutside);

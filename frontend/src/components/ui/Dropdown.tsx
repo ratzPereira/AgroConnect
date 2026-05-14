@@ -35,7 +35,7 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(e.target as Node)) close();
+      if (e.target instanceof Node && containerRef.current && !containerRef.current.contains(e.target)) close();
     };
     if (open) document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);

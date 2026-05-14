@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { Children, useState } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { cn } from '@/utils/cn';
 
 type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
@@ -87,14 +87,14 @@ interface AvatarGroupProps {
 }
 
 export function AvatarGroup({ children, max, className }: AvatarGroupProps) {
-  const childArray = Array.isArray(children) ? children : [children];
+  const childArray = Children.toArray(children);
   const visible = max ? childArray.slice(0, max) : childArray;
   const overflow = max ? childArray.length - max : 0;
 
   return (
     <div className={cn('flex -space-x-2', className)}>
-      {visible.map((child, i) => (
-        <div key={`av-${i}`} className="ring-2 ring-white rounded-full">
+      {visible.map((child) => (
+        <div key={(child as ReactElement).key ?? 'avatar'} className="ring-2 ring-white rounded-full">
           {child}
         </div>
       ))}

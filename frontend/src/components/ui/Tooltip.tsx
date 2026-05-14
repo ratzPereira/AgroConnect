@@ -1,4 +1,4 @@
-import { useState, useRef, useId, useCallback } from 'react';
+import { cloneElement, useState, useRef, useId, useCallback } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
@@ -41,17 +41,22 @@ export function Tooltip({ content, position = 'top', delay = 300, children, clas
     setVisible(false);
   }, []);
 
+  const childProps = (children.props ?? {}) as Record<string, unknown>;
+  const composedHandler = <T,>(existing: unknown, next: () => void) => (e: T) => {
+    (existing as ((event: T) => void) | undefined)?.(e);
+    next();
+  };
+  const trigger = cloneElement(children, {
+    onMouseEnter: composedHandler(childProps.onMouseEnter, show),
+    onMouseLeave: composedHandler(childProps.onMouseLeave, hide),
+    onFocus: composedHandler(childProps.onFocus, show),
+    onBlur: composedHandler(childProps.onBlur, hide),
+    'aria-describedby': visible ? tooltipId : undefined,
+  } as Record<string, unknown>);
+
   return (
-    <div
-      className="relative inline-flex"
-      onMouseEnter={show}
-      onMouseLeave={hide}
-      onFocus={show}
-      onBlur={hide}
-    >
-      <div aria-describedby={visible ? tooltipId : undefined}>
-        {children}
-      </div>
+    <span className="relative inline-flex">
+      {trigger}
       <AnimatePresence>
         {visible && (
           <motion.div
@@ -72,6 +77,6 @@ export function Tooltip({ content, position = 'top', delay = 300, children, clas
           </motion.div>
         )}
       </AnimatePresence>
-    </div>
+    </span>
   );
 }

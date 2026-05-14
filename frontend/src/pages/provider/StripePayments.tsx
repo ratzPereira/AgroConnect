@@ -206,7 +206,7 @@ export function StripePayments() {
   );
 }
 
-function CapabilityRow({ label, enabled }: { label: string; enabled: boolean }) {
+function CapabilityRow({ label, enabled }: { readonly label: string; readonly enabled: boolean }) {
   return (
     <div className="flex items-center gap-2 p-3 rounded-lg border border-neutral-200 bg-white">
       {enabled ? (

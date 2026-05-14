@@ -162,16 +162,14 @@ describe('WizardPhotoCollector (deeper)', () => {
   });
 
   it('addFile rejects when files.length >= maxPhotos', () => {
-    // Start with 2 files, maxPhotos=2, then try to add via a fresh render with 0 files but max=2
-    // Actually, let's test via input with existing files at max
     const existingFiles = Array.from({ length: 2 }, (_, i) =>
       createMockFile(`photo${i}.jpg`, 100, 'image/jpeg'),
     );
     renderCollector({ files: existingFiles, maxPhotos: 2 });
 
-    // Drop zone is hidden, so we can't add via input. Test the toast scenario
-    // by setting maxPhotos to 3 and having 2 files, then adding 2 more (one succeeds, one shows toast)
-    // Let's re-render to test the toast path
+    // Drop zone is hidden once the cap is reached, so the user has no way to add more.
+    expect(screen.queryByText(/Arraste imagens/)).not.toBeInTheDocument();
+    expect(screen.getByText('2/2 fotos')).toBeInTheDocument();
   });
 
   it('drop zone text changes to "Largue aqui" on drag over', () => {

@@ -124,7 +124,7 @@ export function ResourceUsageModal({ open, onClose, executionId, requestId }: Re
               {items.map((i) => (
                 <option key={i.id} value={i.id}>
                   {i.productName} ({i.quantity} {unitLabels[i.unit]} em stock
-                  {i.costPerUnit != null ? ` · ${i.costPerUnit.toFixed(4)} €/${unitLabels[i.unit]}` : ''})
+                  {i.costPerUnit == null ? '' : ` · ${i.costPerUnit.toFixed(4)} €/${unitLabels[i.unit]}`})
                 </option>
               ))}
             </select>

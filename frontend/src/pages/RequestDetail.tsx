@@ -48,10 +48,63 @@ const TERMINAL_LABELS: Record<string, string> = {
   DISPUTED: 'Em Disputa',
 };
 
+const PROPOSE_STATUSES = new Set(['PUBLISHED', 'WITH_PROPOSALS']);
+const CANCEL_BLOCKED_STATUSES = new Set(['COMPLETED', 'RATED', 'DISPUTED', 'EXPIRED', 'CANCELLED']);
+const UPLOAD_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'WITH_PROPOSALS']);
+
 function stepStatus(index: number, currentIndex: number): 'completed' | 'active' | 'upcoming' {
   if (index < currentIndex) return 'completed';
   if (index === currentIndex) return 'active';
   return 'upcoming';
+}
+
+interface RequestFlags {
+  isProvider: boolean;
+  isOwner: boolean;
+  canPropose: boolean;
+  canCancel: boolean;
+  canUploadPhotos: boolean;
+  showExecution: boolean;
+  showChat: boolean;
+  showConfirmation: boolean;
+  showReviewForm: boolean;
+}
+
+function computeRequestFlags(
+  request: { status: string; clientId: number } | undefined,
+  user: { id: number; role: string } | null,
+  proposals: { status: string }[] | undefined,
+  reviews: { authorId: number }[] | undefined,
+): RequestFlags {
+  const role = user?.role;
+  const isProvider = role === 'PROVIDER_MANAGER' || role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR';
+  const isOwner = !!request && request.clientId === user?.id;
+  const status = request?.status;
+  const hasProposals = !!proposals && proposals.length > 0;
+  const alreadyProposed = isProvider && hasProposals;
+
+  const canPropose = isProvider && !alreadyProposed && !!status && PROPOSE_STATUSES.has(status);
+  const canCancel = isOwner && !!status && !CANCEL_BLOCKED_STATUSES.has(status);
+  const canUploadPhotos = !!status && UPLOAD_STATUSES.has(status);
+  const showExecution = !!status && EXECUTION_STATUSES.has(status);
+  const showChat = !!status && CHAT_STATUSES.has(status);
+  const showConfirmation = isOwner && status === 'AWAITING_CONFIRMATION';
+
+  const isParticipant = isOwner || (isProvider && !!proposals?.some((p) => p.status === 'ACCEPTED'));
+  const showReviewForm =
+    isParticipant && !!status && REVIEW_STATUSES.has(status) && !!reviews && !reviews.some((r) => r.authorId === user?.id);
+
+  return {
+    isProvider,
+    isOwner,
+    canPropose,
+    canCancel,
+    canUploadPhotos,
+    showExecution,
+    showChat,
+    showConfirmation,
+    showReviewForm,
+  };
 }
 
 function buildTimelineSteps(status: string): Array<{ label: string; status: 'completed' | 'active' | 'upcoming' }> {
@@ -145,19 +198,8 @@ export function RequestDetail() {
     setAcceptingId(null);
   }
 
-  const isProvider = user?.role === 'PROVIDER_MANAGER' || user?.role === 'PROVIDER_LEAD' || user?.role === 'PROVIDER_OPERATOR';
-  const isOwner = request && request.clientId === user?.id;
-  const alreadyProposed = isProvider && proposals && proposals.length > 0;
-  const canPropose = isProvider && !alreadyProposed && request && (request.status === 'PUBLISHED' || request.status === 'WITH_PROPOSALS');
-  const canCancel = isOwner && request && !['COMPLETED', 'RATED', 'DISPUTED', 'EXPIRED', 'CANCELLED'].includes(request.status);
-  const canUploadPhotos = request && ['DRAFT', 'PUBLISHED', 'WITH_PROPOSALS'].includes(request.status);
-
-  const showExecution = request && EXECUTION_STATUSES.has(request.status);
-  const showChat = request && CHAT_STATUSES.has(request.status);
-  const showConfirmation = isOwner && request?.status === 'AWAITING_CONFIRMATION';
-  const isParticipant = isOwner || (isProvider && proposals?.some((p) => p.status === 'ACCEPTED'));
-  const showReviewForm = isParticipant && request && REVIEW_STATUSES.has(request.status) &&
-    reviews && !reviews.some((r) => r.authorId === user?.id);
+  const flags = computeRequestFlags(request, user, proposals, reviews);
+  const { isProvider, isOwner, canPropose, canCancel, canUploadPhotos, showExecution, showChat, showConfirmation, showReviewForm } = flags;
 
   if (requestLoading) {
     return (

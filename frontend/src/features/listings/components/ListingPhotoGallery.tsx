@@ -43,9 +43,9 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
   function renderLightbox() {
     if (!lightboxOpen) return null;
     return (
-      <div
-        className="fixed inset-0 z-50 flex items-center justify-center"
-        role="dialog"
+      <dialog
+        open
+        className="fixed inset-0 z-50 flex items-center justify-center m-0 max-w-none max-h-none w-screen h-screen bg-transparent p-0"
         aria-modal="true"
         aria-label="Visualização de foto"
       >
@@ -108,7 +108,7 @@ export function ListingPhotoGallery({ photos }: ListingPhotoGalleryProps) {
             </div>
           </>
         )}
-      </div>
+      </dialog>
     );
   }
 

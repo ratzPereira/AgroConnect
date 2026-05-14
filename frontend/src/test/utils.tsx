@@ -16,7 +16,7 @@ interface CustomRenderOptions extends Omit<RenderOptions, 'wrapper'> {
   route?: string;
 }
 
-function AllProviders({ children, route = '/' }: { children: ReactNode; route?: string }) {
+function AllProviders({ children, route = '/' }: { readonly children: ReactNode; readonly route?: string }) {
   const queryClient = createTestQueryClient();
   return (
     <QueryClientProvider client={queryClient}>

@@ -398,7 +398,7 @@ export function InventoryDetail() {
   );
 }
 
-function StatCard({ label, value, hint }: { label: string; value: string; hint?: string }) {
+function StatCard({ label, value, hint }: { readonly label: string; readonly value: string; readonly hint?: string }) {
   return (
     <Card>
       <CardBody>
@@ -410,7 +410,7 @@ function StatCard({ label, value, hint }: { label: string; value: string; hint?:
   );
 }
 
-function FormField({ label, children }: { label: string; children: React.ReactNode }) {
+function FormField({ label, children }: { readonly label: string; readonly children: React.ReactNode }) {
   return (
     <div className="space-y-1.5">
       <label className="block text-sm font-medium text-neutral-700">{label}</label>

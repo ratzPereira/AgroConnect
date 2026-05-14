@@ -35,8 +35,8 @@ describe('Tooltip', () => {
 
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
-    const wrapper = screen.getByText('Trigger').closest('.relative') as HTMLElement;
-    fireEvent.mouseEnter(wrapper);
+    const trigger = screen.getByText('Trigger');
+    fireEvent.mouseEnter(trigger);
 
     act(() => {
       vi.advanceTimersByTime(300);
@@ -56,14 +56,14 @@ describe('Tooltip', () => {
       </Tooltip>,
     );
 
-    const wrapper = screen.getByText('Trigger').closest('.relative') as HTMLElement;
-    fireEvent.mouseEnter(wrapper);
+    const trigger = screen.getByText('Trigger');
+    fireEvent.mouseEnter(trigger);
     act(() => {
       vi.advanceTimersByTime(0);
     });
     expect(screen.getByRole('tooltip')).toBeInTheDocument();
 
-    fireEvent.mouseLeave(wrapper);
+    fireEvent.mouseLeave(trigger);
     expect(screen.queryByRole('tooltip')).not.toBeInTheDocument();
 
     vi.useRealTimers();

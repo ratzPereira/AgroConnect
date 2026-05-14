@@ -118,7 +118,7 @@ export function JobCostingPanel({ executionId, requestId, isProvider, canEdit }:
   );
 }
 
-function FinancialSummary({ costs }: { costs: JobCosts }) {
+function FinancialSummary({ costs }: { readonly costs: JobCosts }) {
   const isProfit = costs.netProfit >= 0;
   return (
     <div>
@@ -152,7 +152,7 @@ function FinancialSummary({ costs }: { costs: JobCosts }) {
   );
 }
 
-function SummaryTile({ label, value, tone }: { label: string; value: string; tone: 'neutral' }) {
+function SummaryTile({ label, value, tone }: { readonly label: string; readonly value: string; readonly tone: 'neutral' }) {
   return (
     <div className="rounded-lg bg-white border border-neutral-200 px-3 py-2">
       <p className="text-[11px] text-neutral-500">{label}</p>
@@ -167,10 +167,10 @@ function ResourceUsagesList({
   requestId,
   canEdit,
 }: {
-  costs: JobCosts;
-  executionId: number;
-  requestId: number;
-  canEdit: boolean;
+  readonly costs: JobCosts;
+  readonly executionId: number;
+  readonly requestId: number;
+  readonly canEdit: boolean;
 }) {
   const queryClient = useQueryClient();
 
@@ -228,10 +228,10 @@ function AssignmentsHoursList({
   requestId,
   canEdit,
 }: {
-  costs: JobCosts;
-  executionId: number;
-  requestId: number;
-  canEdit: boolean;
+  readonly costs: JobCosts;
+  readonly executionId: number;
+  readonly requestId: number;
+  readonly canEdit: boolean;
 }) {
   if (costs.assignments.length === 0) {
     return <p className="text-sm text-neutral-500">Sem membros atribuídos.</p>;
@@ -257,10 +257,10 @@ function AssignmentHoursRow({
   requestId,
   canEdit,
 }: {
-  assignment: AssignmentCost;
-  executionId: number;
-  requestId: number;
-  canEdit: boolean;
+  readonly assignment: AssignmentCost;
+  readonly executionId: number;
+  readonly requestId: number;
+  readonly canEdit: boolean;
 }) {
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);

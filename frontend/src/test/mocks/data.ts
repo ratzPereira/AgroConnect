@@ -66,7 +66,7 @@ export const mockRequestSummaries: ServiceRequestSummary[] = [
     parish: 'São Sebastião',
     municipality: 'Angra do Heroísmo',
     island: 'Terceira',
-    area: 1.0,
+    area: 1,
     areaUnit: 'ha',
     urgency: 'LOW',
     proposalCount: 2,

@@ -48,7 +48,7 @@ export function AllDayBand({
           const dayEvents = filterEventsForDay(allDayEvents, dayIdx, days, dayLabels);
           return (
             <div
-              key={dayIdx}
+              key={`allday-${dayIdx}`}
               className={cn(
                 'flex min-h-[40px] flex-col gap-1 px-2 py-1.5',
                 dayIdx > 0 && 'border-l border-neutral-200',

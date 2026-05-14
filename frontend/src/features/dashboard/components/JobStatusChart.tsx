@@ -17,6 +17,8 @@ function LegendLabel({ value }: { readonly value: string }) {
   return <span className="text-xs text-neutral-600 ml-1">{value}</span>;
 }
 
+const renderLegendLabel = (value: string) => <LegendLabel value={value} />;
+
 export function JobStatusChart({ data, total, className }: JobStatusChartProps) {
   if (data.every((d) => d.value === 0)) {
     return (
@@ -56,7 +58,7 @@ export function JobStatusChart({ data, total, className }: JobStatusChartProps) 
             verticalAlign="bottom"
             iconType="circle"
             iconSize={8}
-            formatter={(value: string) => <LegendLabel value={value} />}
+            formatter={renderLegendLabel}
           />
         </PieChart>
       </ResponsiveContainer>

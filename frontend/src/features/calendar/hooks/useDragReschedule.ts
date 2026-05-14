@@ -43,7 +43,7 @@ export function useDragReschedule({ events }: UseDragRescheduleOptions) {
       const machineIds =
         target.resourceType === 'machine' && target.resourceId != null
           ? [target.resourceId]
-          : session.event.assignments.flatMap((a) => (a.machineId != null ? [a.machineId] : []));
+          : session.event.assignments.flatMap((a) => (a.machineId == null ? [] : [a.machineId]));
       return eventsConflict(
         {
           executionId: session.event.executionId,

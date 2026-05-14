@@ -62,7 +62,7 @@ export function EventPopover({ event, anchor, onClose }: EventPopoverProps) {
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) onClose();
+      if (e.target instanceof Node && ref.current && !ref.current.contains(e.target)) onClose();
     }
     function handleKey(e: KeyboardEvent) {
       if (e.key === 'Escape') onClose();
@@ -316,9 +316,9 @@ function Row({
   label,
   children,
 }: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
+  readonly icon: React.ReactNode;
+  readonly label: string;
+  readonly children: React.ReactNode;
 }) {
   return (
     <div className="flex items-center gap-2">

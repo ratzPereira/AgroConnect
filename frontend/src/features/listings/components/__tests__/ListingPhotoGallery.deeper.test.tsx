@@ -135,7 +135,7 @@ describe('ListingPhotoGallery — deeper coverage', () => {
     openLightboxForMultiPhotos();
 
     // Initially showing photo at index 0 (alt="Foto 1" in lightbox)
-    const lightboxOverlay = screen.getByLabelText('Fechar').closest('div[class*="fixed"]');
+    const lightboxOverlay = screen.getByLabelText('Fechar').closest('[class*="fixed"]');
     expect(lightboxOverlay).toBeInTheDocument();
 
     // The lightbox img should show "Foto 1"
@@ -160,7 +160,7 @@ describe('ListingPhotoGallery — deeper coverage', () => {
     // Initially at index 0, ArrowLeft should wrap to last photo
     fireEvent.keyDown(document, { key: 'ArrowLeft' });
 
-    const lightboxOverlay = screen.getByLabelText('Fechar').closest('div[class*="fixed"]');
+    const lightboxOverlay = screen.getByLabelText('Fechar').closest('[class*="fixed"]');
     const lightboxImgs = lightboxOverlay
       ? within(lightboxOverlay as HTMLElement).getAllByRole('img')
       : [];
@@ -184,7 +184,7 @@ describe('ListingPhotoGallery — deeper coverage', () => {
     // Click dot for photo 3
     await user.click(screen.getByLabelText('Foto 3'));
 
-    const lightboxOverlay = screen.getByLabelText('Fechar').closest('div[class*="fixed"]');
+    const lightboxOverlay = screen.getByLabelText('Fechar').closest('[class*="fixed"]');
     const lightboxImgs = lightboxOverlay
       ? within(lightboxOverlay as HTMLElement).getAllByRole('img')
       : [];

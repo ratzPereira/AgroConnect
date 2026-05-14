@@ -1,6 +1,15 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
+
+const navigateMock = vi.fn();
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual<typeof import('react-router-dom')>('react-router-dom');
+  return {
+    ...actual,
+    useNavigate: () => navigateMock,
+  };
+});
 import type { CalendarEvent } from '@/types/calendar';
 import { TimeAxis } from '../TimeAxis';
 import { ResourceLane } from '../ResourceLane';
@@ -100,6 +109,69 @@ describe('AllDayBand', () => {
   it('shows empty hint when no all-day events on the day', () => {
     wrap(<AllDayBand events={[baseEvent]} days={1} dayLabels={['2026-04-15']} />);
     expect(screen.getByText(/Sem eventos de dia inteiro/)).toBeInTheDocument();
+  });
+
+  it('invokes onEventClick when an event button is clicked', () => {
+    const allDay: CalendarEvent = { ...baseEvent, executionId: 5, scheduledAllDay: true, requestTitle: 'Sementeira' };
+    const onEventClick = vi.fn();
+    wrap(<AllDayBand events={[allDay]} days={1} onEventClick={onEventClick} />);
+    fireEvent.click(screen.getByText('Sementeira'));
+    expect(onEventClick).toHaveBeenCalledWith(allDay);
+  });
+
+  it('navigates to the job detail when no onEventClick is provided', () => {
+    navigateMock.mockClear();
+    const allDay: CalendarEvent = { ...baseEvent, executionId: 7, requestId: 99, scheduledAllDay: true, requestTitle: 'Poda' };
+    wrap(<AllDayBand events={[allDay]} days={1} />);
+    fireEvent.click(screen.getByText('Poda'));
+    expect(navigateMock).toHaveBeenCalledWith('/provider/jobs/99');
+  });
+
+  it('renders custom rightActions in the band header', () => {
+    wrap(
+      <AllDayBand
+        events={[]}
+        days={1}
+        rightActions={<span data-testid="right-action">+</span>}
+      />,
+    );
+    expect(screen.getByTestId('right-action')).toBeInTheDocument();
+  });
+
+  it('filters events per day when given dayLabels for a multi-day view', () => {
+    const dayA: CalendarEvent = {
+      ...baseEvent,
+      executionId: 21,
+      scheduledAllDay: true,
+      scheduledDate: '2026-04-15',
+      scheduledEndDate: '2026-04-15',
+      requestTitle: 'Evento A',
+    };
+    const dayB: CalendarEvent = {
+      ...baseEvent,
+      executionId: 22,
+      scheduledAllDay: true,
+      scheduledDate: '2026-04-16',
+      scheduledEndDate: '2026-04-16',
+      requestTitle: 'Evento B',
+    };
+    wrap(
+      <AllDayBand
+        events={[dayA, dayB]}
+        days={2}
+        dayLabels={['2026-04-15', '2026-04-16']}
+      />,
+    );
+    expect(screen.getByText('Evento A')).toBeInTheDocument();
+    expect(screen.getByText('Evento B')).toBeInTheDocument();
+  });
+
+  it('applies urgency-specific styles to HIGH and LOW events', () => {
+    const high: CalendarEvent = { ...baseEvent, executionId: 31, scheduledAllDay: true, urgency: 'HIGH', requestTitle: 'Urgente' };
+    const low: CalendarEvent = { ...baseEvent, executionId: 32, scheduledAllDay: true, urgency: 'LOW', requestTitle: 'Tranquilo' };
+    wrap(<AllDayBand events={[high, low]} days={1} />);
+    expect(screen.getByText('Urgente').className).toMatch(/warning/);
+    expect(screen.getByText('Tranquilo').className).toMatch(/secondary/);
   });
 });
 
