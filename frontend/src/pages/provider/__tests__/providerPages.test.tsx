@@ -69,6 +69,10 @@ vi.mock('@/features/dashboard/components/RevenueChart', () => ({
   RevenueChart: () => <div data-testid="revenue-chart" />,
 }));
 
+vi.mock('@/features/dashboard/components/DashboardRevenueChart', () => ({
+  DashboardRevenueChart: () => <div data-testid="dashboard-revenue-chart" />,
+}));
+
 vi.mock('@/features/dashboard/components/ProviderAlerts', () => ({
   ProviderAlerts: () => null,
 }));
@@ -116,6 +120,23 @@ vi.mock('@/api/finance', () => ({
       thisMonthEarnings: 300,
       pendingPayouts: 100,
       completedJobs: 5,
+    }),
+  ),
+  getMonthlyBreakdown: vi.fn(() =>
+    Promise.resolve({ year: new Date().getFullYear(), months: [] }),
+  ),
+  getYearlyComparison: vi.fn(() =>
+    Promise.resolve({
+      currentYear: new Date().getFullYear(),
+      previousYear: new Date().getFullYear() - 1,
+      currentRevenue: 0,
+      previousRevenue: 0,
+      revenueDeltaPct: null,
+      currentProfit: 0,
+      previousProfit: 0,
+      profitDeltaPct: null,
+      currentJobs: 0,
+      previousJobs: 0,
     }),
   ),
   getFinanceTransactions: vi.fn(() =>

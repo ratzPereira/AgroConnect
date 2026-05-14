@@ -95,67 +95,68 @@ export function ProviderCalendar() {
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_320px]">
-        <div className="space-y-4 min-w-0">
-          <CalendarDnd events={filteredEvents}>
-            {eventsLoading && (
-              <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
-                A carregar agenda…
-              </div>
-            )}
-            {!eventsLoading && view === 'day' && (
-              <DayView
-                events={filteredEvents}
-                conflicts={conflicts}
-                dayIso={anchor}
-                lane={lane}
-                enableDnd
-                onEventClick={(e) =>
-                  handleEventClick(e, { clientX: 200, clientY: 200 })
-                }
-              />
-            )}
-            {!eventsLoading && view === 'week' && (
-              <WeekView
-                events={filteredEvents}
-                conflicts={conflicts}
-                days={days}
-                lane={lane}
-                enableDnd
-                onEventClick={(e) =>
-                  handleEventClick(e, { clientX: 200, clientY: 200 })
-                }
-              />
-            )}
-            {!eventsLoading && view === 'month' && (
-              <MonthView
-                events={filteredEvents}
-                conflicts={conflicts}
-                year={Number(anchor.slice(0, 4))}
-                month={Number(anchor.slice(5, 7)) - 1}
-                lane={lane}
-              />
-            )}
-          </CalendarDnd>
+      <div className="space-y-4">
+        <CalendarDnd events={filteredEvents}>
+          {eventsLoading && (
+            <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
+              A carregar agenda…
+            </div>
+          )}
+          {!eventsLoading && view === 'day' && (
+            <DayView
+              events={filteredEvents}
+              conflicts={conflicts}
+              dayIso={anchor}
+              lane={lane}
+              enableDnd
+              onEventClick={(e) =>
+                handleEventClick(e, { clientX: 200, clientY: 200 })
+              }
+            />
+          )}
+          {!eventsLoading && view === 'week' && (
+            <WeekView
+              events={filteredEvents}
+              conflicts={conflicts}
+              days={days}
+              lane={lane}
+              enableDnd
+              onEventClick={(e) =>
+                handleEventClick(e, { clientX: 200, clientY: 200 })
+              }
+            />
+          )}
+          {!eventsLoading && view === 'month' && (
+            <MonthView
+              events={filteredEvents}
+              conflicts={conflicts}
+              year={Number(anchor.slice(0, 4))}
+              month={Number(anchor.slice(5, 7)) - 1}
+              lane={lane}
+            />
+          )}
+        </CalendarDnd>
 
-          <WorkloadHeatmap
-            data={workload}
-            isLoading={workloadLoading}
-            onCellClick={(dateIso) => {
-              setView('day');
-              setAnchor(dateIso);
-            }}
-          />
+        <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_320px]">
+          <div className="min-w-0">
+            <WorkloadHeatmap
+              data={workload}
+              isLoading={workloadLoading}
+              onCellClick={(dateIso) => {
+                setView('day');
+                setAnchor(dateIso);
+              }}
+            />
+          </div>
+          <aside className="min-w-0">
+            <SideRail
+              alerts={alerts}
+              events={filteredEvents}
+              isLoading={alertsLoading}
+              anchorIso={anchor}
+            />
+          </aside>
         </div>
-
-        <aside className="min-w-0">
-          <SideRail
-            alerts={alerts}
-            events={filteredEvents}
-            isLoading={alertsLoading}
-            anchorIso={anchor}
-          />
-        </aside>
       </div>
 
       {popover && (

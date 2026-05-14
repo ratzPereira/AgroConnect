@@ -1,11 +1,12 @@
 import { useQuery } from '@tanstack/react-query';
 import { Briefcase, TrendingUp, AlertTriangle, Wrench } from 'lucide-react';
 import { getProviderDashboardStats, getProviderActiveJobs } from '@/api/dashboard';
+import { getMonthlyBreakdown } from '@/api/finance';
 import { getRequestPins } from '@/api/pins';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { AzoresMap } from '@/components/AzoresMap';
 import { DashboardStatCards } from '@/features/dashboard/components/DashboardStatCards';
-import { RevenueChart } from '@/features/dashboard/components/RevenueChart';
+import { DashboardRevenueChart } from '@/features/dashboard/components/DashboardRevenueChart';
 import { ProviderAlerts } from '@/features/dashboard/components/ProviderAlerts';
 import { ProviderJobsList } from '@/features/dashboard/components/ProviderJobsList';
 import { UpcomingJobsMini } from '@/features/calendar/components/UpcomingJobsMini';
@@ -37,6 +38,12 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
     refetchOnMount: 'always',
   });
 
+  const { data: monthlyBreakdown, isLoading: breakdownLoading } = useQuery({
+    queryKey: ['provider-dashboard-monthly-breakdown'],
+    queryFn: () => getMonthlyBreakdown(),
+    refetchOnMount: 'always',
+  });
+
   const Wrapper = inline ? 'div' : AnimatedPage;
 
   if (isLoading || !data) {
@@ -53,8 +60,8 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
               <Skeleton.Stat key={k} />
             ))}
           </div>
-          <Skeleton.Rect className="h-[400px]" />
-          <Skeleton.Rect className="h-[200px]" />
+          <Skeleton.Rect className="h-[420px]" />
+          <Skeleton.Rect className="h-[300px]" />
         </div>
       </Wrapper>
     );
@@ -68,13 +75,6 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
     { label: 'Stock baixo', value: lowStockItems.length, icon: <AlertTriangle className="h-4 w-4 text-warning-600" />, iconBg: 'bg-warning-50' },
     { label: 'Manutenção pendente', value: maintenanceDueMachines.length, icon: <Wrench className="h-4 w-4 text-danger-600" />, iconBg: 'bg-danger-50' },
   ];
-
-  const revenueData = finance.thisMonthEarnings > 0
-    ? [
-        { label: 'Anterior', value: Math.round(finance.totalEarnings - finance.thisMonthEarnings) },
-        { label: 'Este mês', value: Math.round(finance.thisMonthEarnings) },
-      ]
-    : [];
 
   const providerLocation = geo.latitude && geo.longitude
     ? { latitude: geo.latitude, longitude: geo.longitude, radiusKm: 50 }
@@ -91,26 +91,25 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
         <ProviderAlerts lowStockItems={lowStockItems} maintenanceDueMachines={maintenanceDueMachines} />
         <DashboardStatCards stats={stats} />
 
-        <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6">
-          <div>
-            <h3 className="text-sm font-semibold text-neutral-800 mb-3">Pedidos na Zona</h3>
-            <AzoresMap
-              pins={pins ?? []}
-              providerLocation={providerLocation}
-              height="400px"
-              colorBy="status"
-            />
+        <div className="rounded-xl border border-neutral-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-sm font-semibold text-neutral-900">Pedidos na Zona</h3>
+            <p className="text-xs text-neutral-500">Os pedidos publicados perto de si</p>
           </div>
-          <div className="space-y-4">
-            <ProviderJobsList jobs={activeJobs ?? []} />
-            <UpcomingJobsMini />
-          </div>
+          <AzoresMap
+            pins={pins ?? []}
+            providerLocation={providerLocation}
+            height="420px"
+            colorBy="status"
+          />
         </div>
 
-        <div className="rounded-xl border border-neutral-200 bg-white p-5">
-          <h3 className="text-sm font-semibold text-neutral-800 mb-3">Receitas</h3>
-          <RevenueChart data={revenueData} />
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ProviderJobsList jobs={activeJobs ?? []} />
+          <UpcomingJobsMini />
         </div>
+
+        <DashboardRevenueChart breakdown={monthlyBreakdown} isLoading={breakdownLoading} />
       </div>
     </Wrapper>
   );

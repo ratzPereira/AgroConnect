@@ -16,6 +16,7 @@ import { Modal } from '@/components/ui/Modal';
 import { Alert } from '@/components/ui/Alert';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AnimatedPage } from '@/components/AnimatedPage';
+import { PriceHistory } from '@/features/inventory/components/PriceHistory';
 import {
   ArrowLeft,
   ShoppingCart,
@@ -77,6 +78,7 @@ export function InventoryDetail() {
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['inventory'] });
     queryClient.invalidateQueries({ queryKey: ['inventory', itemId] });
+    queryClient.invalidateQueries({ queryKey: ['inventory', itemId, 'price-history'] });
     queryClient.invalidateQueries({ queryKey: ['low-stock'] });
   };
 
@@ -191,6 +193,10 @@ export function InventoryDetail() {
           </Button>
         </div>
       </CardBody></Card>
+
+      <div className="mb-6">
+        <PriceHistory itemId={itemId} unit={item.unit} currentWac={item.costPerUnit} />
+      </div>
 
       <h2 className="text-sm font-semibold text-neutral-700 mb-3">Histórico de movimentos</h2>
       {movementsLoading && <Skeleton.Table />}
