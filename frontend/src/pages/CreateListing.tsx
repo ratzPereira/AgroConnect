@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm, Controller } from 'react-hook-form';
+import { useForm, useWatch, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation } from '@tanstack/react-query';
@@ -133,7 +133,6 @@ export function CreateListing() {
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
     control,
     formState: { errors },
@@ -149,7 +148,7 @@ export function CreateListing() {
     },
   });
 
-  const values = watch();
+  const values = useWatch({ control }) as Partial<ListingFormData>;
 
   const selectedCategoryMeta = CATEGORIES.find((c) => c.value === values.category);
 
@@ -272,29 +271,26 @@ export function CreateListing() {
     if (fileInputRef.current) fileInputRef.current.value = '';
   }
 
-  const handleDragOver = useCallback((e: React.DragEvent) => {
+  function handleDragOver(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(true);
-  }, []);
+  }
 
-  const handleDragLeave = useCallback((e: React.DragEvent) => {
+  function handleDragLeave(e: React.DragEvent) {
     e.preventDefault();
     e.stopPropagation();
     setDragOver(false);
-  }, []);
+  }
 
-  const handleDrop = useCallback(
-    (e: React.DragEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
-      setDragOver(false);
-      if (e.dataTransfer.files.length > 0) {
-        addPhotos(e.dataTransfer.files);
-      }
-    },
-    [photos.length], // eslint-disable-line react-hooks/exhaustive-deps
-  );
+  function handleDrop(e: React.DragEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    if (e.dataTransfer.files.length > 0) {
+      addPhotos(e.dataTransfer.files);
+    }
+  }
 
   // --- Submit ---
 

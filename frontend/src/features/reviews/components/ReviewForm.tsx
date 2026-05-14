@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -29,7 +29,7 @@ export function ReviewForm({ requestId }: ReviewFormProps) {
     register,
     handleSubmit,
     setValue,
-    watch,
+    control,
     formState: { errors },
     reset,
   } = useForm<ReviewFormData>({
@@ -37,7 +37,7 @@ export function ReviewForm({ requestId }: ReviewFormProps) {
     defaultValues: { rating: 0, comment: '' },
   });
 
-  const currentRating = watch('rating');
+  const currentRating = useWatch({ control, name: 'rating' });
 
   const createMutation = useMutation({
     mutationFn: (data: CreateReviewRequest) => createReview(requestId, data),

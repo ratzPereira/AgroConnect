@@ -77,7 +77,7 @@ export function Marketplace() {
       }),
   });
 
-  const listings = data?.content ?? [];
+  const listings = useMemo(() => data?.content ?? [], [data?.content]);
   const totalPages = data?.totalPages ?? 0;
   const totalElements = data?.totalElements ?? 0;
 

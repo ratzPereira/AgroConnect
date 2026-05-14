@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -56,8 +56,8 @@ export function ProviderOnboarding() {
   const {
     register,
     handleSubmit,
-    watch,
     setValue,
+    control,
     formState: { errors },
     trigger,
   } = useForm<OnboardingFormData>({
@@ -95,7 +95,7 @@ export function ProviderOnboarding() {
     },
   });
 
-  const values = watch();
+  const values = useWatch({ control }) as Partial<OnboardingFormData>;
 
   const selectedIslandData = useMemo(
     () => (values.island ? findIsland(values.island) : undefined),

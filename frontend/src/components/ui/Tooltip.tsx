@@ -1,4 +1,4 @@
-import { cloneElement, useState, useRef, useId, useCallback } from 'react';
+import { cloneElement, useState, useEffect, useId, useCallback } from 'react';
 import type { ReactElement, ReactNode } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
@@ -28,29 +28,27 @@ const arrowStyles: Record<TooltipPosition, string> = {
 };
 
 export function Tooltip({ content, position = 'top', delay = 300, children, className }: TooltipProps) {
+  const [pending, setPending] = useState(false);
   const [visible, setVisible] = useState(false);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>(null);
   const tooltipId = useId();
 
-  const show = useCallback(() => {
-    timeoutRef.current = setTimeout(() => setVisible(true), delay);
-  }, [delay]);
+  useEffect(() => {
+    if (!pending) return;
+    const handle = setTimeout(() => setVisible(true), delay);
+    return () => clearTimeout(handle);
+  }, [pending, delay]);
 
+  const show = useCallback(() => setPending(true), []);
   const hide = useCallback(() => {
-    if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    setPending(false);
     setVisible(false);
   }, []);
 
-  const childProps = (children.props ?? {}) as Record<string, unknown>;
-  const composedHandler = <T,>(existing: unknown, next: () => void) => (e: T) => {
-    (existing as ((event: T) => void) | undefined)?.(e);
-    next();
-  };
   const trigger = cloneElement(children, {
-    onMouseEnter: composedHandler(childProps.onMouseEnter, show),
-    onMouseLeave: composedHandler(childProps.onMouseLeave, hide),
-    onFocus: composedHandler(childProps.onFocus, show),
-    onBlur: composedHandler(childProps.onBlur, hide),
+    onMouseEnter: show,
+    onMouseLeave: hide,
+    onFocus: show,
+    onBlur: hide,
     'aria-describedby': visible ? tooltipId : undefined,
   } as Record<string, unknown>);
 
