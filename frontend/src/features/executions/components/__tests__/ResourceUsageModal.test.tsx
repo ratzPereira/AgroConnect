@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import type { InventoryItem } from '@/types/inventory';
 
 const mockMutate = vi.fn();
@@ -9,11 +9,15 @@ let mockMutationReturn: {
   mutate: typeof mockMutate;
   isPending: boolean;
 };
+const capturedMutationConfig: { current: { onSuccess?: () => void; onError?: (e: unknown) => void } } = {
+  current: {},
+};
 
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(() => mockQueryReturn),
   useMutation: vi.fn((opts: unknown) => {
     const config = opts as { onSuccess?: () => void; onError?: (e: unknown) => void };
+    capturedMutationConfig.current = config;
     return {
       ...mockMutationReturn,
       mutate: (...args: unknown[]) => {
@@ -27,6 +31,13 @@ vi.mock('@tanstack/react-query', () => ({
 
 vi.mock('@/api/inventory', () => ({ listInventory: vi.fn() }));
 vi.mock('@/api/jobCosting', () => ({ recordResourceUsage: vi.fn() }));
+
+vi.mock('axios', () => ({
+  default: {
+    isAxiosError: (err: unknown): boolean =>
+      typeof err === 'object' && err !== null && (err as { isAxiosError?: boolean }).isAxiosError === true,
+  },
+}));
 
 vi.mock('framer-motion', () => ({
   motion: {
@@ -109,5 +120,69 @@ describe('ResourceUsageModal', () => {
     mockQueryReturn = { data: [], isLoading: false };
     render(<ResourceUsageModal open={true} onClose={vi.fn()} executionId={1} requestId={10} />);
     expect(screen.getByText(/Sem itens no inventário/)).toBeInTheDocument();
+  });
+
+  it('renders the loading indicator while inventory is loading', () => {
+    mockQueryReturn = { data: undefined, isLoading: true };
+    render(<ResourceUsageModal open={true} onClose={vi.fn()} executionId={1} requestId={10} />);
+    expect(screen.getByText(/A carregar inventário/)).toBeInTheDocument();
+  });
+
+  it('rejects a quantity of zero with a positive-number error', () => {
+    render(<ResourceUsageModal open={true} onClose={vi.fn()} executionId={1} requestId={10} />);
+    fireEvent.change(screen.getByLabelText(/Produto/), { target: { value: '1' } });
+    fireEvent.change(screen.getByLabelText(/Quantidade/), { target: { value: '0' } });
+    fireEvent.click(screen.getByRole('button', { name: /Registar consumo/i }));
+    expect(screen.getByText(/maior que zero/)).toBeInTheDocument();
+    expect(mockMutate).not.toHaveBeenCalled();
+  });
+
+  it('calls onClose when Cancelar is pressed', () => {
+    const onClose = vi.fn();
+    render(<ResourceUsageModal open={true} onClose={onClose} executionId={1} requestId={10} />);
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(onClose).toHaveBeenCalled();
+  });
+
+  it('shows 409 stock-insufficient message from server error', () => {
+    render(<ResourceUsageModal open={true} onClose={vi.fn()} executionId={1} requestId={10} />);
+    act(() => {
+      capturedMutationConfig.current.onError?.({
+        isAxiosError: true,
+        response: { status: 409, data: { message: 'Sem stock disponível' } },
+      });
+    });
+    expect(screen.getByText('Sem stock disponível')).toBeInTheDocument();
+    act(() => {
+      capturedMutationConfig.current.onError?.({
+        isAxiosError: true,
+        response: { status: 409 },
+      });
+    });
+    expect(screen.getByText(/Stock insuficiente/)).toBeInTheDocument();
+  });
+
+  it('shows 400 invalid-data message from server error', () => {
+    render(<ResourceUsageModal open={true} onClose={vi.fn()} executionId={1} requestId={10} />);
+    act(() => {
+      capturedMutationConfig.current.onError?.({
+        isAxiosError: true,
+        response: { status: 400 },
+      });
+    });
+    expect(screen.getByText(/Dados inválidos/)).toBeInTheDocument();
+  });
+
+  it('shows generic error for non-axios errors', () => {
+    render(<ResourceUsageModal open={true} onClose={vi.fn()} executionId={1} requestId={10} />);
+    act(() => {
+      capturedMutationConfig.current.onError?.(new Error('boom'));
+    });
+    expect(screen.getByText(/Erro ao registar consumo/)).toBeInTheDocument();
+  });
+
+  it('renders the costPerUnit segment when defined', () => {
+    render(<ResourceUsageModal open={true} onClose={vi.fn()} executionId={1} requestId={10} />);
+    expect(screen.getByText(/2\.0000 €\/kg/)).toBeInTheDocument();
   });
 });

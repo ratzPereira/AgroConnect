@@ -5,12 +5,15 @@ import com.agroconnect.dto.response.OperatorJobResponse;
 import com.agroconnect.exception.ForbiddenException;
 import com.agroconnect.exception.ResourceNotFoundException;
 import com.agroconnect.fixture.ExecutionFixture;
+import com.agroconnect.fixture.ServiceRequestFixture;
 import com.agroconnect.fixture.UserFixture;
+import com.agroconnect.model.ClientProfile;
 import com.agroconnect.model.ExecutionAssignment;
 import com.agroconnect.model.Machine;
 import com.agroconnect.model.ProviderProfile;
 import com.agroconnect.model.Proposal;
 import com.agroconnect.model.ServiceExecution;
+import com.agroconnect.model.ServiceRequest;
 import com.agroconnect.model.TeamMember;
 import com.agroconnect.model.User;
 import com.agroconnect.repository.ClientProfileRepository;
@@ -39,6 +42,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -343,5 +347,184 @@ class TeamAnalyticsServiceTest {
 
         assertThrows(ForbiddenException.class,
                 () -> service.listJobs(1L, 99L, null, null, pageable));
+    }
+
+    @Test
+    void getAnalytics_givenNoOperatorsForExecution_shouldAttributeFullPrice() {
+        // operatorsCount = 0 → revenue share is full price (defensive branch)
+        Proposal proposal = Proposal.builder().id(11L).price(new BigDecimal("400.00")).build();
+        ServiceExecution exec = ExecutionFixture.aCompletedExecution().id(100L).proposal(proposal).build();
+        ExecutionAssignment a1 = ExecutionFixture.anAssignment()
+                .id(1L).execution(exec).teamMember(operator).machine(machine).build();
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(operator));
+        when(assignmentRepository.countDistinctExecutionsForOperator(anyLong(), any(), any())).thenReturn(1L);
+        when(assignmentRepository.sumHoursWorkedForOperator(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(assignmentRepository.sumLaborCostForOperator(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(assignmentRepository.findAllForOperatorInPeriod(anyLong(), any(), any())).thenReturn(List.of(a1));
+        when(assignmentRepository.countOperatorsForExecution(eq(100L))).thenReturn(0L);
+
+        OperatorAnalyticsResponse response = service.getAnalytics(1L, 2L, null, null);
+
+        assertEquals(0, response.revenueAttributed().compareTo(new BigDecimal("400.00")));
+    }
+
+    @Test
+    void getAnalytics_givenAssignmentWithoutProposal_shouldAttributeZero() {
+        // proposal null branch in computeAttributedRevenue
+        ServiceExecution exec = ExecutionFixture.aCompletedExecution().id(100L).proposal(null).build();
+        ExecutionAssignment a1 = ExecutionFixture.anAssignment()
+                .id(1L).execution(exec).teamMember(operator).machine(machine).build();
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(operator));
+        when(assignmentRepository.countDistinctExecutionsForOperator(anyLong(), any(), any())).thenReturn(1L);
+        when(assignmentRepository.sumHoursWorkedForOperator(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(assignmentRepository.sumLaborCostForOperator(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(assignmentRepository.findAllForOperatorInPeriod(anyLong(), any(), any())).thenReturn(List.of(a1));
+        when(assignmentRepository.countOperatorsForExecution(eq(100L))).thenReturn(1L);
+
+        OperatorAnalyticsResponse response = service.getAnalytics(1L, 2L, null, null);
+
+        assertEquals(0, response.revenueAttributed().compareTo(BigDecimal.ZERO));
+    }
+
+    @Test
+    void getAnalytics_givenAssignmentWithoutMachine_shouldSkipFromTopMachines() {
+        Proposal proposal = Proposal.builder().id(11L).price(BigDecimal.ZERO).build();
+        ServiceExecution exec = ExecutionFixture.aCompletedExecution().id(100L).proposal(proposal).build();
+        ExecutionAssignment a1 = ExecutionFixture.anAssignment()
+                .id(1L).execution(exec).teamMember(operator).machine(null).build();
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(operator));
+        when(assignmentRepository.countDistinctExecutionsForOperator(anyLong(), any(), any())).thenReturn(1L);
+        when(assignmentRepository.sumHoursWorkedForOperator(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(assignmentRepository.sumLaborCostForOperator(anyLong(), any(), any())).thenReturn(BigDecimal.ZERO);
+        when(assignmentRepository.findAllForOperatorInPeriod(anyLong(), any(), any())).thenReturn(List.of(a1));
+        when(assignmentRepository.countOperatorsForExecution(eq(100L))).thenReturn(1L);
+
+        OperatorAnalyticsResponse response = service.getAnalytics(1L, 2L, null, null);
+
+        assertTrue(response.topMachines().isEmpty());
+    }
+
+    @Test
+    void listJobs_givenAssignmentWithoutRateSnapshot_shouldReturnZeroLabor() {
+        Pageable pageable = PageRequest.of(0, 20);
+
+        Proposal proposal = Proposal.builder().id(50L).price(new BigDecimal("100.00")).build();
+        ServiceExecution exec = ExecutionFixture.aCompletedExecution().id(100L).proposal(proposal).build();
+        ExecutionAssignment assignment = ExecutionFixture.anAssignment()
+                .id(1L).execution(exec).teamMember(operator).machine(null)
+                .hoursWorked(new BigDecimal("3.00"))
+                .hourlyRateSnapshot(null)
+                .build();
+        Set<ExecutionAssignment> assignments = new HashSet<>();
+        assignments.add(assignment);
+        exec.setAssignments(assignments);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(operator));
+        when(assignmentRepository.findExecutionIdsForOperator(anyLong(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(100L), pageable, 1));
+        when(executionRepository.findAllById(List.of(100L))).thenReturn(List.of(exec));
+        when(assignmentRepository.countOperatorsForExecution(100L)).thenReturn(1L);
+
+        Page<OperatorJobResponse> page = service.listJobs(1L, 2L, null, null, pageable);
+
+        OperatorJobResponse job = page.getContent().get(0);
+        assertNull(job.hourlyRateSnapshot());
+        assertEquals(0, job.laborCost().compareTo(BigDecimal.ZERO));
+        assertNull(job.machineName());
+    }
+
+    @Test
+    void listJobs_givenZeroOperatorsForExecution_shouldAttributeFullPrice() {
+        Pageable pageable = PageRequest.of(0, 20);
+
+        Proposal proposal = Proposal.builder().id(50L).price(new BigDecimal("200.00")).build();
+        ServiceExecution exec = ExecutionFixture.aCompletedExecution().id(100L).proposal(proposal).build();
+        ExecutionAssignment assignment = ExecutionFixture.anAssignment()
+                .id(1L).execution(exec).teamMember(operator).build();
+        Set<ExecutionAssignment> assignments = new HashSet<>();
+        assignments.add(assignment);
+        exec.setAssignments(assignments);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(operator));
+        when(assignmentRepository.findExecutionIdsForOperator(anyLong(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(100L), pageable, 1));
+        when(executionRepository.findAllById(List.of(100L))).thenReturn(List.of(exec));
+        when(assignmentRepository.countOperatorsForExecution(100L)).thenReturn(0L);
+
+        Page<OperatorJobResponse> page = service.listJobs(1L, 2L, null, null, pageable);
+
+        assertEquals(0, page.getContent().get(0).revenueAttributed().compareTo(new BigDecimal("200.00")));
+    }
+
+    @Test
+    void listJobs_givenProposalWithRequest_shouldPopulateRequestIdAndClient() {
+        Pageable pageable = PageRequest.of(0, 20);
+
+        User clientUser = UserFixture.aClientUser().id(77L).build();
+        ServiceRequest request = ServiceRequestFixture.aRequest().id(555L).client(clientUser).build();
+        Proposal proposal = Proposal.builder()
+                .id(50L).price(new BigDecimal("300.00")).request(request).build();
+        ServiceExecution exec = ExecutionFixture.aCompletedExecution().id(100L).proposal(proposal).build();
+        ExecutionAssignment assignment = ExecutionFixture.anAssignment()
+                .id(1L).execution(exec).teamMember(operator).machine(machine).build();
+        Set<ExecutionAssignment> assignments = new HashSet<>();
+        assignments.add(assignment);
+        exec.setAssignments(assignments);
+
+        ClientProfile clientProfile = UserFixture.aClientProfile()
+                .name("Cliente Demo").user(clientUser).build();
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(operator));
+        when(assignmentRepository.findExecutionIdsForOperator(anyLong(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(100L), pageable, 1));
+        when(executionRepository.findAllById(List.of(100L))).thenReturn(List.of(exec));
+        when(assignmentRepository.countOperatorsForExecution(100L)).thenReturn(1L);
+        when(clientProfileRepository.findByUserId(77L)).thenReturn(Optional.of(clientProfile));
+
+        Page<OperatorJobResponse> page = service.listJobs(1L, 2L, null, null, pageable);
+
+        OperatorJobResponse job = page.getContent().get(0);
+        assertEquals(555L, job.requestId());
+        assertEquals("Cliente Demo", job.clientName());
+    }
+
+    @Test
+    void listJobs_givenExecutionWithoutOperatorAssignment_shouldReturnZeroHours() {
+        // exec has no assignment for the queried operator → operatorAssignment is null
+        Pageable pageable = PageRequest.of(0, 20);
+
+        Proposal proposal = Proposal.builder().id(50L).price(new BigDecimal("100.00")).build();
+        ServiceExecution exec = ExecutionFixture.aCompletedExecution().id(100L).proposal(proposal).build();
+        // Assignment belongs to a DIFFERENT team member
+        TeamMember other = ExecutionFixture.aTeamMember().id(999L).provider(providerProfile).build();
+        ExecutionAssignment otherAssignment = ExecutionFixture.anAssignment()
+                .id(1L).execution(exec).teamMember(other).build();
+        Set<ExecutionAssignment> assignments = new HashSet<>();
+        assignments.add(otherAssignment);
+        exec.setAssignments(assignments);
+
+        when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+        when(teamMemberRepository.findByIdAndProviderId(1L, 1L)).thenReturn(Optional.of(operator));
+        when(assignmentRepository.findExecutionIdsForOperator(anyLong(), any(), any(), any()))
+                .thenReturn(new PageImpl<>(List.of(100L), pageable, 1));
+        when(executionRepository.findAllById(List.of(100L))).thenReturn(List.of(exec));
+        when(assignmentRepository.countOperatorsForExecution(100L)).thenReturn(1L);
+
+        Page<OperatorJobResponse> page = service.listJobs(1L, 2L, null, null, pageable);
+
+        OperatorJobResponse job = page.getContent().get(0);
+        assertEquals(0, job.hoursWorked().compareTo(BigDecimal.ZERO));
+        assertNull(job.hourlyRateSnapshot());
+        assertEquals(0, job.laborCost().compareTo(BigDecimal.ZERO));
+        assertNull(job.machineName());
     }
 }

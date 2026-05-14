@@ -716,6 +716,185 @@ class CalendarServiceTest {
                 .isInstanceOf(ForbiddenException.class);
     }
 
+    @Test
+    void getAlerts_givenConflictingExecutions_shouldEmitConflictAlert() {
+        // Two executions on the same date sharing teamMember → triggers conflict path
+        ServiceExecution exec2 = ServiceExecution.builder()
+                .id(101L)
+                .proposal(otherProposalForRequest(11L, "Poda"))
+                .scheduledDate(LocalDate.of(2026, 4, 1))
+                .scheduledEndDate(LocalDate.of(2026, 4, 1))
+                .scheduledAllDay(true)
+                .assignments(Set.of(
+                        ExecutionAssignment.builder().id(2L).teamMember(teamMember).build()
+                ))
+                .build();
+        ServiceExecution exec1 = ServiceExecution.builder()
+                .id(100L).proposal(proposal)
+                .scheduledDate(LocalDate.of(2026, 4, 1))
+                .scheduledEndDate(LocalDate.of(2026, 4, 1))
+                .scheduledAllDay(true)
+                .assignments(Set.of(
+                        ExecutionAssignment.builder().id(1L).teamMember(teamMember).build()
+                ))
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(exec1, exec2));
+        when(maintenanceLogRepository.findUpcomingByProviderInRange(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(executionRepository.findCompletedAwaitingConfirmationBefore(any()))
+                .thenReturn(List.of());
+        when(proposalRepository.findPendingByProviderId(1L)).thenReturn(List.of());
+
+        CalendarAlertsResponse alerts = calendarService.getAlerts(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(alerts.conflicts()).isNotEmpty();
+        assertThat(alerts.conflicts().get(0).resourceType()).isEqualTo("TEAM_MEMBER");
+        assertThat(alerts.conflicts().get(0).overlappingCount()).isEqualTo(2);
+    }
+
+    @Test
+    void getAlerts_givenUpcomingMaintenance_shouldEmitMaintenanceAlert() {
+        Machine machine = Machine.builder().id(7L).name("Trator XYZ").build();
+        MachineMaintenanceLog log = MachineMaintenanceLog.builder()
+                .id(42L).machine(machine)
+                .performedAt(LocalDate.of(2026, 3, 1))
+                .nextDueAt(LocalDate.of(2026, 4, 15))
+                .description("Mudança óleo")
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(maintenanceLogRepository.findUpcomingByProviderInRange(eq(1L), any(), any()))
+                .thenReturn(List.of(log));
+        when(executionRepository.findCompletedAwaitingConfirmationBefore(any()))
+                .thenReturn(List.of());
+        when(proposalRepository.findPendingByProviderId(1L)).thenReturn(List.of());
+
+        CalendarAlertsResponse alerts = calendarService.getAlerts(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(alerts.maintenance()).hasSize(1);
+        assertThat(alerts.maintenance().get(0).maintenanceLogId()).isEqualTo(42L);
+        assertThat(alerts.maintenance().get(0).machineId()).isEqualTo(7L);
+        assertThat(alerts.maintenance().get(0).machineName()).isEqualTo("Trator XYZ");
+        assertThat(alerts.maintenance().get(0).description()).isEqualTo("Mudança óleo");
+    }
+
+    @Test
+    void getAlerts_givenPendingProposals_shouldEmitProposalAlert() {
+        Proposal pending = Proposal.builder()
+                .id(77L).provider(provider).request(request)
+                .createdAt(Instant.now().minus(2, ChronoUnit.DAYS))
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(maintenanceLogRepository.findUpcomingByProviderInRange(eq(1L), any(), any()))
+                .thenReturn(List.of());
+        when(executionRepository.findCompletedAwaitingConfirmationBefore(any()))
+                .thenReturn(List.of());
+        when(proposalRepository.findPendingByProviderId(1L)).thenReturn(List.of(pending));
+        when(proposalRepository.countByRequestIdAndStatus(
+                eq(request.getId()),
+                eq(com.agroconnect.model.enums.ProposalStatus.PENDING))).thenReturn(3L);
+
+        CalendarAlertsResponse alerts = calendarService.getAlerts(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(alerts.proposals()).hasSize(1);
+        assertThat(alerts.proposals().get(0).requestId()).isEqualTo(request.getId());
+        assertThat(alerts.proposals().get(0).requestTitle()).isEqualTo("Limpeza parcela norte");
+        assertThat(alerts.proposals().get(0).competingProposals()).isEqualTo(3);
+    }
+
+    @Test
+    void reassignExecution_givenMachineSwap_shouldReplaceMachine() {
+        TeamMember newMember = TeamMember.builder()
+                .id(2L).name("Maria Costa").role(TeamMemberRole.OPERATOR).provider(provider).build();
+        Machine oldMachine = Machine.builder().id(10L).name("Trator Velho").build();
+        Machine newMachine = Machine.builder().id(20L).name("Trator Novo").build();
+
+        ExecutionAssignment current = ExecutionAssignment.builder()
+                .id(50L).teamMember(teamMember).machine(oldMachine).build();
+        Set<ExecutionAssignment> mutable = new HashSet<>();
+        mutable.add(current);
+        execution.setAssignments(mutable);
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(100L)).thenReturn(Optional.of(execution));
+        when(teamMemberRepository.findByIdAndProviderId(2L, 1L)).thenReturn(Optional.of(newMember));
+        when(executionAssignmentRepository.existsByExecutionIdAndTeamMemberId(100L, 2L))
+                .thenReturn(false);
+        when(machineRepository.findByIdAndProviderId(20L, 1L)).thenReturn(Optional.of(newMachine));
+
+        ReassignExecutionDto dto = new ReassignExecutionDto(1L, 2L, 20L);
+        calendarService.reassignExecution(100L, dto, 1L);
+
+        assertThat(current.getMachine().getId()).isEqualTo(20L);
+        assertThat(current.getMachine().getName()).isEqualTo("Trator Novo");
+    }
+
+    @Test
+    void reassignExecution_givenUnknownMachine_shouldThrow() {
+        TeamMember newMember = TeamMember.builder()
+                .id(2L).name("Maria Costa").role(TeamMemberRole.OPERATOR).provider(provider).build();
+
+        ExecutionAssignment current = ExecutionAssignment.builder()
+                .id(50L).teamMember(teamMember).build();
+        Set<ExecutionAssignment> mutable = new HashSet<>();
+        mutable.add(current);
+        execution.setAssignments(mutable);
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(100L)).thenReturn(Optional.of(execution));
+        when(teamMemberRepository.findByIdAndProviderId(2L, 1L)).thenReturn(Optional.of(newMember));
+        when(executionAssignmentRepository.existsByExecutionIdAndTeamMemberId(100L, 2L))
+                .thenReturn(false);
+        when(machineRepository.findByIdAndProviderId(999L, 1L)).thenReturn(Optional.empty());
+
+        ReassignExecutionDto dto = new ReassignExecutionDto(1L, 2L, 999L);
+
+        assertThatThrownBy(() -> calendarService.reassignExecution(100L, dto, 1L))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getWorkloadHeatmap_givenSingleDayTimedExecution_shouldUseTimeDelta() {
+        // Single-day execution with start/end times exercises the else branch of minutesPerDayForExecution
+        ServiceExecution timed = ServiceExecution.builder()
+                .id(300L).proposal(proposal)
+                .scheduledDate(LocalDate.of(2026, 4, 2))
+                .scheduledEndDate(LocalDate.of(2026, 4, 2))
+                .scheduledAllDay(false)
+                .scheduledStartTime(LocalTime.of(9, 0))
+                .scheduledEndTime(LocalTime.of(11, 30))
+                .assignments(Set.of(
+                        ExecutionAssignment.builder().id(99L).teamMember(teamMember).build()
+                ))
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(teamMemberRepository.findByProviderIdAndActiveTrue(1L))
+                .thenReturn(List.of(teamMember));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(timed));
+
+        WorkloadHeatmapResponse workload = calendarService.getWorkloadHeatmap(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 3));
+
+        // 2h30 = 150 minutes between 09:00 and 11:30
+        assertThat(workload.operators()).hasSize(1);
+        assertThat(workload.operators().get(0).totalMinutes()).isEqualTo(150);
+        assertThat(workload.operators().get(0).minutesByDate())
+                .containsEntry(LocalDate.of(2026, 4, 2), 150);
+    }
+
     private Proposal otherProposalForRequest(Long requestId, String catName) {
         return Proposal.builder()
                 .id(requestId + 100)

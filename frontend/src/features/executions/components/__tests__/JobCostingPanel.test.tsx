@@ -152,4 +152,151 @@ describe('JobCostingPanel', () => {
     expect(screen.queryByRole('button', { name: /Adicionar/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Editar/i })).not.toBeInTheDocument();
   });
+
+  it('renders a loading spinner while isLoading', () => {
+    mockQueryReturn = { data: undefined, isLoading: true, error: null };
+    const { container } = render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(container.querySelector('svg.animate-spin')).not.toBeNull();
+    expect(screen.queryByText('Custos & Rentabilidade')).not.toBeInTheDocument();
+  });
+
+  it('renders nothing on query error', () => {
+    mockQueryReturn = { data: undefined, isLoading: false, error: new Error('boom') };
+    const { container } = render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(container.innerHTML).toBe('');
+  });
+
+  it('renders empty-state messages for no resource usages and no assignments', () => {
+    mockQueryReturn = {
+      data: makeCosts({ resourceUsages: [], assignments: [] }),
+      isLoading: false,
+      error: null,
+    };
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(screen.getByText('Nenhum recurso consumido neste serviço.')).toBeInTheDocument();
+    expect(screen.getByText('Sem membros atribuídos.')).toBeInTheDocument();
+  });
+
+  it('shows singular warning when exactly one assignment is missing rate', () => {
+    mockQueryReturn = {
+      data: makeCosts({ assignmentsMissingRate: 1 }),
+      isLoading: false,
+      error: null,
+    };
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(screen.getByText(/1 membro sem taxa horária definida/)).toBeInTheDocument();
+  });
+
+  it('renders the net profit in red tone when negative', () => {
+    mockQueryReturn = {
+      data: makeCosts({ netProfit: -50 }),
+      isLoading: false,
+      error: null,
+    };
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(screen.getByText(/-50,00/)).toHaveClass('text-red-700');
+  });
+
+  it('omits the margin line when revenue is zero', () => {
+    mockQueryReturn = {
+      data: makeCosts({ revenue: 0, netProfit: -25 }),
+      isLoading: false,
+      error: null,
+    };
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(screen.queryByText(/margem/)).not.toBeInTheDocument();
+  });
+
+  it('renders machine hours info when machineHours > 0', () => {
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(screen.getByText(/6\.5h máquina/)).toBeInTheDocument();
+  });
+
+  it('renders "sem taxa" when effectiveHourlyRate is null', () => {
+    mockQueryReturn = {
+      data: makeCosts({
+        assignments: [
+          {
+            assignmentId: 11,
+            teamMemberId: 22,
+            teamMemberName: 'Sem Taxa',
+            hoursWorked: 4,
+            machineHours: 0,
+            effectiveHourlyRate: null,
+            laborCost: 0,
+          },
+        ],
+      }),
+      isLoading: false,
+      error: null,
+    };
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    expect(screen.getByText('sem taxa')).toBeInTheDocument();
+  });
+
+  it('calls deleteResourceUsage mutate after confirm()', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Remover consumo/i }));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(mockMutate).toHaveBeenCalledWith(33);
+    confirmSpy.mockRestore();
+  });
+
+  it('does not delete when confirm() is cancelled', () => {
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(false);
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /Remover consumo/i }));
+    expect(mockMutate).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it('opens edit mode for an assignment row when "Editar" is clicked', () => {
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    expect(screen.getByLabelText('Horas trabalhadas')).toBeInTheDocument();
+    expect(screen.getByLabelText('Horas de máquina')).toBeInTheDocument();
+  });
+
+  it('closes edit mode when Cancelar is clicked', () => {
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar' }));
+    expect(screen.queryByLabelText('Horas trabalhadas')).not.toBeInTheDocument();
+  });
+
+  it('calls the update mutation when Guardar is clicked', () => {
+    render(
+      <JobCostingPanel executionId={1} requestId={10} isProvider={true} canEdit={true} />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Editar' }));
+    fireEvent.change(screen.getByLabelText('Horas trabalhadas'), { target: { value: '9.5' } });
+    fireEvent.change(screen.getByLabelText('Horas de máquina'), { target: { value: '7' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Guardar' }));
+    expect(mockMutate).toHaveBeenCalled();
+  });
 });
