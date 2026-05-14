@@ -7,7 +7,6 @@ vi.mock('recharts', () => ({
   ResponsiveContainer: ({ children }: { children: React.ReactNode }) => <div data-testid="responsive-container">{children}</div>,
   ComposedChart: ({ children }: { children: React.ReactNode }) => <div data-testid="composed-chart">{children}</div>,
   Bar: () => <div data-testid="bar" />,
-  Area: () => <div data-testid="area" />,
   Line: () => <div data-testid="line" />,
   CartesianGrid: () => <div data-testid="grid" />,
   XAxis: () => <div data-testid="x-axis" />,
@@ -44,7 +43,7 @@ afterEach(() => {
 
 describe('DashboardRevenueChart', () => {
   it('renders header with year from breakdown', () => {
-    const breakdown = makeBreakdown(2026, () => ({ revenue: 100 }));
+    const breakdown = makeBreakdown(2026, () => ({ revenue: 100, payouts: 90 }));
     render(<DashboardRevenueChart breakdown={breakdown} />);
     expect(screen.getByText(/Receita e lucro · 2026/)).toBeInTheDocument();
   });
@@ -54,47 +53,88 @@ describe('DashboardRevenueChart', () => {
     expect(container.querySelector('.animate-pulse')).toBeInTheDocument();
   });
 
-  it('shows empty state when all months have zero revenue and profit', () => {
+  it('shows empty state when all months have zero revenue and zero costs', () => {
     const breakdown = makeBreakdown(2026);
     render(<DashboardRevenueChart breakdown={breakdown} />);
     expect(screen.getByText(/Sem receitas registadas/)).toBeInTheDocument();
     expect(screen.queryByTestId('composed-chart')).not.toBeInTheDocument();
   });
 
-  it('renders chart when data has values', () => {
-    const breakdown = makeBreakdown(2026, (m) => ({ revenue: m * 100, netProfit: m * 40 }));
+  it('renders chart with stacked bars and revenue line when data has values', () => {
+    const breakdown = makeBreakdown(2026, (m) => ({
+      revenue: m * 100,
+      payouts: m * 88,
+      laborCost: m * 30,
+      machineExpenses: m * 20,
+      netProfit: m * 38,
+    }));
     render(<DashboardRevenueChart breakdown={breakdown} />);
     expect(screen.getByTestId('composed-chart')).toBeInTheDocument();
-    expect(screen.getByTestId('bar')).toBeInTheDocument();
-    expect(screen.getByTestId('area')).toBeInTheDocument();
+    expect(screen.getAllByTestId('bar').length).toBeGreaterThanOrEqual(4);
     expect(screen.getByTestId('line')).toBeInTheDocument();
   });
 
-  it('computes YTD totals from monthly breakdown', () => {
-    const breakdown = makeBreakdown(2026, () => ({ revenue: 100, netProfit: 40, completedJobs: 1 }));
+  it('renders YTD anatomy section with revenue total', () => {
+    const breakdown = makeBreakdown(2026, () => ({
+      revenue: 100,
+      payouts: 88,
+      laborCost: 30,
+      machineExpenses: 20,
+      netProfit: 38,
+      completedJobs: 1,
+    }));
     render(<DashboardRevenueChart breakdown={breakdown} />);
-    expect(screen.getByText(/Receita YTD/)).toBeInTheDocument();
-    const tile = screen.getByText(/Receita YTD/).parentElement;
-    expect(tile?.textContent).toMatch(/1\D?200\s*€/);
-    expect(screen.getByText(/Trabalhos concluídos/)).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getByText(/Anatomia da receita YTD/)).toBeInTheDocument();
+    const anatomySection = screen.getByText(/Anatomia da receita YTD/).parentElement?.parentElement;
+    expect(anatomySection?.textContent).toMatch(/1\D?200\s*€/);
   });
 
-  it('shows month-over-month delta for current year', () => {
-    const breakdown = makeBreakdown(2026, (m) => {
-      if (m === 4) return { revenue: 100 };
-      if (m === 5) return { revenue: 150 };
-      return {};
-    });
+  it('shows all four cost category rows in anatomy section', () => {
+    const breakdown = makeBreakdown(2026, () => ({ revenue: 100, payouts: 88, laborCost: 30, machineExpenses: 20, netProfit: 38 }));
     render(<DashboardRevenueChart breakdown={breakdown} />);
-    expect(screen.getByText(/Este mês/)).toBeInTheDocument();
-    expect(screen.getByText(/50\.0%/)).toBeInTheDocument();
+    expect(screen.getByText('Comissão plataforma')).toBeInTheDocument();
+    expect(screen.getByText('Materiais')).toBeInTheDocument();
+    expect(screen.getByText('Mão-de-obra')).toBeInTheDocument();
+    expect(screen.getByText('Manutenção e despesas de máquinas')).toBeInTheDocument();
   });
 
-  it('renders best-month summary tile when revenue exists', () => {
-    const breakdown = makeBreakdown(2026, (m) => ({ revenue: m === 7 ? 999 : 100 }));
+  it('shows positive lucro and margin when costs are below payouts', () => {
+    const breakdown = makeBreakdown(2026, () => ({
+      revenue: 1000,
+      payouts: 880,
+      laborCost: 200,
+      machineExpenses: 100,
+      netProfit: 580,
+    }));
     render(<DashboardRevenueChart breakdown={breakdown} />);
-    expect(screen.getByText(/Melhor mês/)).toBeInTheDocument();
+    expect(screen.getByText(/Lucro líquido/)).toBeInTheDocument();
+    expect(screen.getByText(/margem 58\.0%/i)).toBeInTheDocument();
+  });
+
+  it('shows negative lucro with warning when costs exceed payouts', () => {
+    const breakdown = makeBreakdown(2026, () => ({
+      revenue: 1000,
+      payouts: 880,
+      laborCost: 600,
+      machineExpenses: 500,
+      netProfit: -220,
+    }));
+    render(<DashboardRevenueChart breakdown={breakdown} />);
+    const lucroLabel = screen.getByText(/Lucro líquido/);
+    const lucroSection = lucroLabel.closest('div')?.parentElement;
+    expect(lucroSection?.textContent).toMatch(/-2\D?640\s*€/);
+    expect(screen.getByText(/margem -22\.0%/i)).toBeInTheDocument();
+  });
+
+  it('shows jobs count and best month when revenue exists', () => {
+    const breakdown = makeBreakdown(2026, (m) => ({
+      revenue: m === 7 ? 999 : 100,
+      payouts: m === 7 ? 880 : 90,
+      completedJobs: 2,
+      netProfit: 10,
+    }));
+    render(<DashboardRevenueChart breakdown={breakdown} />);
+    expect(screen.getByText(/24 trabalhos concluídos/)).toBeInTheDocument();
     expect(screen.getByText(/Jul/)).toBeInTheDocument();
   });
 });
