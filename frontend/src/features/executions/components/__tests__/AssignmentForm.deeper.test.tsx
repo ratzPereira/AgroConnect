@@ -6,8 +6,12 @@ vi.mock('@/api/executions', () => ({
   assignExecution: vi.fn(),
 }));
 
-vi.mock('@/api/client', () => ({
-  apiClient: { get: vi.fn() },
+vi.mock('@/api/teamMembers', () => ({
+  listTeamMembers: vi.fn(),
+}));
+
+vi.mock('@/api/machines', () => ({
+  listMachines: vi.fn(),
 }));
 
 // ── React Query mock variables (set per-test) ──────────────────────────────
@@ -17,12 +21,14 @@ const mockInvalidateQueries = vi.fn();
 interface TeamMember {
   id: number;
   name: string;
-  role: string;
+  role: 'MANAGER' | 'LEAD' | 'OPERATOR';
+  active: boolean;
 }
 
 interface Machine {
   id: number;
   name: string;
+  status: 'AVAILABLE' | 'IN_USE' | 'MAINTENANCE' | 'RETIRED';
 }
 
 let teamMembersData: TeamMember[] | undefined;
@@ -70,12 +76,12 @@ describe('AssignmentForm (deeper)', () => {
 
   beforeEach(() => {
     teamMembersData = [
-      { id: 1, name: 'João Silva', role: 'Operador' },
-      { id: 2, name: 'Ana Costa', role: 'Técnica' },
+      { id: 1, name: 'João Silva', role: 'OPERATOR', active: true },
+      { id: 2, name: 'Ana Costa', role: 'LEAD', active: true },
     ];
     machinesData = [
-      { id: 10, name: 'Trator John Deere 5075' },
-      { id: 20, name: 'Pulverizador Stihl' },
+      { id: 10, name: 'Trator John Deere 5075', status: 'AVAILABLE' },
+      { id: 20, name: 'Pulverizador Stihl', status: 'AVAILABLE' },
     ];
     mutationIsPending = false;
     mutationIsError = false;
@@ -94,7 +100,7 @@ describe('AssignmentForm (deeper)', () => {
   it('renders team member options from query data', () => {
     render(<AssignmentForm {...defaultProps} />);
     expect(screen.getByText('João Silva (Operador)')).toBeInTheDocument();
-    expect(screen.getByText('Ana Costa (Técnica)')).toBeInTheDocument();
+    expect(screen.getByText('Ana Costa (Chefe de equipa)')).toBeInTheDocument();
   });
 
   it('renders machine options from query data', () => {

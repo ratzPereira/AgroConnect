@@ -7,10 +7,10 @@ const mockMutate = vi.fn();
 vi.mock('@tanstack/react-query', () => ({
   useQuery: vi.fn(({ queryKey }: { queryKey: string[] }) => {
     if (queryKey[0] === 'team-members') {
-      return { data: [{ id: 1, name: 'Jo\u00e3o Silva', role: 'Operador' }] };
+      return { data: [{ id: 1, name: 'Jo\u00e3o Silva', role: 'OPERATOR', active: true }] };
     }
     if (queryKey[0] === 'machines') {
-      return { data: [{ id: 1, name: 'Trator John Deere' }] };
+      return { data: [{ id: 1, name: 'Trator John Deere', status: 'AVAILABLE' }] };
     }
     return { data: null };
   }),
@@ -28,8 +28,12 @@ vi.mock('@/api/executions', () => ({
   assignExecution: vi.fn(),
 }));
 
-vi.mock('@/api/client', () => ({
-  apiClient: { get: vi.fn() },
+vi.mock('@/api/teamMembers', () => ({
+  listTeamMembers: vi.fn(),
+}));
+
+vi.mock('@/api/machines', () => ({
+  listMachines: vi.fn(),
 }));
 
 describe('AssignmentForm', () => {

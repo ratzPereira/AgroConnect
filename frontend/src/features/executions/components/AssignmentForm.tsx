@@ -1,20 +1,17 @@
 import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { assignExecution } from '@/api/executions';
-import { apiClient } from '@/api/client';
+import { listTeamMembers } from '@/api/teamMembers';
+import { listMachines } from '@/api/machines';
 import { Button } from '@/components/ui/Button';
 import { UserPlus } from 'lucide-react';
+import type { TeamMemberRole } from '@/types/teamMember';
 
-interface TeamMember {
-  id: number;
-  name: string;
-  role: string;
-}
-
-interface Machine {
-  id: number;
-  name: string;
-}
+const ROLE_LABEL: Record<TeamMemberRole, string> = {
+  MANAGER: 'Gestor',
+  LEAD: 'Chefe de equipa',
+  OPERATOR: 'Operador',
+};
 
 interface AssignmentFormProps {
   readonly executionId: number;
@@ -28,18 +25,12 @@ export function AssignmentForm({ executionId, requestId }: AssignmentFormProps) 
 
   const { data: teamMembers } = useQuery({
     queryKey: ['team-members'],
-    queryFn: async () => {
-      const response = await apiClient.get<TeamMember[]>('/team-members');
-      return response.data;
-    },
+    queryFn: listTeamMembers,
   });
 
   const { data: machines } = useQuery({
     queryKey: ['machines'],
-    queryFn: async () => {
-      const response = await apiClient.get<Machine[]>('/machines');
-      return response.data;
-    },
+    queryFn: () => listMachines(),
   });
 
   const assignMutation = useMutation({
@@ -74,9 +65,9 @@ export function AssignmentForm({ executionId, requestId }: AssignmentFormProps) 
           className="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
         >
           <option value="">Selecionar...</option>
-          {teamMembers?.map((m) => (
+          {teamMembers?.filter((m) => m.active).map((m) => (
             <option key={m.id} value={m.id}>
-              {m.name} ({m.role})
+              {m.name} ({ROLE_LABEL[m.role]})
             </option>
           ))}
         </select>
@@ -92,7 +83,7 @@ export function AssignmentForm({ executionId, requestId }: AssignmentFormProps) 
           className="block w-full rounded-lg border border-neutral-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
         >
           <option value="">Nenhuma</option>
-          {machines?.map((m) => (
+          {machines?.filter((m) => m.status !== 'RETIRED').map((m) => (
             <option key={m.id} value={m.id}>
               {m.name}
             </option>
