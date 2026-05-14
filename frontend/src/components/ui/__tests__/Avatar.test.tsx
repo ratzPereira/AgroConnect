@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '@testing-library/react';
-import { Avatar } from '../Avatar';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { Avatar, AvatarGroup } from '../Avatar';
 
 describe('Avatar', () => {
   it('renders initials from single name', () => {
@@ -47,5 +47,68 @@ describe('Avatar', () => {
     const inner = container.querySelector('.rounded-full') as HTMLElement;
     expect(inner.className).toContain('h-10');
     expect(inner.className).toContain('w-10');
+  });
+
+  it('falls back to initials when image fails to load', () => {
+    render(<Avatar src="https://example.com/broken.jpg" name="Maria Santos" />);
+    const img = screen.getByRole('img');
+    fireEvent.error(img);
+    expect(screen.getByText('MS')).toBeInTheDocument();
+  });
+
+  it('renders status dot with online color when status="online"', () => {
+    const { container } = render(<Avatar name="A" status="online" />);
+    const dot = container.querySelector('.bg-leaf-500');
+    expect(dot).toBeInTheDocument();
+  });
+
+  it('renders status dot with busy color when status="busy"', () => {
+    const { container } = render(<Avatar name="A" status="busy" />);
+    expect(container.querySelector('.bg-warning-400')).toBeInTheDocument();
+  });
+
+  it('uses alt fallback when name is provided but alt is not', () => {
+    render(<Avatar src="https://example.com/photo.jpg" name="Joao" />);
+    expect(screen.getByAltText('Joao')).toBeInTheDocument();
+  });
+});
+
+describe('AvatarGroup', () => {
+  it('renders all children when no max is set', () => {
+    render(
+      <AvatarGroup>
+        <Avatar name="Ana" />
+        <Avatar name="Bia" />
+        <Avatar name="Caio" />
+      </AvatarGroup>,
+    );
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('B')).toBeInTheDocument();
+    expect(screen.getByText('C')).toBeInTheDocument();
+  });
+
+  it('shows overflow indicator when avatars exceed max', () => {
+    render(
+      <AvatarGroup max={2}>
+        <Avatar name="Ana" />
+        <Avatar name="Bia" />
+        <Avatar name="Caio" />
+        <Avatar name="Duda" />
+      </AvatarGroup>,
+    );
+    expect(screen.getByText('A')).toBeInTheDocument();
+    expect(screen.getByText('B')).toBeInTheDocument();
+    expect(screen.queryByText('C')).not.toBeInTheDocument();
+    expect(screen.getByText('+2')).toBeInTheDocument();
+  });
+
+  it('does not show overflow indicator when count is exactly max', () => {
+    render(
+      <AvatarGroup max={2}>
+        <Avatar name="Ana" />
+        <Avatar name="Bia" />
+      </AvatarGroup>,
+    );
+    expect(screen.queryByText(/^\+\d+$/)).not.toBeInTheDocument();
   });
 });
