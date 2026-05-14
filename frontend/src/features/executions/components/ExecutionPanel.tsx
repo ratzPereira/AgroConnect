@@ -100,8 +100,9 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
     return null;
   }
 
-  const isCheckedIn = execution.checkinTime !== null;
-  const isCompleted = execution.completedAt !== null;
+  const checkinDate = execution.checkinTime ? new Date(execution.checkinTime) : null;
+  const isCheckedIn = checkinDate !== null && !Number.isNaN(checkinDate.getTime());
+  const isCompleted = Boolean(execution.completedAt);
 
   return (
     <>
@@ -190,7 +191,7 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
               <p>
                 Check-in realizado em{' '}
                 <span className="font-medium">
-                  {format(new Date(execution.checkinTime as string), 'dd/MM/yyyy HH:mm')}
+                  {checkinDate ? format(checkinDate, 'dd/MM/yyyy HH:mm') : '—'}
                 </span>
               </p>
               {execution.checkinLatitude !== null && execution.checkinLongitude !== null && (
