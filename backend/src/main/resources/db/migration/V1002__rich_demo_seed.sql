@@ -9,38 +9,39 @@
 --   so the provider backoffice — Calendar V2, Machines, Team, Job
 --   Costing, Inventory — has a realistic, full-of-life shape.
 --
--- Approach
---   This migration ASSUMES V999 + V1000 + V1001 have already run and
---   that the seed tables are populated with their canonical IDs.
---   It only INSERTs *new* rows. No UPDATE except a one-off hourly_rate
---   backfill for the eight pre-existing team_members so the Job
---   Costing panel has data to work with.
+-- ID strategy
+--   All NEW rows use a high-range starting at 1000+. This avoids
+--   collisions with real user sign-ups that may have happened on the
+--   production database after V999/V1000/V1001 ran. References to
+--   baseline rows (users 1-15, team_members 1-8, machines 1-12,
+--   inventory 1-11, etc.) keep their original IDs.
 --
--- Layout (all IDs are explicit and disjoint from prior seeds)
---   PART 1  — Users (16-22)
+--   At the end, sequences are set to MAX(id) per table so any future
+--   inserts continue cleanly.
+--
+-- Layout (all NEW IDs are explicit and disjoint from prior seeds)
+--   PART 0  — Defensive guards (fail loudly if state is unexpected)
+--   PART 1  — Users (1016-1022)
 --   PART 2  — Client profiles
---   PART 3  — Team members for provider 1 (9-14) + hourly_rate backfill
---   PART 4  — Machines for provider 1 (13-19)
+--   PART 3  — Team members for provider 1 (1009-1014) + hourly_rate
+--   PART 4  — Machines for provider 1 (1013-1019)
 --   PART 5  — Provider service categories (add 6, 7 to provider 1)
---   PART 6  — Inventory expansion + INITIAL movements
---   PART 7  — Service requests (51-88)
---   PART 8  — Proposals (31-67)
---   PART 9  — Transactions (24-56)
---   PART 10 — Service executions (20-52) with calendar metadata
---   PART 11 — Execution assignments (with hours_worked + rate snapshot)
+--   PART 6  — Inventory expansion (1012-1018) + INITIAL movements
+--   PART 7  — Service requests (1051-1088)
+--   PART 8  — Proposals (1031-1067)
+--   PART 9  — Transactions (1024-1056)
+--   PART 10 — Service executions (1020-1052) with calendar metadata
+--   PART 11 — Execution assignments
 --   PART 12 — Machine maintenance logs
 --   PART 13 — Machine expenses
---   PART 14 — Reviews (22-39)
+--   PART 14 — Reviews (1022-1039)
 --   PART 15 — Notifications
---   PART 16 — Sequence resets
+--   PART 16 — Sequence resets (dynamic MAX(id))
 --
 -- Date anchor
 --   Demo day = 2026-05-12 (Tue). "Today" in the migration = 2026-05-13.
 --   AWARDED + IN_PROGRESS rows are pinned to specific 2026-05 / 2026-06
 --   calendar dates so the Day/Week/Month views populate as designed.
---   Completed/historical rows use NOW() - INTERVAL '… days' for
---   created_at / checkin_time / completed_at since those don't
---   appear on the calendar's positional axis.
 --
 -- Passwords
 --   New user passwords = 'password123', BCrypt-12 hash matches V999.
@@ -48,17 +49,34 @@
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 1 — New Users (IDs 16-22)
+-- PART 0 — Defensive guards
+-- ═══════════════════════════════════════════════════════════════
+-- If anything in the 1000+ range is already used, fail loudly BEFORE
+-- making partial changes. The migration is rolled back as a whole if
+-- any of these RAISE EXCEPTION fire.
+
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM users WHERE id BETWEEN 1016 AND 1022) THEN
+    RAISE EXCEPTION 'V1002 aborted: users.id 1016-1022 already in use. Bump V1002 ID range.';
+  END IF;
+  IF EXISTS (SELECT 1 FROM service_requests WHERE id BETWEEN 1051 AND 1088) THEN
+    RAISE EXCEPTION 'V1002 aborted: service_requests.id 1051-1088 already in use. Bump V1002 ID range.';
+  END IF;
+END $$;
+
+
+-- ═══════════════════════════════════════════════════════════════
+-- PART 1 — New Users (IDs 1016-1022)
 -- ═══════════════════════════════════════════════════════════════
 
 INSERT INTO users (id, email, password_hash, role, email_verified, active) VALUES
-(16, 'rita.alves@email.com',      '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_LEAD',     TRUE, TRUE),
-(17, 'nuno.cardoso@email.com',    '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_OPERATOR', TRUE, TRUE),
-(18, 'filipe.brum@email.com',     '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_OPERATOR', TRUE, TRUE),
-(19, 'sandra.melo@email.com',     '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_OPERATOR', TRUE, TRUE),
-(20, 'francisco.melo@email.com',  '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'CLIENT',            TRUE, TRUE),
-(21, 'laura.dutra@email.com',     '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'CLIENT',            TRUE, TRUE),
-(22, 'paulo.brum@email.com',      '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'CLIENT',            TRUE, TRUE);
+(1016, 'rita.alves@email.com',      '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_LEAD',     TRUE, TRUE),
+(1017, 'nuno.cardoso@email.com',    '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_OPERATOR', TRUE, TRUE),
+(1018, 'filipe.brum@email.com',     '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_OPERATOR', TRUE, TRUE),
+(1019, 'sandra.melo@email.com',     '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'PROVIDER_OPERATOR', TRUE, TRUE),
+(1020, 'francisco.melo@email.com',  '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'CLIENT',            TRUE, TRUE),
+(1021, 'laura.dutra@email.com',     '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'CLIENT',            TRUE, TRUE),
+(1022, 'paulo.brum@email.com',      '$2a$12$LJ3m4ys3uz4HJ/TfUIWB5eXPQhykMlCmXJU/WJybkMO.WxWAJLqVa', 'CLIENT',            TRUE, TRUE);
 
 
 -- ═══════════════════════════════════════════════════════════════
@@ -66,114 +84,120 @@ INSERT INTO users (id, email, password_hash, role, email_verified, active) VALUE
 -- ═══════════════════════════════════════════════════════════════
 
 INSERT INTO client_profiles (user_id, name, phone, location, parish, municipality, island, farm_type, total_area_ha) VALUES
-(20, 'Francisco Melo',  '+351 921 234 567', ST_SetSRID(ST_MakePoint(-27.2300, 38.6700), 4326), 'Terra Chã',     'Angra do Heroísmo', 'Terceira',   'Pastagem leiteira', 25.0),
-(21, 'Laura Dutra',     '+351 922 345 678', ST_SetSRID(ST_MakePoint(-27.0500, 38.7400), 4326), 'Santa Cruz',    'Praia da Vitória',  'Terceira',   'Mista',             18.0),
-(22, 'Paulo Brum',      '+351 923 456 789', ST_SetSRID(ST_MakePoint(-25.6850, 37.7510), 4326), 'São Sebastião', 'Ponta Delgada',     'São Miguel', 'Horticultura',       7.5);
+(1020, 'Francisco Melo',  '+351 921 234 567', ST_SetSRID(ST_MakePoint(-27.2300, 38.6700), 4326), 'Terra Chã',     'Angra do Heroísmo', 'Terceira',   'Pastagem leiteira', 25.0),
+(1021, 'Laura Dutra',     '+351 922 345 678', ST_SetSRID(ST_MakePoint(-27.0500, 38.7400), 4326), 'Santa Cruz',    'Praia da Vitória',  'Terceira',   'Mista',             18.0),
+(1022, 'Paulo Brum',      '+351 923 456 789', ST_SetSRID(ST_MakePoint(-25.6850, 37.7510), 4326), 'São Sebastião', 'Ponta Delgada',     'São Miguel', 'Horticultura',       7.5);
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 3 — Team Members for Provider 1 (IDs 9-14) + hourly_rate backfill
+-- PART 3 — Team Members for Provider 1 (IDs 1009-1014) + hourly_rate backfill
 -- ═══════════════════════════════════════════════════════════════
 -- hourly_rate column added in V32 (job costing) — backfill existing rows
 -- so the Job Costing panel can compute labor on historical jobs.
 
-UPDATE team_members SET hourly_rate = 14.00 WHERE id = 1;  -- António Mendes (P1 manager)
-UPDATE team_members SET hourly_rate = 10.50 WHERE id = 2;  -- Carlos Oliveira (P1 op)
-UPDATE team_members SET hourly_rate = 13.50 WHERE id = 3;  -- Ricardo Sousa (P2 manager)
-UPDATE team_members SET hourly_rate = 10.00 WHERE id = 4;  -- Miguel Tavares (P2 op)
-UPDATE team_members SET hourly_rate = 13.00 WHERE id = 5;  -- João Pereira (P3 manager)
-UPDATE team_members SET hourly_rate = 13.00 WHERE id = 6;  -- Rui Pacheco (P4 manager)
-UPDATE team_members SET hourly_rate =  9.50 WHERE id = 7;  -- Bruno Faria (P4 op)
-UPDATE team_members SET hourly_rate = 12.00 WHERE id = 8;  -- Helena Vieira (P5 manager)
+UPDATE team_members SET hourly_rate = 14.00 WHERE id = 1;
+UPDATE team_members SET hourly_rate = 10.50 WHERE id = 2;
+UPDATE team_members SET hourly_rate = 13.50 WHERE id = 3;
+UPDATE team_members SET hourly_rate = 10.00 WHERE id = 4;
+UPDATE team_members SET hourly_rate = 13.00 WHERE id = 5;
+UPDATE team_members SET hourly_rate = 13.00 WHERE id = 6;
+UPDATE team_members SET hourly_rate =  9.50 WHERE id = 7;
+UPDATE team_members SET hourly_rate = 12.00 WHERE id = 8;
 
 INSERT INTO team_members (id, provider_id, user_id, name, email, phone, role, active, joined_at, hourly_rate) VALUES
-(9,  1, 16,   'Rita Alves',     'rita.alves@email.com',            '+351 924 567 890', 'LEAD',     TRUE, NOW() - INTERVAL '320 days', 13.50),
-(10, 1, 17,   'Nuno Cardoso',   'nuno.cardoso@email.com',          '+351 925 678 901', 'OPERATOR', TRUE, NOW() - INTERVAL '260 days', 10.50),
-(11, 1, 18,   'Filipe Brum',    'filipe.brum@email.com',           '+351 926 789 012', 'OPERATOR', TRUE, NOW() - INTERVAL '180 days', 10.00),
-(12, 1, 19,   'Sandra Melo',    'sandra.melo@email.com',           '+351 927 890 123', 'OPERATOR', TRUE, NOW() - INTERVAL '120 days', 11.00),
-(13, 1, NULL, 'Joaquim Sousa',  'joaquim.sousa@agroservicos.pt',   '+351 928 901 234', 'OPERATOR', TRUE, NOW() - INTERVAL '90 days',   9.50),
-(14, 1, NULL, 'Manuela Toste',  'manuela.toste@agroservicos.pt',   '+351 929 012 345', 'LEAD',     TRUE, NOW() - INTERVAL '210 days', 13.00);
+(1009, 1, 1016, 'Rita Alves',     'rita.alves@email.com',          '+351 924 567 890', 'LEAD',     TRUE, NOW() - INTERVAL '320 days', 13.50),
+(1010, 1, 1017, 'Nuno Cardoso',   'nuno.cardoso@email.com',        '+351 925 678 901', 'OPERATOR', TRUE, NOW() - INTERVAL '260 days', 10.50),
+(1011, 1, 1018, 'Filipe Brum',    'filipe.brum@email.com',         '+351 926 789 012', 'OPERATOR', TRUE, NOW() - INTERVAL '180 days', 10.00),
+(1012, 1, 1019, 'Sandra Melo',    'sandra.melo@email.com',         '+351 927 890 123', 'OPERATOR', TRUE, NOW() - INTERVAL '120 days', 11.00),
+(1013, 1, NULL, 'Joaquim Sousa',  'joaquim.sousa@agroservicos.pt', '+351 928 901 234', 'OPERATOR', TRUE, NOW() - INTERVAL '90 days',   9.50),
+(1014, 1, NULL, 'Manuela Toste',  'manuela.toste@agroservicos.pt', '+351 929 012 345', 'LEAD',     TRUE, NOW() - INTERVAL '210 days', 13.00);
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 4 — Machines for Provider 1 (IDs 13-19)
+-- PART 4 — Machines for Provider 1 (IDs 1013-1019)
 -- ═══════════════════════════════════════════════════════════════
 
 INSERT INTO machines (id, provider_id, name, type, description, status, license_plate, last_maintenance_date, next_maintenance_date) VALUES
-(13, 1, 'Massey Ferguson 4707',           'Tractor',      'Tractor 75cv ideal para trabalhos médios em pastagem',         'AVAILABLE',   'KK-12-LL', '2026-03-10', '2026-09-10'),
-(14, 1, 'John Deere 6120M',               'Tractor',      'Tractor 120cv com transmissão PowerQuad — alta versatilidade', 'AVAILABLE',   'MM-34-NN', '2026-04-05', '2026-10-05'),
-(15, 1, 'Ceifeira-debulhadora Claas',     'Colheitadora', 'Ceifeira para cereais e milho, corte de 4.5m',                 'AVAILABLE',   'OO-56-PP', '2026-02-15', '2026-08-15'),
-(16, 1, 'Pulverizador atrelado 2000L',    'Pulverizador', 'Pulverizador rebocável com barras de 12m',                     'AVAILABLE',   NULL,       '2026-03-20', '2026-09-20'),
-(17, 1, 'Atomizador 800L',                'Pulverizador', 'Atomizador montado para tratamentos de pomares e vinhas',      'IN_USE',      NULL,       '2026-04-12', '2026-10-12'),
-(18, 1, 'Charrua reversível 3 ferros',    'Alfaia',       'Charrua reversível de 3 ferros para lavoura profunda',         'AVAILABLE',   NULL,       '2026-03-05', '2026-09-05'),
-(19, 1, 'Iveco Daily 35C16',              'Transporte',   'Carrinha de transporte 3.5t com caixa aberta',                 'AVAILABLE',   'QQ-78-RR', '2026-02-28', '2026-08-28');
+(1013, 1, 'Massey Ferguson 4707',           'Tractor',      'Tractor 75cv ideal para trabalhos médios em pastagem',         'AVAILABLE',   'KK-12-LL', '2026-03-10', '2026-09-10'),
+(1014, 1, 'John Deere 6120M',               'Tractor',      'Tractor 120cv com transmissão PowerQuad — alta versatilidade', 'AVAILABLE',   'MM-34-NN', '2026-04-05', '2026-10-05'),
+(1015, 1, 'Ceifeira-debulhadora Claas',     'Colheitadora', 'Ceifeira para cereais e milho, corte de 4.5m',                 'AVAILABLE',   'OO-56-PP', '2026-02-15', '2026-08-15'),
+(1016, 1, 'Pulverizador atrelado 2000L',    'Pulverizador', 'Pulverizador rebocável com barras de 12m',                     'AVAILABLE',   NULL,       '2026-03-20', '2026-09-20'),
+(1017, 1, 'Atomizador 800L',                'Pulverizador', 'Atomizador montado para tratamentos de pomares e vinhas',      'IN_USE',      NULL,       '2026-04-12', '2026-10-12'),
+(1018, 1, 'Charrua reversível 3 ferros',    'Alfaia',       'Charrua reversível de 3 ferros para lavoura profunda',         'AVAILABLE',   NULL,       '2026-03-05', '2026-09-05'),
+(1019, 1, 'Iveco Daily 35C16',              'Transporte',   'Carrinha de transporte 3.5t com caixa aberta',                 'AVAILABLE',   'QQ-78-RR', '2026-02-28', '2026-08-28');
 
 
 -- ═══════════════════════════════════════════════════════════════
 -- PART 5 — Provider Services (expand provider 1's catalogue)
 -- ═══════════════════════════════════════════════════════════════
+-- ON CONFLICT DO NOTHING so the seed is safe to re-run on a DB where
+-- the provider may already have added these categories via the UI.
 
 INSERT INTO provider_services (provider_id, category_id) VALUES
-(1, 6),  -- Vedação
-(1, 7);  -- Rega
+(1, 6),
+(1, 7)
+ON CONFLICT DO NOTHING;
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 6 — Inventory for Provider 1 (IDs 12-18) + INITIAL movements
+-- PART 6 — Inventory for Provider 1 (IDs 1012-1018) + INITIAL movements
 -- ═══════════════════════════════════════════════════════════════
--- Quantities are tightened to NUMERIC(14,3) by V31; cost is NUMERIC(10,4).
 
 INSERT INTO inventory (id, provider_id, product_name, unit, quantity, min_stock_alert, cost_per_unit) VALUES
-(12, 1, 'Adubo NPK 12-12-17',           'KG', 1200.000, 200.000,  0.7800),
-(13, 1, 'Adubo NPK 20-10-10',           'KG',  850.000, 150.000,  0.8500),
-(14, 1, 'Herbicida glifosato 36%',      'L',   180.000,  40.000,  9.5000),
-(15, 1, 'Fungicida cobre (oxicloreto)', 'L',    95.000,  25.000, 14.2000),
-(16, 1, 'Inseticida piretróide',        'L',    42.000,  10.000, 22.5000),
-(17, 1, 'Óleo motor 15W-40',            'L',    85.000,  20.000,  6.8000),
-(18, 1, 'Sementes pastagem mista',      'KG',  320.000,  50.000,  4.9000);
+(1012, 1, 'Adubo NPK 12-12-17',           'KG', 1200.000, 200.000,  0.7800),
+(1013, 1, 'Adubo NPK 20-10-10',           'KG',  850.000, 150.000,  0.8500),
+(1014, 1, 'Herbicida glifosato 36%',      'L',   180.000,  40.000,  9.5000),
+(1015, 1, 'Fungicida cobre (oxicloreto)', 'L',    95.000,  25.000, 14.2000),
+(1016, 1, 'Inseticida piretróide',        'L',    42.000,  10.000, 22.5000),
+(1017, 1, 'Óleo motor 15W-40',            'L',    85.000,  20.000,  6.8000),
+(1018, 1, 'Sementes pastagem mista',      'KG',  320.000,  50.000,  4.9000);
 
--- Backfill INITIAL movements for V999/V1000 items 1-11 (they had no movements
--- because V31 ran before V999/V1000 inserted the seed rows).
-INSERT INTO inventory_movements (item_id, movement_type, quantity_delta, unit_cost, quantity_after, wac_after, reason, actor_user_id, created_at) VALUES
-(1,  'INITIAL',  800.000,  1.1500,  800.000,  1.1500, 'Inventário inicial', 6,  NOW() - INTERVAL '180 days'),
-(2,  'INITIAL',   50.000,  4.5000,   50.000,  4.5000, 'Inventário inicial', 6,  NOW() - INTERVAL '180 days'),
-(3,  'INITIAL', 1200.000,  1.1500, 1200.000,  1.1500, 'Inventário inicial', 7,  NOW() - INTERVAL '180 days'),
-(4,  'INITIAL',  500.000,  0.8500,  500.000,  0.8500, 'Inventário inicial', 7,  NOW() - INTERVAL '180 days'),
-(5,  'INITIAL',   80.000, 12.0000,   80.000, 12.0000, 'Inventário inicial', 7,  NOW() - INTERVAL '180 days'),
-(6,  'INITIAL',  150.000,  1.5500,  150.000,  1.5500, 'Inventário inicial', 8,  NOW() - INTERVAL '180 days'),
-(7,  'INITIAL',   20.000,  3.5000,   20.000,  3.5000, 'Inventário inicial', 8,  NOW() - INTERVAL '180 days'),
-(8,  'INITIAL',  600.000,  1.1500,  600.000,  1.1500, 'Inventário inicial', 13, NOW() - INTERVAL '180 days'),
-(9,  'INITIAL',   30.000, 25.0000,   30.000, 25.0000, 'Inventário inicial', 13, NOW() - INTERVAL '180 days'),
-(10, 'INITIAL',  300.000,  1.5500,  300.000,  1.5500, 'Inventário inicial', 14, NOW() - INTERVAL '180 days'),
-(11, 'INITIAL',   50.000,  8.5000,   50.000,  8.5000, 'Inventário inicial', 14, NOW() - INTERVAL '180 days');
+-- Backfill INITIAL movements for baseline items 1-11 (only if missing).
+-- V31 runs before V999/V1000, so baseline inventory rows were inserted
+-- without movement records.
+INSERT INTO inventory_movements (item_id, movement_type, quantity_delta, unit_cost, quantity_after, wac_after, reason, actor_user_id, created_at)
+SELECT * FROM (VALUES
+  (1,  'INITIAL',  800.000::numeric,  1.1500::numeric,  800.000::numeric,  1.1500::numeric, 'Inventário inicial', 6,  NOW() - INTERVAL '180 days'),
+  (2,  'INITIAL',   50.000::numeric,  4.5000::numeric,   50.000::numeric,  4.5000::numeric, 'Inventário inicial', 6,  NOW() - INTERVAL '180 days'),
+  (3,  'INITIAL', 1200.000::numeric,  1.1500::numeric, 1200.000::numeric,  1.1500::numeric, 'Inventário inicial', 7,  NOW() - INTERVAL '180 days'),
+  (4,  'INITIAL',  500.000::numeric,  0.8500::numeric,  500.000::numeric,  0.8500::numeric, 'Inventário inicial', 7,  NOW() - INTERVAL '180 days'),
+  (5,  'INITIAL',   80.000::numeric, 12.0000::numeric,   80.000::numeric, 12.0000::numeric, 'Inventário inicial', 7,  NOW() - INTERVAL '180 days'),
+  (6,  'INITIAL',  150.000::numeric,  1.5500::numeric,  150.000::numeric,  1.5500::numeric, 'Inventário inicial', 8,  NOW() - INTERVAL '180 days'),
+  (7,  'INITIAL',   20.000::numeric,  3.5000::numeric,   20.000::numeric,  3.5000::numeric, 'Inventário inicial', 8,  NOW() - INTERVAL '180 days'),
+  (8,  'INITIAL',  600.000::numeric,  1.1500::numeric,  600.000::numeric,  1.1500::numeric, 'Inventário inicial', 13, NOW() - INTERVAL '180 days'),
+  (9,  'INITIAL',   30.000::numeric, 25.0000::numeric,   30.000::numeric, 25.0000::numeric, 'Inventário inicial', 13, NOW() - INTERVAL '180 days'),
+  (10, 'INITIAL',  300.000::numeric,  1.5500::numeric,  300.000::numeric,  1.5500::numeric, 'Inventário inicial', 14, NOW() - INTERVAL '180 days'),
+  (11, 'INITIAL',   50.000::numeric,  8.5000::numeric,   50.000::numeric,  8.5000::numeric, 'Inventário inicial', 14, NOW() - INTERVAL '180 days')
+) AS v(item_id, movement_type, quantity_delta, unit_cost, quantity_after, wac_after, reason, actor_user_id, created_at)
+WHERE NOT EXISTS (SELECT 1 FROM inventory_movements im WHERE im.item_id = v.item_id);
 
--- INITIAL movements for the new provider 1 items 12-18
+-- INITIAL movements for the new provider 1 items 1012-1018
 INSERT INTO inventory_movements (item_id, movement_type, quantity_delta, unit_cost, quantity_after, wac_after, reason, actor_user_id, created_at) VALUES
-(12, 'INITIAL', 1200.000,  0.7800, 1200.000,  0.7800, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
-(13, 'INITIAL',  850.000,  0.8500,  850.000,  0.8500, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
-(14, 'INITIAL',  180.000,  9.5000,  180.000,  9.5000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
-(15, 'INITIAL',   95.000, 14.2000,   95.000, 14.2000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
-(16, 'INITIAL',   42.000, 22.5000,   42.000, 22.5000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
-(17, 'INITIAL',   85.000,  6.8000,   85.000,  6.8000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
-(18, 'INITIAL',  320.000,  4.9000,  320.000,  4.9000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days');
+(1012, 'INITIAL', 1200.000,  0.7800, 1200.000,  0.7800, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
+(1013, 'INITIAL',  850.000,  0.8500,  850.000,  0.8500, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
+(1014, 'INITIAL',  180.000,  9.5000,  180.000,  9.5000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
+(1015, 'INITIAL',   95.000, 14.2000,   95.000, 14.2000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
+(1016, 'INITIAL',   42.000, 22.5000,   42.000, 22.5000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
+(1017, 'INITIAL',   85.000,  6.8000,   85.000,  6.8000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days'),
+(1018, 'INITIAL',  320.000,  4.9000,  320.000,  4.9000, 'Inventário inicial — campanha 2026', 6, NOW() - INTERVAL '90 days');
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 7 — Service Requests (IDs 51-88)
+-- PART 7 — Service Requests (IDs 1051-1088)
 -- ═══════════════════════════════════════════════════════════════
 -- Distribution (focus: joao.silva + provider 1 on Terceira):
---   COMPLETED              (51-58)  8 jobs, recent past
---   RATED                  (59-63)  5 jobs, deeper past, with full reviews
---   AWAITING_CONFIRMATION  (64-65)  2 jobs, just finished
---   IN_PROGRESS            (66-68)  3 jobs running TODAY (2026-05-13)
---   AWARDED                (69-83) 15 jobs scheduled in the next 6 weeks
---   PUBLISHED              (84-86)  3 open requests (joao.silva + others)
---   WITH_PROPOSALS         (87-88)  2 with provider 1 + provider 2 PENDING
+--   COMPLETED              (1051-1058)  8 jobs, recent past
+--   RATED                  (1059-1063)  5 jobs, deeper past
+--   AWAITING_CONFIRMATION  (1064-1065)  2 jobs, just finished
+--   IN_PROGRESS            (1066-1068)  3 jobs running TODAY (2026-05-13)
+--   AWARDED                (1069-1083) 15 jobs scheduled in the next 6 weeks
+--   PUBLISHED              (1084-1086)  3 open requests
+--   WITH_PROPOSALS         (1087-1088)  2 with PENDING proposals
 
 -- ── COMPLETED (recent past) ───────────────────────────────────
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(51, 2, 1, 'COMPLETED', 'Lavoura de pastagem para resseada — 4 hectares',
+(1051, 2, 1, 'COMPLETED', 'Lavoura de pastagem para resseada — 4 hectares',
     'Pastagem cansada de 4 hectares precisa de lavoura profunda antes da resseada de Maio. Terreno conhecido e acessível, tractor pode entrar pela estrada do Biscoito.',
     ST_SetSRID(ST_MakePoint(-27.2050, 38.6720), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 4.0, 'hectares', 'MEDIUM',
@@ -182,7 +206,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '22 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(52, 3, 1, 'COMPLETED', 'Fresagem de batatal — 2 hectares',
+(1052, 3, 1, 'COMPLETED', 'Fresagem de batatal — 2 hectares',
     'Preparação fina de canteiros para batata branca. Já está lavrado, falta fresar para deixar solo solto.',
     ST_SetSRID(ST_MakePoint(-27.0700, 38.7250), 4326),
     'Fonte do Bastardo', 'Praia da Vitória', 'Terceira', 2.0, 'hectares', 'MEDIUM',
@@ -191,7 +215,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '20 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(53, 5, 2, 'COMPLETED', 'Pulverização de pomar de citrinos',
+(1053, 5, 2, 'COMPLETED', 'Pulverização de pomar de citrinos',
     'Pomar de laranjeiras com 1.5 hectares precisa de tratamento fungicida e inseticida. Produtos no local.',
     ST_SetSRID(ST_MakePoint(-25.5200, 37.8150), 4326),
     'Conceição', 'Ribeira Grande', 'São Miguel', 1.5, 'hectares', 'HIGH',
@@ -200,7 +224,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '17 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(54, 2, 1, 'COMPLETED', 'Gradagem após lavoura — 4 hectares',
+(1054, 2, 1, 'COMPLETED', 'Gradagem após lavoura — 4 hectares',
     'Sequência da lavoura anterior. Quero gradar para nivelar o terreno antes da sementeira de erva.',
     ST_SetSRID(ST_MakePoint(-27.2050, 38.6720), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 4.0, 'hectares', 'HIGH',
@@ -209,7 +233,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '12 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(55, 4, 2, 'COMPLETED', 'Pulverização preventiva de milho — 3 hectares',
+(1055, 4, 2, 'COMPLETED', 'Pulverização preventiva de milho — 3 hectares',
     'Tratamento herbicida pré-emergente em campo de milho recém semeado. Produto será fornecido.',
     ST_SetSRID(ST_MakePoint(-25.6750, 37.7320), 4326),
     'São Sebastião', 'Ponta Delgada', 'São Miguel', 3.0, 'hectares', 'HIGH',
@@ -218,7 +242,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '11 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(56, 11, 2, 'COMPLETED', 'Tratamento fitossanitário em vinha — Faial',
+(1056, 11, 2, 'COMPLETED', 'Tratamento fitossanitário em vinha — Faial',
     'Vinha de 2 hectares na zona dos Flamengos. Necessidade de fungicida cobre por sinais iniciais de míldio.',
     ST_SetSRID(ST_MakePoint(-28.7180, 38.5340), 4326),
     'Flamengos', 'Horta', 'Faial', 2.0, 'hectares', 'HIGH',
@@ -227,7 +251,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '10 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(57, 20, 6, 'COMPLETED', 'Reparação de vedação — 200 metros',
+(1057, 1020, 6, 'COMPLETED', 'Reparação de vedação — 200 metros',
     'Vedação de pastagem caiu em vários pontos com o temporal de Março. Preciso de reparação rápida antes de soltar o gado.',
     ST_SetSRID(ST_MakePoint(-27.2310, 38.6695), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 200, 'metros', 'HIGH',
@@ -236,7 +260,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '9 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(58, 21, 4, 'COMPLETED', 'Transporte de fardos de silagem — 30 fardos',
+(1058, 1021, 4, 'COMPLETED', 'Transporte de fardos de silagem — 30 fardos',
     '30 fardos quadrados de silagem do campo para o armazém na Praia. Distância 5km.',
     ST_SetSRID(ST_MakePoint(-27.0530, 38.7390), 4326),
     'Santa Cruz', 'Praia da Vitória', 'Terceira', NULL, NULL, 'MEDIUM',
@@ -248,7 +272,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
 -- ── RATED (deeper past) ───────────────────────────────────────
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(59, 2, 1, 'RATED', 'Lavoura inicial campanha 2026 — 6 hectares',
+(1059, 2, 1, 'RATED', 'Lavoura inicial campanha 2026 — 6 hectares',
     'Lavoura de fundo em pastagem antiga para resseada de início de campanha. Trabalho urgente para aproveitar humidade do solo.',
     ST_SetSRID(ST_MakePoint(-27.2120, 38.6650), 4326),
     'Sé', 'Angra do Heroísmo', 'Terceira', 6.0, 'hectares', 'HIGH',
@@ -257,7 +281,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '92 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(60, 3, 3, 'RATED', 'Colheita de milho silagem — 5 hectares',
+(1060, 3, 3, 'RATED', 'Colheita de milho silagem — 5 hectares',
     'Colheita de milho para silagem com ceifeira. 5 hectares plantados no fim de Setembro, prontos a cortar.',
     ST_SetSRID(ST_MakePoint(-27.0820, 38.7180), 4326),
     'Fonte do Bastardo', 'Praia da Vitória', 'Terceira', 5.0, 'hectares', 'HIGH',
@@ -266,7 +290,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '70 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(61, 5, 2, 'RATED', 'Pulverização foliar em pomar — 2 hectares',
+(1061, 5, 2, 'RATED', 'Pulverização foliar em pomar — 2 hectares',
     'Aplicação de adubo foliar e fungicida preventivo em pomar de citrinos. 2 hectares no total.',
     ST_SetSRID(ST_MakePoint(-25.5180, 37.8170), 4326),
     'Conceição', 'Ribeira Grande', 'São Miguel', 2.0, 'hectares', 'MEDIUM',
@@ -275,7 +299,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '58 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(62, 2, 1, 'RATED', 'Fresagem para semeadura de pastagem — 3 hectares',
+(1062, 2, 1, 'RATED', 'Fresagem para semeadura de pastagem — 3 hectares',
     'Preparação fina para semeadura de mistura de pastagem permanente. Solo já lavrado e gradado, falta fresar.',
     ST_SetSRID(ST_MakePoint(-27.2080, 38.6700), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 3.0, 'hectares', 'MEDIUM',
@@ -284,7 +308,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '42 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(63, 20, 1, 'RATED', 'Gradagem para sementeira de erva — 8 hectares',
+(1063, 1020, 1, 'RATED', 'Gradagem para sementeira de erva — 8 hectares',
     'Gradagem em parcela grande para resseada com mistura de pastagem nova. Acesso por estrada da Terra Chã.',
     ST_SetSRID(ST_MakePoint(-27.2280, 38.6730), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 8.0, 'hectares', 'MEDIUM',
@@ -296,7 +320,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
 -- ── AWAITING_CONFIRMATION ────────────────────────────────────
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(64, 4, 2, 'AWAITING_CONFIRMATION', 'Aplicação de adubo NPK em milho — 4 hectares',
+(1064, 4, 2, 'AWAITING_CONFIRMATION', 'Aplicação de adubo NPK em milho — 4 hectares',
     'Adubação de cobertura em campo de milho com NPK 20-10-10. Pretende-se aplicação uniforme e cuidado com zonas declivosas.',
     ST_SetSRID(ST_MakePoint(-25.6730, 37.7390), 4326),
     'São Sebastião', 'Ponta Delgada', 'São Miguel', 4.0, 'hectares', 'MEDIUM',
@@ -305,7 +329,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '5 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(65, 2, 5, 'AWAITING_CONFIRMATION', 'Limpeza de terreno com silvas — 1.5 hectares',
+(1065, 2, 5, 'AWAITING_CONFIRMATION', 'Limpeza de terreno com silvas — 1.5 hectares',
     'Terreno encostado às vinhas com silvas e mato a invadir. Limpeza com destroçador para travar avanço.',
     ST_SetSRID(ST_MakePoint(-27.2160, 38.6690), 4326),
     'Sé', 'Angra do Heroísmo', 'Terceira', 1.5, 'hectares', 'MEDIUM',
@@ -317,7 +341,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
 -- ── IN_PROGRESS (running TODAY 2026-05-13) ───────────────────
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(66, 2, 1, 'IN_PROGRESS', 'Subsolagem em pastagem compactada — 3 hectares',
+(1066, 2, 1, 'IN_PROGRESS', 'Subsolagem em pastagem compactada — 3 hectares',
     'Pastagem com problemas de drenagem após o inverno. Solo compactado, precisa de subsolagem para arejar.',
     ST_SetSRID(ST_MakePoint(-27.2100, 38.6750), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 3.0, 'hectares', 'HIGH',
@@ -326,7 +350,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '3 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(67, 21, 4, 'IN_PROGRESS', 'Transporte de adubo do porto para armazém',
+(1067, 1021, 4, 'IN_PROGRESS', 'Transporte de adubo do porto para armazém',
     'Recolha de 5 toneladas de adubo no porto da Praia da Vitória e entrega no armazém em Santa Cruz. Carga em sacos de 50kg.',
     ST_SetSRID(ST_MakePoint(-27.0610, 38.7330), 4326),
     'Santa Cruz', 'Praia da Vitória', 'Terceira', NULL, NULL, 'MEDIUM',
@@ -335,7 +359,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '2 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(68, 3, 5, 'IN_PROGRESS', 'Limpeza de levada e bermas — 800 metros',
+(1068, 3, 5, 'IN_PROGRESS', 'Limpeza de levada e bermas — 800 metros',
     'Limpeza de levada e bermas em propriedade rural. Vegetação rasteira abundante após chuvas.',
     ST_SetSRID(ST_MakePoint(-27.0680, 38.7260), 4326),
     'Lajes', 'Praia da Vitória', 'Terceira', 0.8, 'hectares', 'MEDIUM',
@@ -345,13 +369,12 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
 
 
 -- ── AWARDED (future, scheduled) ──────────────────────────────
--- Distribution across the next 6 weeks. Intentional conflicts:
---   * Req 70 + Req 71: same operator (TM 1, António) overlap on 2026-05-14
---   * Req 75 + Req 76: same machine (M 1, New Holland) overlap on 2026-05-18
+-- Intentional conflicts:
+--   * Exec 1038 + Exec 1040 share TM 1 (António) on 2026-05-14
+--   * Exec 1044 + Exec 1045 share Machine 1 on 2026-05-18
 
--- Thu May 14 — busy day (3 jobs, includes operator conflict)
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(69, 2, 2, 'AWARDED', 'Tratamento herbicida em pastagem — 4 hectares',
+(1069, 2, 2, 'AWARDED', 'Tratamento herbicida em pastagem — 4 hectares',
     'Aplicação de herbicida seletivo para combate de junças em pastagem permanente. Tratamento de manhã para evitar vento.',
     ST_SetSRID(ST_MakePoint(-27.2090, 38.6710), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 4.0, 'hectares', 'MEDIUM',
@@ -360,7 +383,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '4 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(70, 20, 1, 'AWARDED', 'Gradagem em pastagem nova — 3 hectares',
+(1070, 1020, 1, 'AWARDED', 'Gradagem em pastagem nova — 3 hectares',
     'Gradagem após resseada para incorporar a mistura de pastagem.',
     ST_SetSRID(ST_MakePoint(-27.2320, 38.6720), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 3.0, 'hectares', 'MEDIUM',
@@ -369,7 +392,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '3 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(71, 3, 1, 'AWARDED', 'Lavoura de pastagem velha — 5 hectares',
+(1071, 3, 1, 'AWARDED', 'Lavoura de pastagem velha — 5 hectares',
     'Lavoura profunda para preparar terreno para milho de silagem. Pastagem com 8 anos.',
     ST_SetSRID(ST_MakePoint(-27.0750, 38.7220), 4326),
     'Fonte do Bastardo', 'Praia da Vitória', 'Terceira', 5.0, 'hectares', 'HIGH',
@@ -377,9 +400,8 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '{"area": 5, "terrain_type": "Inclinado", "work_type": "Lavoura", "accessibility": "Caminho de terra"}'::jsonb,
     NOW() - INTERVAL '3 days');
 
--- Fri May 15 — 2 jobs
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(72, 2, 2, 'AWARDED', 'Tratamento fungicida em pomar de macieiras — 1.5 hectares',
+(1072, 2, 2, 'AWARDED', 'Tratamento fungicida em pomar de macieiras — 1.5 hectares',
     'Aplicação preventiva de fungicida cobre em macieiras Bravo de Esmolfe. Importante evitar ventos.',
     ST_SetSRID(ST_MakePoint(-27.2160, 38.6710), 4326),
     'Sé', 'Angra do Heroísmo', 'Terceira', 1.5, 'hectares', 'MEDIUM',
@@ -388,7 +410,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '2 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(73, 4, 1, 'AWARDED', 'Fresagem para campo de milho — 2.5 hectares',
+(1073, 4, 1, 'AWARDED', 'Fresagem para campo de milho — 2.5 hectares',
     'Preparação fina do solo antes da sementeira de milho. Trabalho num único dia idealmente.',
     ST_SetSRID(ST_MakePoint(-25.6680, 37.7380), 4326),
     'São Sebastião', 'Ponta Delgada', 'São Miguel', 2.5, 'hectares', 'HIGH',
@@ -396,9 +418,8 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '{"area": 2.5, "terrain_type": "Plano", "work_type": "Fresagem", "accessibility": "Estrada alcatroada"}'::jsonb,
     NOW() - INTERVAL '2 days');
 
--- Sat May 16 — 1 job
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(74, 21, 6, 'AWARDED', 'Reparação de cerca elétrica — 300 metros',
+(1074, 1021, 6, 'AWARDED', 'Reparação de cerca elétrica — 300 metros',
     'Cerca elétrica de pastagem com falhas. Preciso de reparação e substituição de isoladores em mau estado.',
     ST_SetSRID(ST_MakePoint(-27.0610, 38.7340), 4326),
     'Santa Cruz', 'Praia da Vitória', 'Terceira', 300, 'metros', 'MEDIUM',
@@ -406,9 +427,8 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '{"length_meters": 300, "fence_type": "Elétrica", "work_type": "Reparação"}'::jsonb,
     NOW() - INTERVAL '2 days');
 
--- Mon May 18 — 3 jobs (machine 1 conflict between req 75 and 76)
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(75, 2, 1, 'AWARDED', 'Lavoura de campo para batata — 3 hectares',
+(1075, 2, 1, 'AWARDED', 'Lavoura de campo para batata — 3 hectares',
     'Preparação para batata nova. Lavoura profunda com terreno solto, possível pequena gradagem após.',
     ST_SetSRID(ST_MakePoint(-27.2070, 38.6680), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 3.0, 'hectares', 'HIGH',
@@ -417,7 +437,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '1 day');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(76, 20, 1, 'AWARDED', 'Subsolagem em pomar — 2 hectares',
+(1076, 1020, 1, 'AWARDED', 'Subsolagem em pomar — 2 hectares',
     'Pomar precisa de subsolagem entre filas para arejar e melhorar drenagem.',
     ST_SetSRID(ST_MakePoint(-27.2300, 38.6700), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 2.0, 'hectares', 'MEDIUM',
@@ -426,7 +446,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '1 day');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(77, 3, 5, 'AWARDED', 'Limpeza de mato em pastagem — 2 hectares',
+(1077, 3, 5, 'AWARDED', 'Limpeza de mato em pastagem — 2 hectares',
     'Pastagem invadida por silvas e fetos. Limpeza com destroçador para travar avanço.',
     ST_SetSRID(ST_MakePoint(-27.0650, 38.7280), 4326),
     'Lajes', 'Praia da Vitória', 'Terceira', 2.0, 'hectares', 'MEDIUM',
@@ -434,9 +454,8 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '{"area": 2, "vegetation_type": "Silvas/Mato baixo", "waste_disposal": "Triturar no local"}'::jsonb,
     NOW() - INTERVAL '1 day');
 
--- Tue May 19 — 2 jobs
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(78, 2, 7, 'AWARDED', 'Instalação de rega gota-a-gota — 0.5 hectares',
+(1078, 2, 7, 'AWARDED', 'Instalação de rega gota-a-gota — 0.5 hectares',
     'Instalação de sistema gota-a-gota em horta familiar de 0.5 hectares. Material já está no terreno.',
     ST_SetSRID(ST_MakePoint(-27.2210, 38.6660), 4326),
     'São Pedro', 'Angra do Heroísmo', 'Terceira', 0.5, 'hectares', 'MEDIUM',
@@ -445,7 +464,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '1 day');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(79, 4, 2, 'AWARDED', 'Tratamento de Mildio em vinha — 1.8 hectares',
+(1079, 4, 2, 'AWARDED', 'Tratamento de Mildio em vinha — 1.8 hectares',
     'Tratamento preventivo de míldio em vinha jovem. Atomização aérea de copa.',
     ST_SetSRID(ST_MakePoint(-25.6770, 37.7310), 4326),
     'São Sebastião', 'Ponta Delgada', 'São Miguel', 1.8, 'hectares', 'HIGH',
@@ -453,9 +472,8 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '{"area": 1.8, "crop_type": "Vinha", "treatment_type": "Fungicida", "product_provided": "Não, forneço eu"}'::jsonb,
     NOW() - INTERVAL '1 day');
 
--- Wed May 20 — 2 jobs (joao.silva)
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(80, 2, 3, 'AWARDED', 'Colheita de erva seca para fardos — 4 hectares',
+(1080, 2, 3, 'AWARDED', 'Colheita de erva seca para fardos — 4 hectares',
     'Erva já cortada e amontoada, falta enfardar. Pretende-se fardos quadrados pequenos.',
     ST_SetSRID(ST_MakePoint(-27.2100, 38.6720), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 4.0, 'hectares', 'HIGH',
@@ -464,7 +482,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     NOW() - INTERVAL '1 day');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(81, 2, 2, 'AWARDED', 'Aplicação de adubo em pastagem — 6 hectares',
+(1081, 2, 2, 'AWARDED', 'Aplicação de adubo em pastagem — 6 hectares',
     'Adubação de cobertura com NPK 20-10-10 em pastagem para vacas leiteiras. Aplicação uniforme.',
     ST_SetSRID(ST_MakePoint(-27.2150, 38.6680), 4326),
     'Sé', 'Angra do Heroísmo', 'Terceira', 6.0, 'hectares', 'MEDIUM',
@@ -472,9 +490,8 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '{"area": 6, "crop_type": "Pastagem", "treatment_type": "Fertilização", "product_provided": "Sim"}'::jsonb,
     NOW() - INTERVAL '1 day');
 
--- Thu May 21 — 1 job
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(82, 11, 3, 'AWARDED', 'Colheita de cereal — 3 hectares Faial',
+(1082, 11, 3, 'AWARDED', 'Colheita de cereal — 3 hectares Faial',
     'Colheita de aveia mecanizada com ceifeira-debulhadora. Trabalho num único dia.',
     ST_SetSRID(ST_MakePoint(-28.7160, 38.5360), 4326),
     'Flamengos', 'Horta', 'Faial', 3.0, 'hectares', 'HIGH',
@@ -482,9 +499,8 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '{"area": 3, "crop_type": "Aveia", "method": "Mecanizada"}'::jsonb,
     NOW() - INTERVAL '1 day');
 
--- Fri May 22 — 1 job (joao.silva)
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, created_at) VALUES
-(83, 2, 5, 'AWARDED', 'Limpeza de bermas e regadeiras — 1.5 km',
+(1083, 2, 5, 'AWARDED', 'Limpeza de bermas e regadeiras — 1.5 km',
     'Limpeza geral de bermas em caminho da propriedade. Roça e recolha de vegetação rasteira.',
     ST_SetSRID(ST_MakePoint(-27.2130, 38.6700), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 1.5, 'hectares', 'LOW',
@@ -496,7 +512,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
 -- ── PUBLISHED (open, no proposals yet) ───────────────────────
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, expires_at, created_at) VALUES
-(84, 2, 6, 'PUBLISHED', 'Instalação de vedação nova em parcela — 500 metros',
+(1084, 2, 6, 'PUBLISHED', 'Instalação de vedação nova em parcela — 500 metros',
     'Parcela adquirida recentemente sem qualquer vedação. Preciso de cerca completa em rede de arame com postes de madeira.',
     ST_SetSRID(ST_MakePoint(-27.2050, 38.6740), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 500, 'metros', 'MEDIUM',
@@ -505,7 +521,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '2026-06-05 23:59:59', NOW() - INTERVAL '6 hours');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, expires_at, created_at) VALUES
-(85, 22, 8, 'PUBLISHED', 'Manutenção mensal de jardim — pacote 3 meses',
+(1085, 1022, 8, 'PUBLISHED', 'Manutenção mensal de jardim — pacote 3 meses',
     'Procura prestador para manutenção quinzenal de jardim residencial. Corte de relva, poda de sebes, limpeza geral.',
     ST_SetSRID(ST_MakePoint(-25.6840, 37.7510), 4326),
     'São Sebastião', 'Ponta Delgada', 'São Miguel', 700, 'm²', 'LOW',
@@ -514,7 +530,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '2026-05-30 23:59:59', NOW() - INTERVAL '1 day');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, expires_at, created_at) VALUES
-(86, 3, 4, 'PUBLISHED', 'Transporte de gado leiteiro — 15 vacas',
+(1086, 3, 4, 'PUBLISHED', 'Transporte de gado leiteiro — 15 vacas',
     'Transporte de 15 vacas leiteiras Holstein entre duas propriedades na Terceira. Carga e descarga incluídas.',
     ST_SetSRID(ST_MakePoint(-27.0700, 38.7300), 4326),
     'Santa Cruz', 'Praia da Vitória', 'Terceira', NULL, NULL, 'MEDIUM',
@@ -526,7 +542,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
 -- ── WITH_PROPOSALS ──────────────────────────────────────────
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, expires_at, created_at) VALUES
-(87, 2, 3, 'WITH_PROPOSALS', 'Colheita de batata branca — 2 hectares',
+(1087, 2, 3, 'WITH_PROPOSALS', 'Colheita de batata branca — 2 hectares',
     'Batata branca pronta a colher, plantada em Março. Procuro prestador com arrancador mecânico de batata.',
     ST_SetSRID(ST_MakePoint(-27.2120, 38.6740), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 2.0, 'hectares', 'HIGH',
@@ -535,7 +551,7 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
     '2026-05-22 23:59:59', NOW() - INTERVAL '2 days');
 
 INSERT INTO service_requests (id, client_id, category_id, status, title, description, location, parish, municipality, island, area, area_unit, urgency, preferred_date_from, preferred_date_to, form_data, expires_at, created_at) VALUES
-(88, 20, 1, 'WITH_PROPOSALS', 'Subsolagem em pastagem recente — 4 hectares',
+(1088, 1020, 1, 'WITH_PROPOSALS', 'Subsolagem em pastagem recente — 4 hectares',
     'Pastagem nova com sinais de compactação no terço superior. Subsolagem para corrigir.',
     ST_SetSRID(ST_MakePoint(-27.2310, 38.6690), 4326),
     'Terra Chã', 'Angra do Heroísmo', 'Terceira', 4.0, 'hectares', 'MEDIUM',
@@ -545,209 +561,199 @@ INSERT INTO service_requests (id, client_id, category_id, status, title, descrip
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 8 — Proposals (IDs 31-67)
+-- PART 8 — Proposals (IDs 1031-1067)
 -- ═══════════════════════════════════════════════════════════════
--- ACCEPTED proposals: one per request 51-83 (provider 1 won all).
--- WITH_PROPOSALS (req 87, 88) each have 2 PENDING (P1 + competitor).
 
--- COMPLETED (req 51-58) — proposals 31-38
+-- COMPLETED (req 1051-1058) — proposals 1031-1038
 INSERT INTO proposals (id, request_id, provider_id, status, price, pricing_model, unit_price, estimated_units, description, includes_text, excludes_text, estimated_date, created_at) VALUES
-(31, 51, 1, 'ACCEPTED', 520.00, 'PER_UNIT', 130.00, 4, 'Lavoura com tractor New Holland T5.120 e charrua reversível 3 ferros. 2 dias estimados.',
+(1031, 1051, 1, 'ACCEPTED', 520.00, 'PER_UNIT', 130.00, 4, 'Lavoura com tractor New Holland T5.120 e charrua reversível 3 ferros. 2 dias estimados.',
     'Mão de obra, máquina, combustível', 'Eventuais reparações de muros ou caminhos',
     '2026-04-28', NOW() - INTERVAL '21 days'),
-(32, 52, 1, 'ACCEPTED', 200.00, 'PER_UNIT', 100.00, 2, 'Fresagem com Massey Ferguson 4707 e fresa 2m. Trabalho num único dia.',
+(1032, 1052, 1, 'ACCEPTED', 200.00, 'PER_UNIT', 100.00, 2, 'Fresagem com Massey Ferguson 4707 e fresa 2m. Trabalho num único dia.',
     'Mão de obra, máquina, combustível', 'Remoção de pedras',
     '2026-04-30', NOW() - INTERVAL '19 days'),
-(33, 53, 1, 'ACCEPTED', 240.00, 'PER_UNIT', 160.00, 1.5, 'Pulverização com atomizador 800L e tractor MF 4707. Operador experiente em pomares.',
+(1033, 1053, 1, 'ACCEPTED', 240.00, 'PER_UNIT', 160.00, 1.5, 'Pulverização com atomizador 800L e tractor MF 4707. Operador experiente em pomares.',
     'Mão de obra, máquina, deslocação', 'Produtos fitossanitários (fornecidos pelo cliente)',
     '2026-05-02', NOW() - INTERVAL '16 days'),
-(34, 54, 1, 'ACCEPTED', 360.00, 'PER_UNIT',  90.00, 4, 'Gradagem em duas passagens cruzadas. New Holland + grade de discos 28".',
+(1034, 1054, 1, 'ACCEPTED', 360.00, 'PER_UNIT',  90.00, 4, 'Gradagem em duas passagens cruzadas. New Holland + grade de discos 28".',
     'Mão de obra, máquina, combustível', 'Eventual aplicação de adubo',
     '2026-05-04', NOW() - INTERVAL '11 days'),
-(35, 55, 1, 'ACCEPTED', 270.00, 'PER_UNIT',  90.00, 3, 'Aplicação herbicida com pulverizador 2000L. Trabalho rápido e preciso.',
+(1035, 1055, 1, 'ACCEPTED', 270.00, 'PER_UNIT',  90.00, 3, 'Aplicação herbicida com pulverizador 2000L. Trabalho rápido e preciso.',
     'Mão de obra, máquina, deslocação', 'Produto herbicida (fornecido pelo cliente)',
     '2026-05-05', NOW() - INTERVAL '10 days'),
-(36, 56, 1, 'ACCEPTED', 320.00, 'PER_UNIT', 160.00, 2, 'Tratamento fungicida em vinha. Atomizador 800L. Deslocação para Faial incluída.',
+(1036, 1056, 1, 'ACCEPTED', 320.00, 'PER_UNIT', 160.00, 2, 'Tratamento fungicida em vinha. Atomizador 800L. Deslocação para Faial incluída.',
     'Mão de obra, máquina, deslocação inter-ilhas', 'Produto fungicida',
     '2026-05-06', NOW() - INTERVAL '9 days'),
-(37, 57, 1, 'ACCEPTED', 380.00, 'PER_UNIT',   1.90, 200, 'Reparação de vedação com substituição de postes em mau estado e remate de rede.',
+(1037, 1057, 1, 'ACCEPTED', 380.00, 'PER_UNIT',   1.90, 200, 'Reparação de vedação com substituição de postes em mau estado e remate de rede.',
     'Mão de obra, postes novos, deslocação', 'Pintura ou tratamento extra de postes',
     '2026-05-07', NOW() - INTERVAL '8 days'),
-(38, 58, 1, 'ACCEPTED', 220.00, 'FIXED', NULL, NULL, 'Transporte de 30 fardos com Iveco Daily. Carga e descarga incluídas.',
+(1038, 1058, 1, 'ACCEPTED', 220.00, 'FIXED', NULL, NULL, 'Transporte de 30 fardos com Iveco Daily. Carga e descarga incluídas.',
     'Mão de obra, viatura, combustível', 'Empilhamento no destino',
     '2026-05-08', NOW() - INTERVAL '7 days');
 
--- RATED (req 59-63) — proposals 39-43
+-- RATED (req 1059-1063) — proposals 1039-1043
 INSERT INTO proposals (id, request_id, provider_id, status, price, pricing_model, unit_price, estimated_units, description, includes_text, excludes_text, estimated_date, created_at) VALUES
-(39, 59, 1, 'ACCEPTED', 780.00, 'PER_UNIT', 130.00, 6, 'Lavoura profunda com New Holland T5.120 + charrua reversível. Cuidado especial nas zonas declivosas.',
+(1039, 1059, 1, 'ACCEPTED', 780.00, 'PER_UNIT', 130.00, 6, 'Lavoura profunda com New Holland T5.120 + charrua reversível. Cuidado especial nas zonas declivosas.',
     'Mão de obra, máquina, combustível', 'Gradagem posterior',
     '2026-02-14', NOW() - INTERVAL '91 days'),
-(40, 60, 1, 'ACCEPTED', 750.00, 'PER_UNIT', 150.00, 5, 'Colheita com ceifeira Claas. Trabalho contínuo num único dia.',
+(1040, 1060, 1, 'ACCEPTED', 750.00, 'PER_UNIT', 150.00, 5, 'Colheita com ceifeira Claas. Trabalho contínuo num único dia.',
     'Mão de obra, máquina, combustível', 'Transporte do silo (cliente)',
     '2026-03-10', NOW() - INTERVAL '69 days'),
-(41, 61, 1, 'ACCEPTED', 280.00, 'PER_UNIT', 140.00, 2, 'Aplicação foliar com atomizador 800L. Operador experiente em citrinos.',
+(1041, 1061, 1, 'ACCEPTED', 280.00, 'PER_UNIT', 140.00, 2, 'Aplicação foliar com atomizador 800L. Operador experiente em citrinos.',
     'Mão de obra, máquina, deslocação', 'Produto adubo foliar e fungicida',
     '2026-03-19', NOW() - INTERVAL '57 days'),
-(42, 62, 1, 'ACCEPTED', 330.00, 'PER_UNIT', 110.00, 3, 'Fresagem fina com Massey Ferguson 4707 e fresa 2m. Solo fica pronto para semeadura.',
+(1042, 1062, 1, 'ACCEPTED', 330.00, 'PER_UNIT', 110.00, 3, 'Fresagem fina com Massey Ferguson 4707 e fresa 2m. Solo fica pronto para semeadura.',
     'Mão de obra, máquina, combustível', 'Sementes',
     '2026-04-05', NOW() - INTERVAL '41 days'),
-(43, 63, 1, 'ACCEPTED', 720.00, 'PER_UNIT',  90.00, 8, 'Gradagem em duas passagens cruzadas. Trabalho num único dia se o tempo ajudar.',
+(1043, 1063, 1, 'ACCEPTED', 720.00, 'PER_UNIT',  90.00, 8, 'Gradagem em duas passagens cruzadas. Trabalho num único dia se o tempo ajudar.',
     'Mão de obra, máquina, combustível', 'Sementeira (à parte)',
     '2026-04-16', NOW() - INTERVAL '29 days');
 
--- AWAITING_CONFIRMATION (req 64-65) — proposals 44-45
+-- AWAITING_CONFIRMATION (req 1064-1065) — proposals 1044-1045
 INSERT INTO proposals (id, request_id, provider_id, status, price, pricing_model, unit_price, estimated_units, description, includes_text, excludes_text, estimated_date, created_at) VALUES
-(44, 64, 1, 'ACCEPTED', 360.00, 'PER_UNIT',  90.00, 4, 'Aplicação de NPK 20-10-10 com pulverizador 2000L. Distribuição uniforme garantida.',
+(1044, 1064, 1, 'ACCEPTED', 360.00, 'PER_UNIT',  90.00, 4, 'Aplicação de NPK 20-10-10 com pulverizador 2000L. Distribuição uniforme garantida.',
     'Mão de obra, máquina, deslocação', 'Produto adubo (fornecido pelo cliente)',
     '2026-05-11', NOW() - INTERVAL '5 days'),
-(45, 65, 1, 'ACCEPTED', 195.00, 'PER_UNIT', 130.00, 1.5, 'Limpeza com destroçador florestal. Trabalho de meio dia.',
+(1045, 1065, 1, 'ACCEPTED', 195.00, 'PER_UNIT', 130.00, 1.5, 'Limpeza com destroçador florestal. Trabalho de meio dia.',
     'Mão de obra, máquina, combustível', 'Remoção de troncos',
     '2026-05-11', NOW() - INTERVAL '4 days');
 
--- IN_PROGRESS (req 66-68) — proposals 46-48
+-- IN_PROGRESS (req 1066-1068) — proposals 1046-1048
 INSERT INTO proposals (id, request_id, provider_id, status, price, pricing_model, unit_price, estimated_units, description, includes_text, excludes_text, estimated_date, created_at) VALUES
-(46, 66, 1, 'ACCEPTED', 360.00, 'PER_UNIT', 120.00, 3, 'Subsolagem profunda com subsolador montado em New Holland T5.120. Solo bem arejado.',
+(1046, 1066, 1, 'ACCEPTED', 360.00, 'PER_UNIT', 120.00, 3, 'Subsolagem profunda com subsolador montado em New Holland T5.120. Solo bem arejado.',
     'Mão de obra, máquina, combustível', 'Gradagem posterior',
     '2026-05-13', NOW() - INTERVAL '3 days'),
-(47, 67, 1, 'ACCEPTED', 140.00, 'FIXED', NULL, NULL, 'Transporte de adubo do porto com Iveco Daily. Inclui carga e descarga em rampa.',
+(1047, 1067, 1, 'ACCEPTED', 140.00, 'FIXED', NULL, NULL, 'Transporte de adubo do porto com Iveco Daily. Inclui carga e descarga em rampa.',
     'Mão de obra, viatura, combustível', 'Eventuais paletes danificadas',
     '2026-05-13', NOW() - INTERVAL '2 days'),
-(48, 68, 1, 'ACCEPTED', 180.00, 'PER_UNIT', 225.00, 0.8, 'Limpeza com destroçador. 1 dia e meio estimado.',
+(1048, 1068, 1, 'ACCEPTED', 180.00, 'PER_UNIT', 225.00, 0.8, 'Limpeza com destroçador. 1 dia e meio estimado.',
     'Mão de obra, máquina, combustível', 'Remoção de pedras grandes',
     '2026-05-13', NOW() - INTERVAL '3 days');
 
--- AWARDED (req 69-83) — proposals 49-63
+-- AWARDED (req 1069-1083) — proposals 1049-1063
 INSERT INTO proposals (id, request_id, provider_id, status, price, pricing_model, unit_price, estimated_units, description, includes_text, excludes_text, estimated_date, created_at) VALUES
-(49, 69, 1, 'ACCEPTED', 280.00, 'PER_UNIT',  70.00, 4, 'Tratamento herbicida seletivo com pulverizador 2000L. Aplicação matinal sem vento.',
+(1049, 1069, 1, 'ACCEPTED', 280.00, 'PER_UNIT',  70.00, 4, 'Tratamento herbicida seletivo com pulverizador 2000L. Aplicação matinal sem vento.',
     'Mão de obra, máquina, deslocação', 'Produto herbicida (fornecido pelo cliente)',
     '2026-05-14', NOW() - INTERVAL '4 days'),
-(50, 70, 1, 'ACCEPTED', 240.00, 'PER_UNIT',  80.00, 3, 'Gradagem com John Deere 6120M e grade de discos 28".',
+(1050, 1070, 1, 'ACCEPTED', 240.00, 'PER_UNIT',  80.00, 3, 'Gradagem com John Deere 6120M e grade de discos 28".',
     'Mão de obra, máquina, combustível', 'Sementeira',
     '2026-05-14', NOW() - INTERVAL '3 days'),
-(51, 71, 1, 'ACCEPTED', 650.00, 'PER_UNIT', 130.00, 5, 'Lavoura profunda em terreno inclinado. New Holland + charrua reversível.',
+(1051, 1071, 1, 'ACCEPTED', 650.00, 'PER_UNIT', 130.00, 5, 'Lavoura profunda em terreno inclinado. New Holland + charrua reversível.',
     'Mão de obra, máquina, combustível', 'Gradagem posterior',
     '2026-05-14', NOW() - INTERVAL '3 days'),
-(52, 72, 1, 'ACCEPTED', 195.00, 'PER_UNIT', 130.00, 1.5, 'Aplicação fungicida com atomizador 800L. Operação muito cuidada para evitar derivação.',
+(1052, 1072, 1, 'ACCEPTED', 195.00, 'PER_UNIT', 130.00, 1.5, 'Aplicação fungicida com atomizador 800L. Operação muito cuidada para evitar derivação.',
     'Mão de obra, máquina, deslocação', 'Produto fungicida (fornecido pelo cliente)',
     '2026-05-15', NOW() - INTERVAL '2 days'),
-(53, 73, 1, 'ACCEPTED', 280.00, 'PER_UNIT', 112.00, 2.5, 'Fresagem fina para sementeira de milho. MF 4707 + fresa 2m.',
+(1053, 1073, 1, 'ACCEPTED', 280.00, 'PER_UNIT', 112.00, 2.5, 'Fresagem fina para sementeira de milho. MF 4707 + fresa 2m.',
     'Mão de obra, máquina, deslocação inter-ilhas', 'Sementeira',
     '2026-05-15', NOW() - INTERVAL '2 days'),
-(54, 74, 1, 'ACCEPTED', 290.00, 'PER_UNIT',   0.97, 300, 'Reparação de cerca elétrica com substituição de isoladores e teste de continuidade.',
+(1054, 1074, 1, 'ACCEPTED', 290.00, 'PER_UNIT',   0.97, 300, 'Reparação de cerca elétrica com substituição de isoladores e teste de continuidade.',
     'Mão de obra, isoladores novos, deslocação', 'Energizador (cliente possui)',
     '2026-05-16', NOW() - INTERVAL '2 days'),
-(55, 75, 1, 'ACCEPTED', 420.00, 'PER_UNIT', 140.00, 3, 'Lavoura profunda com New Holland e charrua reversível 3 ferros. 1 dia.',
+(1055, 1075, 1, 'ACCEPTED', 420.00, 'PER_UNIT', 140.00, 3, 'Lavoura profunda com New Holland e charrua reversível 3 ferros. 1 dia.',
     'Mão de obra, máquina, combustível', 'Gradagem posterior',
     '2026-05-18', NOW() - INTERVAL '1 day'),
-(56, 76, 1, 'ACCEPTED', 320.00, 'PER_UNIT', 160.00, 2, 'Subsolagem em filas. New Holland T5.120 + subsolador.',
+(1056, 1076, 1, 'ACCEPTED', 320.00, 'PER_UNIT', 160.00, 2, 'Subsolagem em filas. New Holland T5.120 + subsolador.',
     'Mão de obra, máquina, combustível', 'Cobertura morta entre filas',
     '2026-05-18', NOW() - INTERVAL '1 day'),
-(57, 77, 1, 'ACCEPTED', 220.00, 'PER_UNIT', 110.00, 2, 'Destroçamento com destroçador florestal. Trabalho de 1 dia.',
+(1057, 1077, 1, 'ACCEPTED', 220.00, 'PER_UNIT', 110.00, 2, 'Destroçamento com destroçador florestal. Trabalho de 1 dia.',
     'Mão de obra, máquina, combustível', 'Remoção de troncos grandes',
     '2026-05-18', NOW() - INTERVAL '1 day'),
-(58, 78, 1, 'ACCEPTED', 320.00, 'FIXED', NULL, NULL, 'Instalação completa de gota-a-gota em 0.5ha. Inclui testes.',
+(1058, 1078, 1, 'ACCEPTED', 320.00, 'FIXED', NULL, NULL, 'Instalação completa de gota-a-gota em 0.5ha. Inclui testes.',
     'Mão de obra, conectores e válvulas, deslocação', 'Material principal (tubo, gotejadores — cliente já tem)',
     '2026-05-19', NOW() - INTERVAL '1 day'),
-(59, 79, 1, 'ACCEPTED', 240.00, 'PER_UNIT', 133.33, 1.8, 'Tratamento com atomizador 800L. Atomização aérea de copa.',
+(1059, 1079, 1, 'ACCEPTED', 240.00, 'PER_UNIT', 133.33, 1.8, 'Tratamento com atomizador 800L. Atomização aérea de copa.',
     'Mão de obra, máquina, deslocação inter-ilhas', 'Produto fungicida',
     '2026-05-19', NOW() - INTERVAL '1 day'),
-(60, 80, 1, 'ACCEPTED', 480.00, 'PER_UNIT', 120.00, 4, 'Colheita de erva seca e enfardamento com fardos quadrados pequenos.',
+(1060, 1080, 1, 'ACCEPTED', 480.00, 'PER_UNIT', 120.00, 4, 'Colheita de erva seca e enfardamento com fardos quadrados pequenos.',
     'Mão de obra, máquina, combustível', 'Transporte para armazém',
     '2026-05-20', NOW() - INTERVAL '1 day'),
-(61, 81, 1, 'ACCEPTED', 420.00, 'PER_UNIT',  70.00, 6, 'Aplicação de NPK 20-10-10 com pulverizador 2000L em pastagem.',
+(1061, 1081, 1, 'ACCEPTED', 420.00, 'PER_UNIT',  70.00, 6, 'Aplicação de NPK 20-10-10 com pulverizador 2000L em pastagem.',
     'Mão de obra, máquina, deslocação', 'Produto adubo (fornecido pelo cliente)',
     '2026-05-20', NOW() - INTERVAL '1 day'),
-(62, 82, 1, 'ACCEPTED', 570.00, 'PER_UNIT', 190.00, 3, 'Colheita de aveia com ceifeira Claas. Deslocação inter-ilhas incluída.',
+(1062, 1082, 1, 'ACCEPTED', 570.00, 'PER_UNIT', 190.00, 3, 'Colheita de aveia com ceifeira Claas. Deslocação inter-ilhas incluída.',
     'Mão de obra, máquina, deslocação Faial', 'Armazenamento do grão',
     '2026-05-21', NOW() - INTERVAL '1 day'),
-(63, 83, 1, 'ACCEPTED', 180.00, 'PER_UNIT', 120.00, 1.5, 'Roça e limpeza de bermas com moto-roçadora e carrinha de apoio.',
+(1063, 1083, 1, 'ACCEPTED', 180.00, 'PER_UNIT', 120.00, 1.5, 'Roça e limpeza de bermas com moto-roçadora e carrinha de apoio.',
     'Mão de obra, máquina, combustível', 'Aplicação de herbicida',
     '2026-05-22', NOW() - INTERVAL '1 day');
 
--- WITH_PROPOSALS (req 87-88) — 2 PENDING each (provider 1 + provider 2)
+-- WITH_PROPOSALS (req 1087-1088) — 2 PENDING each (provider 1 + provider 2)
 INSERT INTO proposals (id, request_id, provider_id, status, price, pricing_model, unit_price, estimated_units, description, includes_text, excludes_text, estimated_date, valid_until, created_at) VALUES
-(64, 87, 1, 'PENDING', 380.00, 'PER_UNIT', 190.00, 2, 'Colheita de batata com arrancador mecânico Spedo. Acondicionamento em caixas.',
+(1064, 1087, 1, 'PENDING', 380.00, 'PER_UNIT', 190.00, 2, 'Colheita de batata com arrancador mecânico Spedo. Acondicionamento em caixas.',
     'Mão de obra, máquina, combustível', 'Transporte para armazenamento',
     '2026-05-27', '2026-05-22 23:59:59', NOW() - INTERVAL '1 day'),
-(65, 87, 2, 'PENDING', 360.00, 'PER_UNIT', 180.00, 2, 'Colheita de batata com sistema da Verde Açores. Acondicionamento em sacos.',
+(1065, 1087, 2, 'PENDING', 360.00, 'PER_UNIT', 180.00, 2, 'Colheita de batata com sistema da Verde Açores. Acondicionamento em sacos.',
     'Mão de obra, máquina, combustível', 'Caixas de armazenamento',
     '2026-05-28', '2026-05-22 23:59:59', NOW() - INTERVAL '1 day'),
-(66, 88, 1, 'PENDING', 520.00, 'PER_UNIT', 130.00, 4, 'Subsolagem com subsolador montado em New Holland T5.120. Trabalho cuidado em encosta.',
+(1066, 1088, 1, 'PENDING', 520.00, 'PER_UNIT', 130.00, 4, 'Subsolagem com subsolador montado em New Holland T5.120. Trabalho cuidado em encosta.',
     'Mão de obra, máquina, combustível', 'Gradagem posterior',
     '2026-05-27', '2026-05-24 23:59:59', NOW() - INTERVAL '12 hours'),
-(67, 88, 2, 'PENDING', 540.00, 'PER_UNIT', 135.00, 4, 'Subsolagem com John Deere 6130M. Possibilidade de gradagem incluída por valor adicional.',
+(1067, 1088, 2, 'PENDING', 540.00, 'PER_UNIT', 135.00, 4, 'Subsolagem com John Deere 6130M. Possibilidade de gradagem incluída por valor adicional.',
     'Mão de obra, máquina, deslocação', 'Gradagem (preço à parte)',
     '2026-05-28', '2026-05-24 23:59:59', NOW() - INTERVAL '6 hours');
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 9 — Transactions (IDs 24-56)
+-- PART 9 — Transactions (IDs 1024-1056)
 -- ═══════════════════════════════════════════════════════════════
--- One per request that has an ACCEPTED proposal.
--- Status: RELEASED for COMPLETED/RATED; HELD for AWAITING_CONFIRMATION/IN_PROGRESS/AWARDED.
--- Commission 12% (matches V999).
 
 -- COMPLETED → RELEASED (8 rows)
 INSERT INTO transactions (id, request_id, proposal_id, amount, commission_rate, commission_amount, provider_payout, status, held_at, released_at, created_at) VALUES
-(24, 51, 31, 520.00, 0.12, 62.40, 457.60, 'RELEASED', NOW() - INTERVAL '21 days', NOW() - INTERVAL '17 days', NOW() - INTERVAL '21 days'),
-(25, 52, 32, 200.00, 0.12, 24.00, 176.00, 'RELEASED', NOW() - INTERVAL '19 days', NOW() - INTERVAL '16 days', NOW() - INTERVAL '19 days'),
-(26, 53, 33, 240.00, 0.12, 28.80, 211.20, 'RELEASED', NOW() - INTERVAL '16 days', NOW() - INTERVAL '14 days', NOW() - INTERVAL '16 days'),
-(27, 54, 34, 360.00, 0.12, 43.20, 316.80, 'RELEASED', NOW() - INTERVAL '11 days', NOW() - INTERVAL '8 days',  NOW() - INTERVAL '11 days'),
-(28, 55, 35, 270.00, 0.12, 32.40, 237.60, 'RELEASED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '7 days',  NOW() - INTERVAL '10 days'),
-(29, 56, 36, 320.00, 0.12, 38.40, 281.60, 'RELEASED', NOW() - INTERVAL '9 days',  NOW() - INTERVAL '6 days',  NOW() - INTERVAL '9 days'),
-(30, 57, 37, 380.00, 0.12, 45.60, 334.40, 'RELEASED', NOW() - INTERVAL '8 days',  NOW() - INTERVAL '5 days',  NOW() - INTERVAL '8 days'),
-(31, 58, 38, 220.00, 0.12, 26.40, 193.60, 'RELEASED', NOW() - INTERVAL '7 days',  NOW() - INTERVAL '4 days',  NOW() - INTERVAL '7 days');
+(1024, 1051, 1031, 520.00, 0.12, 62.40, 457.60, 'RELEASED', NOW() - INTERVAL '21 days', NOW() - INTERVAL '17 days', NOW() - INTERVAL '21 days'),
+(1025, 1052, 1032, 200.00, 0.12, 24.00, 176.00, 'RELEASED', NOW() - INTERVAL '19 days', NOW() - INTERVAL '16 days', NOW() - INTERVAL '19 days'),
+(1026, 1053, 1033, 240.00, 0.12, 28.80, 211.20, 'RELEASED', NOW() - INTERVAL '16 days', NOW() - INTERVAL '14 days', NOW() - INTERVAL '16 days'),
+(1027, 1054, 1034, 360.00, 0.12, 43.20, 316.80, 'RELEASED', NOW() - INTERVAL '11 days', NOW() - INTERVAL '8 days',  NOW() - INTERVAL '11 days'),
+(1028, 1055, 1035, 270.00, 0.12, 32.40, 237.60, 'RELEASED', NOW() - INTERVAL '10 days', NOW() - INTERVAL '7 days',  NOW() - INTERVAL '10 days'),
+(1029, 1056, 1036, 320.00, 0.12, 38.40, 281.60, 'RELEASED', NOW() - INTERVAL '9 days',  NOW() - INTERVAL '6 days',  NOW() - INTERVAL '9 days'),
+(1030, 1057, 1037, 380.00, 0.12, 45.60, 334.40, 'RELEASED', NOW() - INTERVAL '8 days',  NOW() - INTERVAL '5 days',  NOW() - INTERVAL '8 days'),
+(1031, 1058, 1038, 220.00, 0.12, 26.40, 193.60, 'RELEASED', NOW() - INTERVAL '7 days',  NOW() - INTERVAL '4 days',  NOW() - INTERVAL '7 days');
 
 -- RATED → RELEASED (5 rows)
 INSERT INTO transactions (id, request_id, proposal_id, amount, commission_rate, commission_amount, provider_payout, status, held_at, released_at, created_at) VALUES
-(32, 59, 39, 780.00, 0.12,  93.60, 686.40, 'RELEASED', NOW() - INTERVAL '91 days', NOW() - INTERVAL '85 days', NOW() - INTERVAL '91 days'),
-(33, 60, 40, 750.00, 0.12,  90.00, 660.00, 'RELEASED', NOW() - INTERVAL '69 days', NOW() - INTERVAL '63 days', NOW() - INTERVAL '69 days'),
-(34, 61, 41, 280.00, 0.12,  33.60, 246.40, 'RELEASED', NOW() - INTERVAL '57 days', NOW() - INTERVAL '52 days', NOW() - INTERVAL '57 days'),
-(35, 62, 42, 330.00, 0.12,  39.60, 290.40, 'RELEASED', NOW() - INTERVAL '41 days', NOW() - INTERVAL '36 days', NOW() - INTERVAL '41 days'),
-(36, 63, 43, 720.00, 0.12,  86.40, 633.60, 'RELEASED', NOW() - INTERVAL '29 days', NOW() - INTERVAL '23 days', NOW() - INTERVAL '29 days');
+(1032, 1059, 1039, 780.00, 0.12,  93.60, 686.40, 'RELEASED', NOW() - INTERVAL '91 days', NOW() - INTERVAL '85 days', NOW() - INTERVAL '91 days'),
+(1033, 1060, 1040, 750.00, 0.12,  90.00, 660.00, 'RELEASED', NOW() - INTERVAL '69 days', NOW() - INTERVAL '63 days', NOW() - INTERVAL '69 days'),
+(1034, 1061, 1041, 280.00, 0.12,  33.60, 246.40, 'RELEASED', NOW() - INTERVAL '57 days', NOW() - INTERVAL '52 days', NOW() - INTERVAL '57 days'),
+(1035, 1062, 1042, 330.00, 0.12,  39.60, 290.40, 'RELEASED', NOW() - INTERVAL '41 days', NOW() - INTERVAL '36 days', NOW() - INTERVAL '41 days'),
+(1036, 1063, 1043, 720.00, 0.12,  86.40, 633.60, 'RELEASED', NOW() - INTERVAL '29 days', NOW() - INTERVAL '23 days', NOW() - INTERVAL '29 days');
 
 -- AWAITING_CONFIRMATION → HELD (2 rows)
 INSERT INTO transactions (id, request_id, proposal_id, amount, commission_rate, commission_amount, provider_payout, status, held_at, created_at) VALUES
-(37, 64, 44, 360.00, 0.12, 43.20, 316.80, 'HELD', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
-(38, 65, 45, 195.00, 0.12, 23.40, 171.60, 'HELD', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days');
+(1037, 1064, 1044, 360.00, 0.12, 43.20, 316.80, 'HELD', NOW() - INTERVAL '5 days', NOW() - INTERVAL '5 days'),
+(1038, 1065, 1045, 195.00, 0.12, 23.40, 171.60, 'HELD', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days');
 
 -- IN_PROGRESS → HELD (3 rows)
 INSERT INTO transactions (id, request_id, proposal_id, amount, commission_rate, commission_amount, provider_payout, status, held_at, created_at) VALUES
-(39, 66, 46, 360.00, 0.12, 43.20, 316.80, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
-(40, 67, 47, 140.00, 0.12, 16.80, 123.20, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(41, 68, 48, 180.00, 0.12, 21.60, 158.40, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days');
+(1039, 1066, 1046, 360.00, 0.12, 43.20, 316.80, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+(1040, 1067, 1047, 140.00, 0.12, 16.80, 123.20, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(1041, 1068, 1048, 180.00, 0.12, 21.60, 158.40, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days');
 
 -- AWARDED → HELD (15 rows)
 INSERT INTO transactions (id, request_id, proposal_id, amount, commission_rate, commission_amount, provider_payout, status, held_at, created_at) VALUES
-(42, 69, 49, 280.00, 0.12, 33.60, 246.40, 'HELD', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
-(43, 70, 50, 240.00, 0.12, 28.80, 211.20, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
-(44, 71, 51, 650.00, 0.12, 78.00, 572.00, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
-(45, 72, 52, 195.00, 0.12, 23.40, 171.60, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(46, 73, 53, 280.00, 0.12, 33.60, 246.40, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(47, 74, 54, 290.00, 0.12, 34.80, 255.20, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
-(48, 75, 55, 420.00, 0.12, 50.40, 369.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(49, 76, 56, 320.00, 0.12, 38.40, 281.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(50, 77, 57, 220.00, 0.12, 26.40, 193.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(51, 78, 58, 320.00, 0.12, 38.40, 281.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(52, 79, 59, 240.00, 0.12, 28.80, 211.20, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(53, 80, 60, 480.00, 0.12, 57.60, 422.40, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(54, 81, 61, 420.00, 0.12, 50.40, 369.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(55, 82, 62, 570.00, 0.12, 68.40, 501.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
-(56, 83, 63, 180.00, 0.12, 21.60, 158.40, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day');
+(1042, 1069, 1049, 280.00, 0.12, 33.60, 246.40, 'HELD', NOW() - INTERVAL '4 days', NOW() - INTERVAL '4 days'),
+(1043, 1070, 1050, 240.00, 0.12, 28.80, 211.20, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+(1044, 1071, 1051, 650.00, 0.12, 78.00, 572.00, 'HELD', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+(1045, 1072, 1052, 195.00, 0.12, 23.40, 171.60, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(1046, 1073, 1053, 280.00, 0.12, 33.60, 246.40, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(1047, 1074, 1054, 290.00, 0.12, 34.80, 255.20, 'HELD', NOW() - INTERVAL '2 days', NOW() - INTERVAL '2 days'),
+(1048, 1075, 1055, 420.00, 0.12, 50.40, 369.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1049, 1076, 1056, 320.00, 0.12, 38.40, 281.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1050, 1077, 1057, 220.00, 0.12, 26.40, 193.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1051, 1078, 1058, 320.00, 0.12, 38.40, 281.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1052, 1079, 1059, 240.00, 0.12, 28.80, 211.20, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1053, 1080, 1060, 480.00, 0.12, 57.60, 422.40, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1054, 1081, 1061, 420.00, 0.12, 50.40, 369.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1055, 1082, 1062, 570.00, 0.12, 68.40, 501.60, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day'),
+(1056, 1083, 1063, 180.00, 0.12, 21.60, 158.40, 'HELD', NOW() - INTERVAL '1 day',  NOW() - INTERVAL '1 day');
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 10 — Service Executions (IDs 20-52) with calendar metadata
+-- PART 10 — Service Executions (IDs 1020-1052) with calendar metadata
 -- ═══════════════════════════════════════════════════════════════
--- For COMPLETED/RATED/AWAITING_CONFIRMATION: scheduled_all_day = TRUE
---   (these don't need precise calendar positioning).
--- For IN_PROGRESS and AWARDED: scheduled_all_day = FALSE with concrete
---   times anchored to absolute 2026-05 dates so Day/Week views render
---   bars in the expected positions.
 
--- COMPLETED (req 51-58) — executions 20-27
+-- COMPLETED (req 1051-1058) — executions 1020-1027
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(20, 31,
+(1020, 1031,
     ST_SetSRID(ST_MakePoint(-27.2050, 38.6720), 4326),
     NOW() - INTERVAL '17 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '16 days' + INTERVAL '18 hours',
@@ -758,7 +764,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '18 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(21, 32,
+(1021, 1032,
     ST_SetSRID(ST_MakePoint(-27.0700, 38.7250), 4326),
     NOW() - INTERVAL '15 days' + INTERVAL '8 hours',
     NOW() - INTERVAL '15 days' + INTERVAL '15 hours',
@@ -769,7 +775,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '16 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(22, 33,
+(1022, 1033,
     ST_SetSRID(ST_MakePoint(-25.5200, 37.8150), 4326),
     NOW() - INTERVAL '12 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '12 days' + INTERVAL '13 hours',
@@ -780,7 +786,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '13 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(23, 34,
+(1023, 1034,
     ST_SetSRID(ST_MakePoint(-27.2050, 38.6720), 4326),
     NOW() - INTERVAL '9 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '8 days' + INTERVAL '17 hours',
@@ -791,7 +797,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '10 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(24, 35,
+(1024, 1035,
     ST_SetSRID(ST_MakePoint(-25.6750, 37.7320), 4326),
     NOW() - INTERVAL '8 days' + INTERVAL '8 hours',
     NOW() - INTERVAL '8 days' + INTERVAL '14 hours',
@@ -802,7 +808,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '9 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(25, 36,
+(1025, 1036,
     ST_SetSRID(ST_MakePoint(-28.7180, 38.5340), 4326),
     NOW() - INTERVAL '7 days' + INTERVAL '8 hours',
     NOW() - INTERVAL '7 days' + INTERVAL '16 hours',
@@ -813,7 +819,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '8 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(26, 37,
+(1026, 1037,
     ST_SetSRID(ST_MakePoint(-27.2310, 38.6695), 4326),
     NOW() - INTERVAL '6 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '6 days' + INTERVAL '17 hours',
@@ -824,7 +830,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '7 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(27, 38,
+(1027, 1038,
     ST_SetSRID(ST_MakePoint(-27.0530, 38.7390), 4326),
     NOW() - INTERVAL '5 days' + INTERVAL '9 hours',
     NOW() - INTERVAL '5 days' + INTERVAL '14 hours',
@@ -834,9 +840,9 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     '2026-05-08', '2026-05-08', TRUE,
     NOW() - INTERVAL '6 days');
 
--- RATED (req 59-63) — executions 28-32
+-- RATED (req 1059-1063) — executions 1028-1032
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(28, 39,
+(1028, 1039,
     ST_SetSRID(ST_MakePoint(-27.2120, 38.6650), 4326),
     NOW() - INTERVAL '88 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '85 days' + INTERVAL '18 hours',
@@ -847,7 +853,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '90 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(29, 40,
+(1029, 1040,
     ST_SetSRID(ST_MakePoint(-27.0820, 38.7180), 4326),
     NOW() - INTERVAL '64 days' + INTERVAL '8 hours',
     NOW() - INTERVAL '64 days' + INTERVAL '19 hours',
@@ -858,7 +864,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '68 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(30, 41,
+(1030, 1041,
     ST_SetSRID(ST_MakePoint(-25.5180, 37.8170), 4326),
     NOW() - INTERVAL '53 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '53 days' + INTERVAL '13 hours',
@@ -869,7 +875,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '56 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(31, 42,
+(1031, 1042,
     ST_SetSRID(ST_MakePoint(-27.2080, 38.6700), 4326),
     NOW() - INTERVAL '37 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '37 days' + INTERVAL '15 hours',
@@ -880,7 +886,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '40 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(32, 43,
+(1032, 1043,
     ST_SetSRID(ST_MakePoint(-27.2280, 38.6730), 4326),
     NOW() - INTERVAL '26 days' + INTERVAL '7 hours',
     NOW() - INTERVAL '25 days' + INTERVAL '18 hours',
@@ -890,9 +896,9 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     '2026-04-16', '2026-04-17', TRUE,
     NOW() - INTERVAL '28 days');
 
--- AWAITING_CONFIRMATION (req 64-65) — executions 33-34
+-- AWAITING_CONFIRMATION (req 1064-1065) — executions 1033-1034
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(33, 44,
+(1033, 1044,
     ST_SetSRID(ST_MakePoint(-25.6730, 37.7390), 4326),
     NOW() - INTERVAL '3 days' + INTERVAL '8 hours',
     NOW() - INTERVAL '3 days' + INTERVAL '15 hours',
@@ -903,7 +909,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '4 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, checkout_time, notes, materials_used, completed_at, scheduled_date, scheduled_end_date, scheduled_all_day, created_at) VALUES
-(34, 45,
+(1034, 1045,
     ST_SetSRID(ST_MakePoint(-27.2160, 38.6690), 4326),
     NOW() - INTERVAL '2 days' + INTERVAL '8 hours',
     NOW() - INTERVAL '2 days' + INTERVAL '13 hours',
@@ -913,9 +919,9 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     '2026-05-12', '2026-05-12', TRUE,
     NOW() - INTERVAL '3 days');
 
--- IN_PROGRESS (req 66-68) — executions 35-37 — scheduled with concrete times TODAY
+-- IN_PROGRESS (req 1066-1068) — executions 1035-1037 — concrete times TODAY
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, notes, scheduled_date, scheduled_end_date, scheduled_start_time, scheduled_end_time, scheduled_all_day, created_at) VALUES
-(35, 46,
+(1035, 1046,
     ST_SetSRID(ST_MakePoint(-27.2100, 38.6750), 4326),
     NOW() - INTERVAL '4 hours',
     NULL,
@@ -923,7 +929,7 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '2 days');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, notes, scheduled_date, scheduled_end_date, scheduled_start_time, scheduled_end_time, scheduled_all_day, created_at) VALUES
-(36, 47,
+(1036, 1047,
     ST_SetSRID(ST_MakePoint(-27.0610, 38.7330), 4326),
     NOW() - INTERVAL '2 hours',
     NULL,
@@ -931,106 +937,103 @@ INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time,
     NOW() - INTERVAL '1 day');
 
 INSERT INTO service_executions (id, proposal_id, checkin_location, checkin_time, notes, scheduled_date, scheduled_end_date, scheduled_start_time, scheduled_end_time, scheduled_all_day, created_at) VALUES
-(37, 48,
+(1037, 1048,
     ST_SetSRID(ST_MakePoint(-27.0680, 38.7260), 4326),
     NOW() - INTERVAL '1 hour',
     NULL,
     '2026-05-13', '2026-05-14', '13:00:00', '17:30:00', FALSE,
     NOW() - INTERVAL '2 days');
 
--- AWARDED (req 69-83) — executions 38-52 — scheduled future, no checkin yet
+-- AWARDED (req 1069-1083) — executions 1038-1052
 INSERT INTO service_executions (id, proposal_id, notes, scheduled_date, scheduled_end_date, scheduled_start_time, scheduled_end_time, scheduled_all_day, created_at) VALUES
-(38, 49, NULL, '2026-05-14', '2026-05-14', '07:30:00', '12:00:00', FALSE, NOW() - INTERVAL '4 days'),  -- Thu 14 morning - operator conflict source
-(39, 50, NULL, '2026-05-14', '2026-05-14', '13:30:00', '18:00:00', FALSE, NOW() - INTERVAL '3 days'),  -- Thu 14 afternoon
-(40, 51, NULL, '2026-05-14', '2026-05-15', '09:00:00', '17:30:00', FALSE, NOW() - INTERVAL '3 days'),  -- Thu 14 → Fri 15 (multi-day) - operator conflict overlap with exec 38 via TM 1
-(41, 52, NULL, '2026-05-15', '2026-05-15', '07:30:00', '11:00:00', FALSE, NOW() - INTERVAL '2 days'),
-(42, 53, NULL, '2026-05-15', '2026-05-15', '13:00:00', '18:00:00', FALSE, NOW() - INTERVAL '2 days'),
-(43, 54, NULL, '2026-05-16', '2026-05-16', '09:00:00', '14:30:00', FALSE, NOW() - INTERVAL '2 days'),  -- Sat
-(44, 55, NULL, '2026-05-18', '2026-05-18', '08:00:00', '12:00:00', FALSE, NOW() - INTERVAL '1 day'),   -- Mon 18 morning - machine 1 conflict source
-(45, 56, NULL, '2026-05-18', '2026-05-18', '10:00:00', '15:30:00', FALSE, NOW() - INTERVAL '1 day'),   -- Mon 18 overlap with exec 44 via machine 1 conflict
-(46, 57, NULL, '2026-05-18', '2026-05-18', '13:30:00', '17:30:00', FALSE, NOW() - INTERVAL '1 day'),   -- Mon 18 afternoon
-(47, 58, NULL, '2026-05-19', '2026-05-19', '08:00:00', '14:00:00', FALSE, NOW() - INTERVAL '1 day'),
-(48, 59, NULL, '2026-05-19', '2026-05-19', '09:30:00', '14:30:00', FALSE, NOW() - INTERVAL '1 day'),
-(49, 60, NULL, '2026-05-20', '2026-05-20', '07:00:00', '13:00:00', FALSE, NOW() - INTERVAL '1 day'),
-(50, 61, NULL, '2026-05-20', '2026-05-20', '13:30:00', '18:00:00', FALSE, NOW() - INTERVAL '1 day'),
-(51, 62, NULL, '2026-05-21', '2026-05-21', '08:00:00', '18:00:00', FALSE, NOW() - INTERVAL '1 day'),
-(52, 63, NULL, '2026-05-22', '2026-05-22', '09:00:00', '12:30:00', FALSE, NOW() - INTERVAL '1 day');
+(1038, 1049, NULL, '2026-05-14', '2026-05-14', '07:30:00', '12:00:00', FALSE, NOW() - INTERVAL '4 days'),
+(1039, 1050, NULL, '2026-05-14', '2026-05-14', '13:30:00', '18:00:00', FALSE, NOW() - INTERVAL '3 days'),
+(1040, 1051, NULL, '2026-05-14', '2026-05-15', '09:00:00', '17:30:00', FALSE, NOW() - INTERVAL '3 days'),
+(1041, 1052, NULL, '2026-05-15', '2026-05-15', '07:30:00', '11:00:00', FALSE, NOW() - INTERVAL '2 days'),
+(1042, 1053, NULL, '2026-05-15', '2026-05-15', '13:00:00', '18:00:00', FALSE, NOW() - INTERVAL '2 days'),
+(1043, 1054, NULL, '2026-05-16', '2026-05-16', '09:00:00', '14:30:00', FALSE, NOW() - INTERVAL '2 days'),
+(1044, 1055, NULL, '2026-05-18', '2026-05-18', '08:00:00', '12:00:00', FALSE, NOW() - INTERVAL '1 day'),
+(1045, 1056, NULL, '2026-05-18', '2026-05-18', '10:00:00', '15:30:00', FALSE, NOW() - INTERVAL '1 day'),
+(1046, 1057, NULL, '2026-05-18', '2026-05-18', '13:30:00', '17:30:00', FALSE, NOW() - INTERVAL '1 day'),
+(1047, 1058, NULL, '2026-05-19', '2026-05-19', '08:00:00', '14:00:00', FALSE, NOW() - INTERVAL '1 day'),
+(1048, 1059, NULL, '2026-05-19', '2026-05-19', '09:30:00', '14:30:00', FALSE, NOW() - INTERVAL '1 day'),
+(1049, 1060, NULL, '2026-05-20', '2026-05-20', '07:00:00', '13:00:00', FALSE, NOW() - INTERVAL '1 day'),
+(1050, 1061, NULL, '2026-05-20', '2026-05-20', '13:30:00', '18:00:00', FALSE, NOW() - INTERVAL '1 day'),
+(1051, 1062, NULL, '2026-05-21', '2026-05-21', '08:00:00', '18:00:00', FALSE, NOW() - INTERVAL '1 day'),
+(1052, 1063, NULL, '2026-05-22', '2026-05-22', '09:00:00', '12:30:00', FALSE, NOW() - INTERVAL '1 day');
 
 
 -- ═══════════════════════════════════════════════════════════════
 -- PART 11 — Execution Assignments
 -- ═══════════════════════════════════════════════════════════════
--- Team members (provider 1): 1=António, 2=Carlos, 9=Rita, 10=Nuno,
---                            11=Filipe, 12=Sandra, 13=Joaquim, 14=Manuela.
--- Machines (provider 1): 1=New Holland, 2=Grade 28", 3=Destroçador,
---                        13=MF 4707, 14=JD 6120M, 15=Claas, 16=Pulv 2000L,
---                        17=Atomizador 800L, 18=Charrua 3F, 19=Iveco Daily.
--- hours_worked, machine_hours, hourly_rate_snapshot populated for
--- COMPLETED + RATED (so the Job Costing panel has data).
+-- Team members (provider 1): 1=António, 2=Carlos (baseline),
+--   1009=Rita, 1010=Nuno, 1011=Filipe, 1012=Sandra, 1013=Joaquim, 1014=Manuela.
+-- Machines (provider 1): 1=New Holland, 2=Grade 28", 3=Destroçador (baseline),
+--   1013=MF 4707, 1014=JD 6120M, 1015=Claas, 1016=Pulv 2000L,
+--   1017=Atomizador, 1018=Charrua, 1019=Iveco Daily.
 
--- COMPLETED (executions 20-27)
+-- COMPLETED (executions 1020-1027)
 INSERT INTO execution_assignments (execution_id, team_member_id, machine_id, hours_worked, machine_hours, hourly_rate_snapshot, assigned_at) VALUES
-(20,  2,  1, 11.0, 11.0, 10.50, NOW() - INTERVAL '18 days'),
-(20, 11, 18,  8.0,  8.0, 10.00, NOW() - INTERVAL '18 days'),
-(21,  9, 13,  7.0,  7.0, 13.50, NOW() - INTERVAL '16 days'),
-(22, 12, 17,  6.0,  6.0, 11.00, NOW() - INTERVAL '13 days'),
-(23,  2,  1, 18.0, 10.0, 10.50, NOW() - INTERVAL '10 days'),
-(23, 10,  2, 18.0,  8.0, 10.50, NOW() - INTERVAL '10 days'),
-(24, 11, 16,  6.0,  6.0, 10.00, NOW() - INTERVAL '9 days'),
-(25, 12, 17,  8.0,  8.0, 11.00, NOW() - INTERVAL '8 days'),
-(26, 13, 19, 10.0,  6.0,  9.50, NOW() - INTERVAL '7 days'),
-(26, 14, NULL,10.0,  0.0, 13.00, NOW() - INTERVAL '7 days'),
-(27, 13, 19,  5.0,  5.0,  9.50, NOW() - INTERVAL '6 days');
+(1020,    2,    1, 11.0, 11.0, 10.50, NOW() - INTERVAL '18 days'),
+(1020, 1011, 1018,  8.0,  8.0, 10.00, NOW() - INTERVAL '18 days'),
+(1021, 1009, 1013,  7.0,  7.0, 13.50, NOW() - INTERVAL '16 days'),
+(1022, 1012, 1017,  6.0,  6.0, 11.00, NOW() - INTERVAL '13 days'),
+(1023,    2,    1, 18.0, 10.0, 10.50, NOW() - INTERVAL '10 days'),
+(1023, 1010,    2, 18.0,  8.0, 10.50, NOW() - INTERVAL '10 days'),
+(1024, 1011, 1016,  6.0,  6.0, 10.00, NOW() - INTERVAL '9 days'),
+(1025, 1012, 1017,  8.0,  8.0, 11.00, NOW() - INTERVAL '8 days'),
+(1026, 1013, 1019, 10.0,  6.0,  9.50, NOW() - INTERVAL '7 days'),
+(1026, 1014, NULL, 10.0,  0.0, 13.00, NOW() - INTERVAL '7 days'),
+(1027, 1013, 1019,  5.0,  5.0,  9.50, NOW() - INTERVAL '6 days');
 
--- RATED (executions 28-32)
+-- RATED (executions 1028-1032)
 INSERT INTO execution_assignments (execution_id, team_member_id, machine_id, hours_worked, machine_hours, hourly_rate_snapshot, assigned_at) VALUES
-(28,  2,  1, 36.0, 28.0, 10.50, NOW() - INTERVAL '90 days'),
-(28, 11, 18, 28.0, 24.0, 10.00, NOW() - INTERVAL '90 days'),
-(29,  1, 15, 11.0, 11.0, 14.00, NOW() - INTERVAL '68 days'),
-(29, 10, NULL,11.0,  0.0, 10.50, NOW() - INTERVAL '68 days'),
-(30, 12, 17,  6.0,  6.0, 11.00, NOW() - INTERVAL '56 days'),
-(31,  9, 13,  8.0,  8.0, 13.50, NOW() - INTERVAL '40 days'),
-(32,  2,  1, 18.0, 11.0, 10.50, NOW() - INTERVAL '28 days'),
-(32, 11,  2, 16.0,  9.0, 10.00, NOW() - INTERVAL '28 days');
+(1028,    2,    1, 36.0, 28.0, 10.50, NOW() - INTERVAL '90 days'),
+(1028, 1011, 1018, 28.0, 24.0, 10.00, NOW() - INTERVAL '90 days'),
+(1029,    1, 1015, 11.0, 11.0, 14.00, NOW() - INTERVAL '68 days'),
+(1029, 1010, NULL, 11.0,  0.0, 10.50, NOW() - INTERVAL '68 days'),
+(1030, 1012, 1017,  6.0,  6.0, 11.00, NOW() - INTERVAL '56 days'),
+(1031, 1009, 1013,  8.0,  8.0, 13.50, NOW() - INTERVAL '40 days'),
+(1032,    2,    1, 18.0, 11.0, 10.50, NOW() - INTERVAL '28 days'),
+(1032, 1011,    2, 16.0,  9.0, 10.00, NOW() - INTERVAL '28 days');
 
--- AWAITING_CONFIRMATION (executions 33-34)
+-- AWAITING_CONFIRMATION (executions 1033-1034)
 INSERT INTO execution_assignments (execution_id, team_member_id, machine_id, hours_worked, machine_hours, hourly_rate_snapshot, assigned_at) VALUES
-(33, 12, 16, 7.0, 7.0, 11.00, NOW() - INTERVAL '4 days'),
-(34, 11,  3, 5.0, 5.0, 10.00, NOW() - INTERVAL '3 days');
+(1033, 1012, 1016, 7.0, 7.0, 11.00, NOW() - INTERVAL '4 days'),
+(1034, 1011,    3, 5.0, 5.0, 10.00, NOW() - INTERVAL '3 days');
 
--- IN_PROGRESS (executions 35-37) — no hours yet
+-- IN_PROGRESS (executions 1035-1037)
 INSERT INTO execution_assignments (execution_id, team_member_id, machine_id, assigned_at) VALUES
-(35,  2,  1, NOW() - INTERVAL '2 days'),
-(35, 10, 18, NOW() - INTERVAL '2 days'),
-(36, 13, 19, NOW() - INTERVAL '1 day'),
-(37, 11,  3, NOW() - INTERVAL '2 days');
+(1035,    2,    1, NOW() - INTERVAL '2 days'),
+(1035, 1010, 1018, NOW() - INTERVAL '2 days'),
+(1036, 1013, 1019, NOW() - INTERVAL '1 day'),
+(1037, 1011,    3, NOW() - INTERVAL '2 days');
 
--- AWARDED (executions 38-52) — assignments without hours yet
--- Intentional conflicts:
---   * Exec 38 + Exec 40 share TM 1 (António) on overlapping windows on 2026-05-14
---   * Exec 44 + Exec 45 share Machine 1 on overlapping windows on 2026-05-18
+-- AWARDED (executions 1038-1052) — intentional conflicts:
+--   Exec 1038 + Exec 1040 share TM 1 (António) on 2026-05-14
+--   Exec 1044 + Exec 1045 share Machine 1 on 2026-05-18
 INSERT INTO execution_assignments (execution_id, team_member_id, machine_id, assigned_at) VALUES
-(38,  1, 16, NOW() - INTERVAL '4 days'),   -- TM 1 - 09:30-13:00 → conflict source
-(38, 11, NULL, NOW() - INTERVAL '4 days'),
-(39,  9, 14, NOW() - INTERVAL '3 days'),
-(39, 12,  2, NOW() - INTERVAL '3 days'),
-(40,  1, 18, NOW() - INTERVAL '3 days'),   -- TM 1 - 09:00-17:30 → overlaps exec 38 (operator conflict)
-(40, 10,  1, NOW() - INTERVAL '3 days'),
-(41, 12, 17, NOW() - INTERVAL '2 days'),
-(42,  9, 13, NOW() - INTERVAL '2 days'),
-(43, 14, 19, NOW() - INTERVAL '2 days'),
-(44,  2,  1, NOW() - INTERVAL '1 day'),    -- Machine 1 morning slot → conflict source
-(44, 11, 18, NOW() - INTERVAL '1 day'),
-(45, 10,  1, NOW() - INTERVAL '1 day'),    -- Machine 1 overlapping slot → conflict
-(46, 13,  3, NOW() - INTERVAL '1 day'),
-(47,  9, NULL, NOW() - INTERVAL '1 day'),
-(48, 12, 17, NOW() - INTERVAL '1 day'),
-(49,  2, 15, NOW() - INTERVAL '1 day'),
-(49, 11, NULL, NOW() - INTERVAL '1 day'),
-(50, 14, 16, NOW() - INTERVAL '1 day'),
-(51,  1, 15, NOW() - INTERVAL '1 day'),
-(51, 10, NULL, NOW() - INTERVAL '1 day'),
-(52, 13, 19, NOW() - INTERVAL '1 day');
+(1038,    1, 1016, NOW() - INTERVAL '4 days'),
+(1038, 1011, NULL, NOW() - INTERVAL '4 days'),
+(1039, 1009, 1014, NOW() - INTERVAL '3 days'),
+(1039, 1012,    2, NOW() - INTERVAL '3 days'),
+(1040,    1, 1018, NOW() - INTERVAL '3 days'),
+(1040, 1010,    1, NOW() - INTERVAL '3 days'),
+(1041, 1012, 1017, NOW() - INTERVAL '2 days'),
+(1042, 1009, 1013, NOW() - INTERVAL '2 days'),
+(1043, 1014, 1019, NOW() - INTERVAL '2 days'),
+(1044,    2,    1, NOW() - INTERVAL '1 day'),
+(1044, 1011, 1018, NOW() - INTERVAL '1 day'),
+(1045, 1010,    1, NOW() - INTERVAL '1 day'),
+(1046, 1013,    3, NOW() - INTERVAL '1 day'),
+(1047, 1009, NULL, NOW() - INTERVAL '1 day'),
+(1048, 1012, 1017, NOW() - INTERVAL '1 day'),
+(1049,    2, 1015, NOW() - INTERVAL '1 day'),
+(1049, 1011, NULL, NOW() - INTERVAL '1 day'),
+(1050, 1014, 1016, NOW() - INTERVAL '1 day'),
+(1051,    1, 1015, NOW() - INTERVAL '1 day'),
+(1051, 1010, NULL, NOW() - INTERVAL '1 day'),
+(1052, 1013, 1019, NOW() - INTERVAL '1 day');
 
 
 -- ═══════════════════════════════════════════════════════════════
@@ -1038,17 +1041,17 @@ INSERT INTO execution_assignments (execution_id, team_member_id, machine_id, ass
 -- ═══════════════════════════════════════════════════════════════
 
 INSERT INTO machine_maintenance_logs (machine_id, maintenance_type, description, cost, workshop_name, performed_at, next_due_at, notes, created_by) VALUES
-(1,  'ROUTINE',    'Revisão das 250 horas — óleo motor, filtros e líquidos',  280.00, 'Oficina Agrícola Ramos',  '2026-01-15', '2026-07-15', 'Substituídos 4 filtros e óleo motor 15W-40.', 6),
-(1,  'REPAIR',     'Substituição de injector com fuga',                       420.00, 'Oficina Agrícola Ramos',  '2026-03-20', NULL,         'Tractor parado 1 dia. Sintomas: arranque difícil e fumo escuro.', 6),
-(2,  'INSPECTION', 'Inspeção da grade de discos e afiamento',                 120.00, 'Mecânica Lima',           '2026-02-01', '2026-08-01', 'Todos os discos afiados, 2 rolamentos lubrificados.', 6),
-(3,  'ROUTINE',    'Manutenção do destroçador florestal',                     180.00, 'Mecânica Lima',           '2026-01-20', '2026-07-20', 'Substituição de martelos e correia.', 6),
-(13, 'ROUTINE',    'Revisão completa Massey Ferguson 4707',                   320.00, 'Oficina Agrícola Ramos',  '2026-03-10', '2026-09-10', 'Óleos e filtros. Tractor em ótimo estado.', 6),
-(14, 'ROUTINE',    'Revisão das 500 horas John Deere 6120M',                  480.00, 'AgriParts Açores',         '2026-04-05', '2026-10-05', 'Revisão major. Substituídas correias e filtros.', 6),
-(15, 'INSPECTION', 'Inspeção pré-campanha da ceifeira Claas',                 250.00, 'AgriParts Açores',         '2026-02-15', '2026-08-15', 'Lâminas afiadas, sem-fins limpos.', 6),
-(16, 'ROUTINE',    'Manutenção do pulverizador atrelado 2000L',               150.00, 'Mecânica Lima',           '2026-03-20', '2026-09-20', 'Limpeza de bicos e teste de pressão.', 6),
-(17, 'REPAIR',     'Reparação do agitador do atomizador 800L',                280.00, 'Mecânica Lima',           '2026-04-12', NULL,         'Veio do agitador partido. Substituído.', 6),
-(18, 'INSPECTION', 'Verificação da charrua reversível',                       90.00,  'Oficina interna',         '2026-03-05', '2026-09-05', 'Aivecas em bom estado, ferros sem desgaste excessivo.', 6),
-(19, 'ROUTINE',    'Inspeção anual da carrinha Iveco Daily',                  220.00, 'Iveco Açores',             '2026-02-28', '2026-08-28', 'IPO realizada. Tudo conforme.', 6);
+(1,    'ROUTINE',    'Revisão das 250 horas — óleo motor, filtros e líquidos',  280.00, 'Oficina Agrícola Ramos',  '2026-01-15', '2026-07-15', 'Substituídos 4 filtros e óleo motor 15W-40.', 6),
+(1,    'REPAIR',     'Substituição de injector com fuga',                       420.00, 'Oficina Agrícola Ramos',  '2026-03-20', NULL,         'Tractor parado 1 dia. Sintomas: arranque difícil e fumo escuro.', 6),
+(2,    'INSPECTION', 'Inspeção da grade de discos e afiamento',                 120.00, 'Mecânica Lima',           '2026-02-01', '2026-08-01', 'Todos os discos afiados, 2 rolamentos lubrificados.', 6),
+(3,    'ROUTINE',    'Manutenção do destroçador florestal',                     180.00, 'Mecânica Lima',           '2026-01-20', '2026-07-20', 'Substituição de martelos e correia.', 6),
+(1013, 'ROUTINE',    'Revisão completa Massey Ferguson 4707',                   320.00, 'Oficina Agrícola Ramos',  '2026-03-10', '2026-09-10', 'Óleos e filtros. Tractor em ótimo estado.', 6),
+(1014, 'ROUTINE',    'Revisão das 500 horas John Deere 6120M',                  480.00, 'AgriParts Açores',         '2026-04-05', '2026-10-05', 'Revisão major. Substituídas correias e filtros.', 6),
+(1015, 'INSPECTION', 'Inspeção pré-campanha da ceifeira Claas',                 250.00, 'AgriParts Açores',         '2026-02-15', '2026-08-15', 'Lâminas afiadas, sem-fins limpos.', 6),
+(1016, 'ROUTINE',    'Manutenção do pulverizador atrelado 2000L',               150.00, 'Mecânica Lima',           '2026-03-20', '2026-09-20', 'Limpeza de bicos e teste de pressão.', 6),
+(1017, 'REPAIR',     'Reparação do agitador do atomizador 800L',                280.00, 'Mecânica Lima',           '2026-04-12', NULL,         'Veio do agitador partido. Substituído.', 6),
+(1018, 'INSPECTION', 'Verificação da charrua reversível',                       90.00,  'Oficina interna',         '2026-03-05', '2026-09-05', 'Aivecas em bom estado, ferros sem desgaste excessivo.', 6),
+(1019, 'ROUTINE',    'Inspeção anual da carrinha Iveco Daily',                  220.00, 'Iveco Açores',             '2026-02-28', '2026-08-28', 'IPO realizada. Tudo conforme.', 6);
 
 
 -- ═══════════════════════════════════════════════════════════════
@@ -1056,101 +1059,97 @@ INSERT INTO machine_maintenance_logs (machine_id, maintenance_type, description,
 -- ═══════════════════════════════════════════════════════════════
 
 INSERT INTO machine_expenses (machine_id, category, description, amount, incurred_at, notes, created_by) VALUES
-(1,  'FUEL',      'Reabastecimento gasóleo (200L)',           230.00, '2026-04-02', '@ 1.15€/L', 6),
-(1,  'FUEL',      'Reabastecimento gasóleo (200L)',           230.00, '2026-04-25', '@ 1.15€/L', 6),
-(1,  'INSURANCE', 'Seguro anual',                             480.00, '2026-01-10', 'Renovação Tranquilidade', 6),
-(1,  'TAX',       'IUC anual',                                 95.00, '2026-01-15', NULL, 6),
-(13, 'FUEL',      'Reabastecimento gasóleo (150L)',           172.50, '2026-04-15', NULL, 6),
-(13, 'INSURANCE', 'Seguro anual',                             380.00, '2026-02-01', NULL, 6),
-(14, 'FUEL',      'Reabastecimento gasóleo (220L)',           253.00, '2026-04-28', '@ 1.15€/L', 6),
-(14, 'INSURANCE', 'Seguro anual',                             520.00, '2026-03-01', 'Renovação Allianz', 6),
-(14, 'TAX',       'IUC anual',                                110.00, '2026-03-10', NULL, 6),
-(15, 'FUEL',      'Reabastecimento gasóleo (300L)',           345.00, '2026-03-10', 'Para colheita de Março', 6),
-(15, 'PARTS',     'Lâminas novas para sem-fim',                95.00, '2026-02-15', NULL, 6),
-(16, 'PARTS',     'Bicos de pulverização (12 unidades)',       72.00, '2026-03-20', NULL, 6),
-(17, 'PARTS',     'Veio do agitador',                         180.00, '2026-04-12', 'Substituído na reparação', 6),
-(19, 'FUEL',      'Reabastecimento gasolina (60L)',            96.00, '2026-04-30', NULL, 6),
-(19, 'INSURANCE', 'Seguro anual',                             280.00, '2026-02-28', NULL, 6),
-(19, 'TAX',       'IUC anual',                                 75.00, '2026-02-28', NULL, 6);
+(1,    'FUEL',      'Reabastecimento gasóleo (200L)',           230.00, '2026-04-02', '@ 1.15€/L', 6),
+(1,    'FUEL',      'Reabastecimento gasóleo (200L)',           230.00, '2026-04-25', '@ 1.15€/L', 6),
+(1,    'INSURANCE', 'Seguro anual',                             480.00, '2026-01-10', 'Renovação Tranquilidade', 6),
+(1,    'TAX',       'IUC anual',                                 95.00, '2026-01-15', NULL, 6),
+(1013, 'FUEL',      'Reabastecimento gasóleo (150L)',           172.50, '2026-04-15', NULL, 6),
+(1013, 'INSURANCE', 'Seguro anual',                             380.00, '2026-02-01', NULL, 6),
+(1014, 'FUEL',      'Reabastecimento gasóleo (220L)',           253.00, '2026-04-28', '@ 1.15€/L', 6),
+(1014, 'INSURANCE', 'Seguro anual',                             520.00, '2026-03-01', 'Renovação Allianz', 6),
+(1014, 'TAX',       'IUC anual',                                110.00, '2026-03-10', NULL, 6),
+(1015, 'FUEL',      'Reabastecimento gasóleo (300L)',           345.00, '2026-03-10', 'Para colheita de Março', 6),
+(1015, 'PARTS',     'Lâminas novas para sem-fim',                95.00, '2026-02-15', NULL, 6),
+(1016, 'PARTS',     'Bicos de pulverização (12 unidades)',       72.00, '2026-03-20', NULL, 6),
+(1017, 'PARTS',     'Veio do agitador',                         180.00, '2026-04-12', 'Substituído na reparação', 6),
+(1019, 'FUEL',      'Reabastecimento gasolina (60L)',            96.00, '2026-04-30', NULL, 6),
+(1019, 'INSURANCE', 'Seguro anual',                             280.00, '2026-02-28', NULL, 6),
+(1019, 'TAX',       'IUC anual',                                 75.00, '2026-02-28', NULL, 6);
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 14 — Reviews (IDs 22-39)
+-- PART 14 — Reviews (IDs 1022-1039)
 -- ═══════════════════════════════════════════════════════════════
--- RATED jobs (req 59-63) get full review pairs (client + provider).
--- COMPLETED jobs (51-58) get client-only reviews for the recent ones
--- (joao.silva is very satisfied — 5★ across the board for provider 1).
--- Author/target user IDs:
---   Provider 1 manager = user 6 (agroservicos@email.com)
---   Clients: 2 (joao.silva), 3 (maria), 4 (pedro), 5 (ana), 11 (carla),
---            20 (francisco), 21 (laura), 22 (paulo).
 
 -- RATED — full review pairs
 INSERT INTO reviews (id, request_id, author_id, target_id, rating, comment, created_at) VALUES
-(22, 59, 2, 6, 5, 'Excelente trabalho de lavoura! O António e a equipa trabalharam mesmo nas zonas mais difíceis sem problemas. Recomendo vivamente.', NOW() - INTERVAL '84 days'),
-(23, 59, 6, 2, 5, 'Cliente experiente, terreno bem preparado. Tudo conforme combinado. Já temos novos trabalhos marcados.', NOW() - INTERVAL '83 days'),
-(24, 60, 3, 6, 4, 'Colheita correu bem no geral. Apenas o atraso de 1 hora à chegada baixou um pouco a nota — fora isso, trabalho excelente.', NOW() - INTERVAL '62 days'),
-(25, 60, 6, 3, 5, 'Maria foi muito flexível com o horário. Silo preparado, tudo eficiente. Excelente parceria.', NOW() - INTERVAL '61 days'),
-(26, 61, 5, 6, 5, 'O Sandra fez uma aplicação foliar perfeita. Pomar a recuperar muito bem após o tratamento. Cinco estrelas!', NOW() - INTERVAL '51 days'),
-(27, 61, 6, 5, 5, 'Cliente atenciosa e produto preparado antecipadamente. Trabalho fluido do princípio ao fim.', NOW() - INTERVAL '50 days'),
-(28, 62, 2, 6, 5, 'Fresagem impecável. Solo ficou perfeito para a sementeira. A equipa do AgroServiços é mesmo de confiança.', NOW() - INTERVAL '35 days'),
-(29, 62, 6, 2, 5, 'Sempre um prazer trabalhar com o João. Terreno preparado e cliente prestável.', NOW() - INTERVAL '34 days'),
-(30, 63, 20, 6, 5, 'Gradagem em parcela grande, terreno inclinado, e nem um problema. Trabalho rápido e profissional.', NOW() - INTERVAL '22 days'),
-(31, 63, 6, 20, 5, 'Cliente novo mas muito organizado. Excelente experiência para começarmos a colaboração.', NOW() - INTERVAL '21 days');
+(1022, 1059,    2,    6, 5, 'Excelente trabalho de lavoura! O António e a equipa trabalharam mesmo nas zonas mais difíceis sem problemas. Recomendo vivamente.', NOW() - INTERVAL '84 days'),
+(1023, 1059,    6,    2, 5, 'Cliente experiente, terreno bem preparado. Tudo conforme combinado. Já temos novos trabalhos marcados.',                           NOW() - INTERVAL '83 days'),
+(1024, 1060,    3,    6, 4, 'Colheita correu bem no geral. Apenas o atraso de 1 hora à chegada baixou um pouco a nota — fora isso, trabalho excelente.',     NOW() - INTERVAL '62 days'),
+(1025, 1060,    6,    3, 5, 'Maria foi muito flexível com o horário. Silo preparado, tudo eficiente. Excelente parceria.',                                    NOW() - INTERVAL '61 days'),
+(1026, 1061,    5,    6, 5, 'O Sandra fez uma aplicação foliar perfeita. Pomar a recuperar muito bem após o tratamento. Cinco estrelas!',                     NOW() - INTERVAL '51 days'),
+(1027, 1061,    6,    5, 5, 'Cliente atenciosa e produto preparado antecipadamente. Trabalho fluido do princípio ao fim.',                                    NOW() - INTERVAL '50 days'),
+(1028, 1062,    2,    6, 5, 'Fresagem impecável. Solo ficou perfeito para a sementeira. A equipa do AgroServiços é mesmo de confiança.',                      NOW() - INTERVAL '35 days'),
+(1029, 1062,    6,    2, 5, 'Sempre um prazer trabalhar com o João. Terreno preparado e cliente prestável.',                                                  NOW() - INTERVAL '34 days'),
+(1030, 1063, 1020,    6, 5, 'Gradagem em parcela grande, terreno inclinado, e nem um problema. Trabalho rápido e profissional.',                              NOW() - INTERVAL '22 days'),
+(1031, 1063,    6, 1020, 5, 'Cliente novo mas muito organizado. Excelente experiência para começarmos a colaboração.',                                        NOW() - INTERVAL '21 days');
 
--- COMPLETED — client-only reviews (joao.silva + a few others)
+-- COMPLETED — client-only reviews
 INSERT INTO reviews (id, request_id, author_id, target_id, rating, comment, created_at) VALUES
-(32, 51, 2, 6, 5, 'Lavoura de 4ha feita em 2 dias. Solo perfeito para a resseada. Como sempre, trabalho de excelência.', NOW() - INTERVAL '15 days'),
-(33, 52, 3, 6, 5, 'Fresagem rápida e bem feita. Recomendo!', NOW() - INTERVAL '14 days'),
-(34, 53, 5, 6, 5, 'Tratamento muito profissional, pomar respondeu bem.', NOW() - INTERVAL '11 days'),
-(35, 54, 2, 6, 5, 'Sequência da lavoura — gradagem impecável. Tudo na hora certa.', NOW() - INTERVAL '7 days'),
-(36, 55, 4, 6, 5, 'Pulverização excelente, sem deriva, milho a sair bem.', NOW() - INTERVAL '6 days'),
-(37, 56, 11, 6, 5, 'Apesar da deslocação inter-ilhas, tudo correu bem. Vinha tratada como deve ser.', NOW() - INTERVAL '5 days'),
-(38, 57, 20, 6, 5, 'Vedação reparada e melhorada onde era preciso. Cinco estrelas!', NOW() - INTERVAL '4 days'),
-(39, 58, 21, 6, 4, 'Transporte rápido. Apenas um fardo ligeiramente deslocado mas nada de problemas.', NOW() - INTERVAL '3 days');
+(1032, 1051,    2,    6, 5, 'Lavoura de 4ha feita em 2 dias. Solo perfeito para a resseada. Como sempre, trabalho de excelência.',   NOW() - INTERVAL '15 days'),
+(1033, 1052,    3,    6, 5, 'Fresagem rápida e bem feita. Recomendo!',                                                                NOW() - INTERVAL '14 days'),
+(1034, 1053,    5,    6, 5, 'Tratamento muito profissional, pomar respondeu bem.',                                                    NOW() - INTERVAL '11 days'),
+(1035, 1054,    2,    6, 5, 'Sequência da lavoura — gradagem impecável. Tudo na hora certa.',                                         NOW() - INTERVAL '7 days'),
+(1036, 1055,    4,    6, 5, 'Pulverização excelente, sem deriva, milho a sair bem.',                                                  NOW() - INTERVAL '6 days'),
+(1037, 1056,   11,    6, 5, 'Apesar da deslocação inter-ilhas, tudo correu bem. Vinha tratada como deve ser.',                        NOW() - INTERVAL '5 days'),
+(1038, 1057, 1020,    6, 5, 'Vedação reparada e melhorada onde era preciso. Cinco estrelas!',                                         NOW() - INTERVAL '4 days'),
+(1039, 1058, 1021,    6, 4, 'Transporte rápido. Apenas um fardo ligeiramente deslocado mas nada de problemas.',                       NOW() - INTERVAL '3 days');
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 15 — Notifications (provider 1 manager + clients)
+-- PART 15 — Notifications
 -- ═══════════════════════════════════════════════════════════════
 
 INSERT INTO notifications (user_id, type, title, body, data, read, created_at) VALUES
 -- Provider 1 manager (user 6) — recent activity
-(6, 'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para a subsolagem do João Silva foi aceite.',         '{"requestId": 66, "proposalId": 46}'::jsonb, TRUE,  NOW() - INTERVAL '3 days'),
-(6, 'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para o transporte da Laura Dutra foi aceite.',         '{"requestId": 67, "proposalId": 47}'::jsonb, TRUE,  NOW() - INTERVAL '2 days'),
-(6, 'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para a colheita de erva (Joao Silva) foi aceite.',     '{"requestId": 80, "proposalId": 60}'::jsonb, FALSE, NOW() - INTERVAL '1 day'),
-(6, 'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para a adubação de pastagem (Joao Silva) foi aceite.', '{"requestId": 81, "proposalId": 61}'::jsonb, FALSE, NOW() - INTERVAL '1 day'),
-(6, 'REQUEST_CONFIRMED', 'Trabalho confirmado',  'O cliente confirmou a lavoura de 4 hectares.',                        '{"requestId": 51}'::jsonb,                   TRUE,  NOW() - INTERVAL '15 days'),
-(6, 'REQUEST_CONFIRMED', 'Trabalho confirmado',  'O cliente confirmou a fresagem da Praia da Vitória.',                 '{"requestId": 52}'::jsonb,                   TRUE,  NOW() - INTERVAL '14 days'),
-(6, 'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 5 estrelas pela lavoura inicial.',           '{"requestId": 59, "reviewId": 22}'::jsonb,   TRUE,  NOW() - INTERVAL '84 days'),
-(6, 'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 5 estrelas pela fresagem.',                  '{"requestId": 62, "reviewId": 28}'::jsonb,   TRUE,  NOW() - INTERVAL '35 days'),
-(6, 'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 5 estrelas pela gradagem.',                  '{"requestId": 63, "reviewId": 30}'::jsonb,   TRUE,  NOW() - INTERVAL '22 days'),
-(6, 'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 4 estrelas pelo transporte.',                '{"requestId": 58, "reviewId": 39}'::jsonb,   FALSE, NOW() - INTERVAL '3 days'),
+(6,    'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para a subsolagem do João Silva foi aceite.',         '{"requestId": 1066, "proposalId": 1046}'::jsonb,  TRUE,  NOW() - INTERVAL '3 days'),
+(6,    'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para o transporte da Laura Dutra foi aceite.',         '{"requestId": 1067, "proposalId": 1047}'::jsonb,  TRUE,  NOW() - INTERVAL '2 days'),
+(6,    'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para a colheita de erva (Joao Silva) foi aceite.',     '{"requestId": 1080, "proposalId": 1060}'::jsonb,  FALSE, NOW() - INTERVAL '1 day'),
+(6,    'PROPOSAL_ACCEPTED', 'Proposta aceite!',     'A sua proposta para a adubação de pastagem (Joao Silva) foi aceite.', '{"requestId": 1081, "proposalId": 1061}'::jsonb,  FALSE, NOW() - INTERVAL '1 day'),
+(6,    'REQUEST_CONFIRMED', 'Trabalho confirmado',  'O cliente confirmou a lavoura de 4 hectares.',                        '{"requestId": 1051}'::jsonb,                      TRUE,  NOW() - INTERVAL '15 days'),
+(6,    'REQUEST_CONFIRMED', 'Trabalho confirmado',  'O cliente confirmou a fresagem da Praia da Vitória.',                 '{"requestId": 1052}'::jsonb,                      TRUE,  NOW() - INTERVAL '14 days'),
+(6,    'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 5 estrelas pela lavoura inicial.',           '{"requestId": 1059, "reviewId": 1022}'::jsonb,    TRUE,  NOW() - INTERVAL '84 days'),
+(6,    'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 5 estrelas pela fresagem.',                  '{"requestId": 1062, "reviewId": 1028}'::jsonb,    TRUE,  NOW() - INTERVAL '35 days'),
+(6,    'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 5 estrelas pela gradagem.',                  '{"requestId": 1063, "reviewId": 1030}'::jsonb,    TRUE,  NOW() - INTERVAL '22 days'),
+(6,    'REVIEW_RECEIVED',   'Nova avaliação',       'Recebeu uma avaliação de 4 estrelas pelo transporte.',                '{"requestId": 1058, "reviewId": 1039}'::jsonb,    FALSE, NOW() - INTERVAL '3 days'),
 
 -- João Silva (user 2) — open thread of activity
-(2, 'EXECUTION_STARTED',    'Trabalho iniciado',        'AgroServiços iniciou a subsolagem da sua pastagem.',               '{"requestId": 66}'::jsonb,                 TRUE,  NOW() - INTERVAL '4 hours'),
-(2, 'EXECUTION_COMPLETED',  'Serviço concluído',        'A limpeza de silvas foi concluída. Por favor confirme.',           '{"requestId": 65}'::jsonb,                 FALSE, NOW() - INTERVAL '2 days'),
-(2, 'PROPOSAL_RECEIVED',    'Nova proposta recebida',   'Recebeu uma proposta para a colheita de batata branca.',           '{"requestId": 87, "proposalId": 64}'::jsonb, FALSE, NOW() - INTERVAL '1 day'),
-(2, 'PROPOSAL_RECEIVED',    'Nova proposta recebida',   'Recebeu uma segunda proposta para a colheita de batata branca.',   '{"requestId": 87, "proposalId": 65}'::jsonb, FALSE, NOW() - INTERVAL '12 hours'),
+(2,    'EXECUTION_STARTED',    'Trabalho iniciado',        'AgroServiços iniciou a subsolagem da sua pastagem.',               '{"requestId": 1066}'::jsonb,                  TRUE,  NOW() - INTERVAL '4 hours'),
+(2,    'EXECUTION_COMPLETED',  'Serviço concluído',        'A limpeza de silvas foi concluída. Por favor confirme.',           '{"requestId": 1065}'::jsonb,                  FALSE, NOW() - INTERVAL '2 days'),
+(2,    'PROPOSAL_RECEIVED',    'Nova proposta recebida',   'Recebeu uma proposta para a colheita de batata branca.',           '{"requestId": 1087, "proposalId": 1064}'::jsonb, FALSE, NOW() - INTERVAL '1 day'),
+(2,    'PROPOSAL_RECEIVED',    'Nova proposta recebida',   'Recebeu uma segunda proposta para a colheita de batata branca.',   '{"requestId": 1087, "proposalId": 1065}'::jsonb, FALSE, NOW() - INTERVAL '12 hours'),
 
 -- Other clients with recent activity
-(4,  'EXECUTION_COMPLETED', 'Serviço concluído',        'A adubação do milho foi concluída. Por favor confirme.',           '{"requestId": 64}'::jsonb,                 FALSE, NOW() - INTERVAL '3 days'),
-(20, 'PROPOSAL_RECEIVED',   'Nova proposta recebida',   'Recebeu uma proposta para a subsolagem em pastagem.',              '{"requestId": 88, "proposalId": 66}'::jsonb, FALSE, NOW() - INTERVAL '12 hours'),
-(20, 'PROPOSAL_RECEIVED',   'Nova proposta recebida',   'Recebeu uma segunda proposta para a subsolagem.',                  '{"requestId": 88, "proposalId": 67}'::jsonb, FALSE, NOW() - INTERVAL '6 hours'),
-(21, 'EXECUTION_STARTED',   'Trabalho iniciado',        'AgroServiços iniciou o transporte do adubo.',                      '{"requestId": 67}'::jsonb,                 TRUE,  NOW() - INTERVAL '2 hours'),
-(3,  'EXECUTION_STARTED',   'Trabalho iniciado',        'AgroServiços iniciou a limpeza de levada.',                        '{"requestId": 68}'::jsonb,                 FALSE, NOW() - INTERVAL '1 hour');
+(4,    'EXECUTION_COMPLETED', 'Serviço concluído',        'A adubação do milho foi concluída. Por favor confirme.',           '{"requestId": 1064}'::jsonb,                  FALSE, NOW() - INTERVAL '3 days'),
+(1020, 'PROPOSAL_RECEIVED',   'Nova proposta recebida',   'Recebeu uma proposta para a subsolagem em pastagem.',              '{"requestId": 1088, "proposalId": 1066}'::jsonb, FALSE, NOW() - INTERVAL '12 hours'),
+(1020, 'PROPOSAL_RECEIVED',   'Nova proposta recebida',   'Recebeu uma segunda proposta para a subsolagem.',                  '{"requestId": 1088, "proposalId": 1067}'::jsonb, FALSE, NOW() - INTERVAL '6 hours'),
+(1021, 'EXECUTION_STARTED',   'Trabalho iniciado',        'AgroServiços iniciou o transporte do adubo.',                      '{"requestId": 1067}'::jsonb,                  TRUE,  NOW() - INTERVAL '2 hours'),
+(3,    'EXECUTION_STARTED',   'Trabalho iniciado',        'AgroServiços iniciou a limpeza de levada.',                        '{"requestId": 1068}'::jsonb,                  FALSE, NOW() - INTERVAL '1 hour');
 
 
 -- ═══════════════════════════════════════════════════════════════
--- PART 16 — Sequence Resets
+-- PART 16 — Sequence Resets (dynamic — safe in any state)
 -- ═══════════════════════════════════════════════════════════════
+-- Use MAX(id) per table so any real user signups in baseline ranges
+-- are respected. Sequence advances past whatever the highest existing
+-- ID is (baseline or V1002).
 
-SELECT setval('users_id_seq',              22);
-SELECT setval('team_members_id_seq',       14);
-SELECT setval('machines_id_seq',           19);
-SELECT setval('inventory_id_seq',          18);
-SELECT setval('service_requests_id_seq',   88);
-SELECT setval('proposals_id_seq',          67);
-SELECT setval('transactions_id_seq',       56);
-SELECT setval('service_executions_id_seq', 52);
-SELECT setval('reviews_id_seq',            39);
+SELECT setval('users_id_seq',              GREATEST((SELECT MAX(id) FROM users),              (SELECT last_value FROM users_id_seq)));
+SELECT setval('team_members_id_seq',       GREATEST((SELECT MAX(id) FROM team_members),       (SELECT last_value FROM team_members_id_seq)));
+SELECT setval('machines_id_seq',           GREATEST((SELECT MAX(id) FROM machines),           (SELECT last_value FROM machines_id_seq)));
+SELECT setval('inventory_id_seq',          GREATEST((SELECT MAX(id) FROM inventory),          (SELECT last_value FROM inventory_id_seq)));
+SELECT setval('service_requests_id_seq',   GREATEST((SELECT MAX(id) FROM service_requests),   (SELECT last_value FROM service_requests_id_seq)));
+SELECT setval('proposals_id_seq',          GREATEST((SELECT MAX(id) FROM proposals),          (SELECT last_value FROM proposals_id_seq)));
+SELECT setval('transactions_id_seq',       GREATEST((SELECT MAX(id) FROM transactions),       (SELECT last_value FROM transactions_id_seq)));
+SELECT setval('service_executions_id_seq', GREATEST((SELECT MAX(id) FROM service_executions), (SELECT last_value FROM service_executions_id_seq)));
+SELECT setval('reviews_id_seq',            GREATEST((SELECT MAX(id) FROM reviews),            (SELECT last_value FROM reviews_id_seq)));
