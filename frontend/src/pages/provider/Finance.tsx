@@ -208,13 +208,15 @@ export function Finance() {
               <h2 className="font-semibold text-neutral-900 text-sm">Receita vs lucro líquido — {summary?.year ?? selectedYear}</h2>
             </CardHeader>
             <CardBody>
-              {breakdownLoading ? (
+              {breakdownLoading && (
                 <div className="h-[280px] flex items-center justify-center">
                   <div className="text-sm text-neutral-400">A carregar gráfico…</div>
                 </div>
-              ) : chartData.length === 0 ? (
+              )}
+              {!breakdownLoading && chartData.length === 0 && (
                 <p className="text-sm text-neutral-500 text-center py-8">Sem dados para este ano.</p>
-              ) : (
+              )}
+              {!breakdownLoading && chartData.length > 0 && (
                 <div className="h-[280px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>

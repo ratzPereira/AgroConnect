@@ -13,7 +13,7 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
 interface ProviderDashboardProps {
-  inline?: boolean;
+  readonly inline?: boolean;
 }
 
 export function ProviderDashboard({ inline }: ProviderDashboardProps) {
@@ -49,8 +49,8 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
         )}
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <Skeleton.Stat key={i} />
+            {['ss-0', 'ss-1', 'ss-2', 'ss-3'].map(k => (
+              <Skeleton.Stat key={k} />
             ))}
           </div>
           <Skeleton.Rect className="h-[400px]" />

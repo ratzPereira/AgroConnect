@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 import { cn } from '@/utils/cn';
 
 interface WizardPhotoCollectorProps {
-  files: File[];
-  onChange: (files: File[]) => void;
-  maxPhotos?: number;
+  readonly files: File[];
+  readonly onChange: (files: File[]) => void;
+  readonly maxPhotos?: number;
 }
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
@@ -91,7 +91,7 @@ export function WizardPhotoCollector({ files, onChange, maxPhotos = 10 }: Wizard
       {files.length > 0 && (
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 mb-3">
           {previews.map((src, i) => (
-            <div key={i} className="relative group aspect-square">
+            <div key={`preview-${src}-${i}`} className="relative group aspect-square">
               <img
                 src={src}
                 alt={`Foto ${i + 1}`}
@@ -111,17 +111,15 @@ export function WizardPhotoCollector({ files, onChange, maxPhotos = 10 }: Wizard
       )}
 
       {canAddMore && (
-        <div
+        <button
+          type="button"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => fileInputRef.current?.click()}
-          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); fileInputRef.current?.click(); } }}
-          role="button"
-          tabIndex={0}
           aria-label="Adicionar foto"
           className={cn(
-            'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200',
+            'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 w-full',
             files.length > 0 ? 'py-5' : 'py-8',
             dragOver
               ? 'border-primary-400 bg-primary-50 scale-[1.01]'
@@ -131,24 +129,24 @@ export function WizardPhotoCollector({ files, onChange, maxPhotos = 10 }: Wizard
           {dragOver ? (
             <>
               <Upload className="h-8 w-8 text-primary-500" />
-              <p className="text-sm text-primary-600 font-medium">Largue aqui</p>
+              <span className="text-sm text-primary-600 font-medium">Largue aqui</span>
             </>
           ) : (
             <>
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-neutral-100">
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-neutral-100">
                 <ImagePlus className="h-5 w-5 text-neutral-500" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-neutral-700 font-medium">
+              </span>
+              <span className="text-center block">
+                <span className="block text-sm text-neutral-700 font-medium">
                   Arraste imagens ou <span className="text-primary-600">clique para escolher</span>
-                </p>
-                <p className="text-xs text-neutral-400 mt-0.5">
+                </span>
+                <span className="block text-xs text-neutral-400 mt-0.5">
                   JPEG, PNG ou WebP, máx. 5MB cada
-                </p>
-              </div>
+                </span>
+              </span>
             </>
           )}
-        </div>
+        </button>
       )}
 
       <input

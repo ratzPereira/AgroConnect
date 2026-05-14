@@ -33,7 +33,7 @@ export function StripePayments() {
     mutationFn: () => startStripeOnboarding(),
     onSuccess: (response) => {
       // Stripe AccountLinks are short-lived — full-page redirect, no new tab
-      window.location.href = response.onboardingUrl;
+      globalThis.location.href = response.onboardingUrl;
     },
     onError: () => {
       toast.error('Não foi possível iniciar o processo. Tente novamente.');

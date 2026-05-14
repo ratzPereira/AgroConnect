@@ -4,11 +4,11 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { cn } from '@/utils/cn';
 
 interface SheetProps {
-  open: boolean;
-  onClose: () => void;
-  title?: string;
-  children: ReactNode;
-  className?: string;
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly title?: string;
+  readonly children: ReactNode;
+  readonly className?: string;
 }
 
 export function Sheet({ open, onClose, title, children, className }: SheetProps) {

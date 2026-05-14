@@ -10,16 +10,16 @@ interface SelectOption {
 }
 
 interface SelectProps {
-  options: SelectOption[];
-  value?: string;
-  onChange?: (value: string) => void;
-  placeholder?: string;
-  searchable?: boolean;
-  disabled?: boolean;
-  error?: string;
-  label?: string;
-  className?: string;
-  name?: string;
+  readonly options: SelectOption[];
+  readonly value?: string;
+  readonly onChange?: (value: string) => void;
+  readonly placeholder?: string;
+  readonly searchable?: boolean;
+  readonly disabled?: boolean;
+  readonly error?: string;
+  readonly label?: string;
+  readonly className?: string;
+  readonly name?: string;
 }
 
 export const Select = forwardRef<HTMLButtonElement, SelectProps>(
@@ -79,7 +79,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
     );
 
     return (
-      <div ref={containerRef} className={cn('relative', className)} onKeyDown={handleKeyDown}>
+      <div ref={containerRef} className={cn('relative', className)}>
         {label && (
           <label htmlFor={selectId} className="block text-[13px] font-medium text-neutral-700 mb-1.5">
             {label}
@@ -92,6 +92,7 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
           type="button"
           disabled={disabled}
           onClick={() => !disabled && setOpen(!open)}
+          onKeyDown={handleKeyDown}
           className={cn(
             'flex w-full items-center justify-between rounded-lg border px-3 py-2.5 text-sm text-left transition-colors duration-150',
             'focus:outline-none focus:ring-2 focus:ring-primary-400/20 focus:border-primary-400',
@@ -108,6 +109,8 @@ export const Select = forwardRef<HTMLButtonElement, SelectProps>(
         <AnimatePresence>
           {open && (
             <motion.div
+              role="listbox"
+              onKeyDown={handleKeyDown}
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}

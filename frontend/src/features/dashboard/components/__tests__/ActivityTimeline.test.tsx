@@ -86,33 +86,18 @@ describe('ActivityTimeline', () => {
     expect(link.closest('a')).toHaveAttribute('href', '/notifications');
   });
 
-  it('navigates on Enter key when notification has a link', () => {
+  it('renders notification with link as a native button', () => {
     render(<ActivityTimeline notifications={mockNotifications} />);
-    const item = screen.getByText('Serviço concluído').closest('[role="button"]') as HTMLElement;
+    const item = screen.getByText('Serviço concluído').closest('button');
     expect(item).toBeTruthy();
-    fireEvent.keyDown(item, { key: 'Enter' });
-    expect(mockNavigate).toHaveBeenCalledWith('/requests/2');
+    expect(item?.tagName).toBe('BUTTON');
+    expect(item).toHaveAttribute('type', 'button');
   });
 
-  it('navigates on Space key when notification has a link', () => {
+  it('does not render notification without link as a button', () => {
     render(<ActivityTimeline notifications={mockNotifications} />);
-    const item = screen.getByText('Serviço concluído').closest('[role="button"]') as HTMLElement;
-    fireEvent.keyDown(item, { key: ' ' });
-    expect(mockNavigate).toHaveBeenCalledWith('/requests/2');
-  });
-
-  it('does not navigate on other keys', () => {
-    render(<ActivityTimeline notifications={mockNotifications} />);
-    const item = screen.getByText('Serviço concluído').closest('[role="button"]') as HTMLElement;
-    fireEvent.keyDown(item, { key: 'a' });
-    expect(mockNavigate).not.toHaveBeenCalled();
-  });
-
-  it('does not set role="button" or tabIndex when notification has no link', () => {
-    render(<ActivityTimeline notifications={mockNotifications} />);
-    const noLinkItem = screen.getByText('Nova mensagem').closest('div.flex');
-    expect(noLinkItem).not.toHaveAttribute('role', 'button');
-    expect(noLinkItem).not.toHaveAttribute('tabindex');
+    const noLinkItem = screen.getByText('Nova mensagem').closest('button');
+    expect(noLinkItem).toBeNull();
   });
 
   it('does not call navigate when clicking notification without a link', () => {

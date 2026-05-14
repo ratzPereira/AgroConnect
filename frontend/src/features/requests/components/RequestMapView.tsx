@@ -6,7 +6,7 @@ import type { FilterState } from './RequestFilters';
 import { Skeleton } from '@/components/ui/Skeleton';
 
 interface RequestMapViewProps {
-  filters: FilterState;
+  readonly filters: FilterState;
 }
 
 export function RequestMapView({ filters }: RequestMapViewProps) {

@@ -2,7 +2,7 @@ import { AlertTriangle } from 'lucide-react';
 import type { ConflictResponse } from '@/types/calendar';
 
 interface ConflictBannerProps {
-  conflicts: ConflictResponse[];
+  readonly conflicts: ConflictResponse[];
 }
 
 export function ConflictBanner({ conflicts }: ConflictBannerProps) {
@@ -19,8 +19,8 @@ export function ConflictBanner({ conflicts }: ConflictBannerProps) {
             {uniqueResources.size} conflito{uniqueResources.size > 1 ? 's' : ''} detetado{uniqueResources.size > 1 ? 's' : ''}
           </p>
           <ul className="mt-1.5 space-y-1">
-            {conflicts.slice(0, 5).map((conflict, i) => (
-              <li key={i} className="text-xs text-warning-600">
+            {conflicts.slice(0, 5).map((conflict) => (
+              <li key={`${conflict.resourceType}-${conflict.resourceId}-${conflict.date}`} className="text-xs text-warning-600">
                 <span className="font-medium">{conflict.resourceName}</span>
                 {' '}({conflict.resourceType === 'TEAM_MEMBER' ? 'Membro' : 'Máquina'})
                 {' — '}

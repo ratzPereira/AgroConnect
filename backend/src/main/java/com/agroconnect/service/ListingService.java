@@ -229,22 +229,25 @@ public class ListingService {
         return buildFullResponse(listing, currentUserId);
     }
 
-    public Page<ListingSummaryResponse> search(String category,
-                                                String island,
-                                                String query,
-                                                BigDecimal minPrice,
-                                                BigDecimal maxPrice,
-                                                Double lat,
-                                                Double lng,
-                                                Double radiusKm,
-                                                Pageable pageable) {
-        Double minPriceDouble = minPrice != null ? minPrice.doubleValue() : null;
-        Double maxPriceDouble = maxPrice != null ? maxPrice.doubleValue() : null;
-        Double radiusMeters = radiusKm != null ? radiusKm * KM_TO_METERS : null;
+    public record ListingSearchCriteria(
+            String category,
+            String island,
+            String query,
+            BigDecimal minPrice,
+            BigDecimal maxPrice,
+            Double lat,
+            Double lng,
+            Double radiusKm) {}
+
+    public Page<ListingSummaryResponse> search(ListingSearchCriteria criteria, Pageable pageable) {
+        Double minPriceDouble = criteria.minPrice() != null ? criteria.minPrice().doubleValue() : null;
+        Double maxPriceDouble = criteria.maxPrice() != null ? criteria.maxPrice().doubleValue() : null;
+        Double radiusMeters = criteria.radiusKm() != null ? criteria.radiusKm() * KM_TO_METERS : null;
 
         Page<Listing> page = listingRepository.searchActive(
-                category, island, query, minPriceDouble, maxPriceDouble,
-                lat, lng, radiusMeters, pageable);
+                criteria.category(), criteria.island(), criteria.query(),
+                minPriceDouble, maxPriceDouble,
+                criteria.lat(), criteria.lng(), radiusMeters, pageable);
 
         return page.map(listing -> {
             String firstPhoto = getFirstPhotoUrl(listing.getId());

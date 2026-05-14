@@ -12,13 +12,13 @@ import { SLOTS_PER_DAY } from '../../utils/timeMath';
 import { formatDayHeader } from '../../utils/viewRange';
 
 interface WeekViewProps {
-  events: CalendarEvent[];
-  conflicts: ConflictResponse[];
-  days: string[];
-  lane: CalendarLane;
-  onEventClick?: (event: CalendarEvent) => void;
-  emptyState?: React.ReactNode;
-  enableDnd?: boolean;
+  readonly events: CalendarEvent[];
+  readonly conflicts: ConflictResponse[];
+  readonly days: string[];
+  readonly lane: CalendarLane;
+  readonly onEventClick?: (event: CalendarEvent) => void;
+  readonly emptyState?: React.ReactNode;
+  readonly enableDnd?: boolean;
 }
 
 const LANE_ICON = {
@@ -41,7 +41,7 @@ export function WeekView({
     [events, conflicts, lane, days],
   );
 
-  const Icon = LANE_ICON[lane === 'jobs' ? 'jobs' : lane === 'machines' ? 'machines' : 'operators'];
+  const Icon = LANE_ICON[lane];
 
   const dayLabels = useMemo(() => days.map(formatDayHeader), [days]);
 

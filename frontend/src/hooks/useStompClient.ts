@@ -10,7 +10,7 @@ let subscriberCount = 0;
 const pendingSubscriptions = new Set<() => void>();
 
 function getOrCreateClient(token: string): Client {
-  if (stompClient && stompClient.active) return stompClient;
+  if (stompClient?.active) return stompClient;
 
   stompClient = new Client({
     webSocketFactory: () => new SockJS('/ws') as WebSocket,

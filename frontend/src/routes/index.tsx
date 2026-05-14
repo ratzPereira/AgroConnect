@@ -20,7 +20,7 @@ function lazyWithReload<T extends ComponentType>(
       const alreadyReloaded = sessionStorage.getItem('chunk_reload');
       if (!alreadyReloaded) {
         sessionStorage.setItem('chunk_reload', '1');
-        window.location.reload();
+        globalThis.location.reload();
       }
       throw error;
     })

@@ -3,7 +3,7 @@ import { useAuthStore } from '@/stores/authStore';
 import type { Role } from '@/types/auth';
 
 interface RoleRouteProps {
-  allowedRoles: Role[];
+  readonly allowedRoles: Role[];
 }
 
 export function RoleRoute({ allowedRoles }: RoleRouteProps) {

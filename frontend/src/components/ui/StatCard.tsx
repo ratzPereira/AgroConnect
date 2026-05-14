@@ -9,17 +9,17 @@ interface SparklineDataPoint {
 }
 
 interface StatCardProps {
-  label: string;
-  value: number;
-  prefix?: string;
-  suffix?: string;
-  decimals?: number;
-  trend?: number;
-  icon?: ReactNode;
-  iconBg?: string;
-  sparklineData?: SparklineDataPoint[];
-  sparklineColor?: string;
-  className?: string;
+  readonly label: string;
+  readonly value: number;
+  readonly prefix?: string;
+  readonly suffix?: string;
+  readonly decimals?: number;
+  readonly trend?: number;
+  readonly icon?: ReactNode;
+  readonly iconBg?: string;
+  readonly sparklineData?: SparklineDataPoint[];
+  readonly sparklineColor?: string;
+  readonly className?: string;
 }
 
 export function StatCard({

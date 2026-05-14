@@ -6,11 +6,11 @@ import { cn } from '@/utils/cn';
 type TooltipPosition = 'top' | 'right' | 'bottom' | 'left';
 
 interface TooltipProps {
-  content: ReactNode;
-  position?: TooltipPosition;
-  delay?: number;
-  children: ReactElement;
-  className?: string;
+  readonly content: ReactNode;
+  readonly position?: TooltipPosition;
+  readonly delay?: number;
+  readonly children: ReactElement;
+  readonly className?: string;
 }
 
 const positionStyles: Record<TooltipPosition, string> = {

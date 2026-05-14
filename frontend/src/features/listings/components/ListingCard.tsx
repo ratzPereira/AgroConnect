@@ -5,8 +5,8 @@ import type { ListingCategory, ListingCondition, ListingSummary } from '@/types/
 import type { ComponentType } from 'react';
 
 interface ListingCardProps {
-  listing: ListingSummary;
-  onClick?: () => void;
+  readonly listing: ListingSummary;
+  readonly onClick?: () => void;
 }
 
 const CATEGORY_LABELS: Record<ListingCategory, string> = {
@@ -66,14 +66,12 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
   const showPlaceholder = !listing.firstPhotoUrl || imgError;
 
   return (
-    <div
+    <button
+      type="button"
       onClick={onClick}
-      role="button"
-      tabIndex={0}
-      onKeyDown={(e) => { if (e.key === 'Enter' && onClick) onClick(); }}
-      style={{ display: 'flex', flexDirection: 'column' }}
+      style={{ display: 'flex', flexDirection: 'column', textAlign: 'left' }}
       className={cn(
-        'group bg-white rounded-2xl border border-neutral-200/80 overflow-hidden cursor-pointer',
+        'group bg-white rounded-2xl border border-neutral-200/80 overflow-hidden cursor-pointer w-full',
         'shadow-sm hover:shadow-md hover:-translate-y-0.5',
         'transition-all duration-200 ease-out',
       )}
@@ -154,12 +152,12 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
 
         {/* Price */}
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginTop: 8 }}>
-          {listing.price !== null ? (
+          {listing.price === null ? (
+            <span className="text-sm font-medium italic text-neutral-400">Sob consulta</span>
+          ) : (
             <span className="text-lg font-bold text-neutral-900" style={{ letterSpacing: '-0.02em' }}>
               {formatPrice(listing.price)}
             </span>
-          ) : (
-            <span className="text-sm font-medium italic text-neutral-400">Sob consulta</span>
           )}
           {listing.priceNegotiable && (
             <span
@@ -190,6 +188,6 @@ export function ListingCard({ listing, onClick }: ListingCardProps) {
           )}
         </div>
       </div>
-    </div>
+    </button>
   );
 }

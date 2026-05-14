@@ -2,7 +2,7 @@ import { Suspense } from 'react';
 import { Loader2 } from 'lucide-react';
 
 interface PageSuspenseProps {
-  children: React.ReactNode;
+  readonly children: React.ReactNode;
 }
 
 function PageLoadingFallback() {

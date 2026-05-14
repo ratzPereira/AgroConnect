@@ -198,7 +198,7 @@ class CalendarServiceTest {
         ScheduleUpdateDto dto = new ScheduleUpdateDto(
                 LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7), null, null, null);
 
-        CalendarEventResponse result = calendarService.updateSchedule(100L, dto, 1L);
+        calendarService.updateSchedule(100L, dto, 1L);
 
         verify(executionRepository).save(execution);
         assertThat(execution.getScheduledDate()).isEqualTo(LocalDate.of(2026, 4, 5));

@@ -5,9 +5,9 @@ import type { InventoryItem } from '@/types/inventory';
 import type { Machine } from '@/types/machine';
 
 interface ProviderAlertsProps {
-  lowStockItems: InventoryItem[];
-  maintenanceDueMachines: Machine[];
-  className?: string;
+  readonly lowStockItems: InventoryItem[];
+  readonly maintenanceDueMachines: Machine[];
+  readonly className?: string;
 }
 
 export function ProviderAlerts({ lowStockItems, maintenanceDueMachines, className }: ProviderAlertsProps) {

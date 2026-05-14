@@ -3,8 +3,8 @@ import type { ErrorInfo, ReactNode } from 'react';
 import { ErrorIllustration } from '@/components/illustrations/ErrorIllustration';
 
 interface Props {
-  children: ReactNode;
-  fallback?: ReactNode;
+  readonly children: ReactNode;
+  readonly fallback?: ReactNode;
 }
 
 interface State {

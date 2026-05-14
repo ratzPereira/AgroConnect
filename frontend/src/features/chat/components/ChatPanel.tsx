@@ -10,7 +10,7 @@ import { Send, Loader2, MessageSquare } from 'lucide-react';
 import { cn } from '@/utils/cn';
 
 interface ChatPanelProps {
-  requestId: number;
+  readonly requestId: number;
 }
 
 function formatDaySeparator(dateStr: string): string {
@@ -84,16 +84,18 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
           onScroll={handleScroll}
           className="h-96 overflow-y-auto mb-4 space-y-2 pr-1"
         >
-          {isLoading ? (
+          {isLoading && (
             <div className="flex justify-center py-6">
               <Loader2 className="h-5 w-5 animate-spin text-neutral-400" />
             </div>
-          ) : messages.length === 0 ? (
+          )}
+          {!isLoading && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <MessageSquare className="h-10 w-10 text-neutral-300 mb-3" />
               <p className="text-sm text-neutral-500">Sem mensagens. Inicie a conversa.</p>
             </div>
-          ) : (
+          )}
+          {!isLoading && messages.length > 0 && (
             messages.map((msg, i) => {
               const isOwn = msg.senderId === user?.id;
               const msgDay = new Date(msg.sentAt).toDateString();

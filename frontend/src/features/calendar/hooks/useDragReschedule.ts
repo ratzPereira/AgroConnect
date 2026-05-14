@@ -70,7 +70,16 @@ export function useDragReschedule({ events }: UseDragRescheduleOptions) {
         target.resourceType === 'operator' &&
         target.resourceId !== session.resourceId;
 
-      if (!isAllDay) {
+      if (isAllDay) {
+        await updateSchedule.mutateAsync({
+          executionId: event.executionId,
+          data: {
+            scheduledDate: target.dayIso,
+            scheduledEndDate: target.dayIso,
+            allDay: true,
+          },
+        });
+      } else {
         const start = slotToTime(target.startSlot);
         const end = slotToTime(target.startSlot + target.spanSlots);
         await updateSchedule.mutateAsync({
@@ -81,15 +90,6 @@ export function useDragReschedule({ events }: UseDragRescheduleOptions) {
             scheduledStartTime: formatTime(start),
             scheduledEndTime: formatTime(end),
             allDay: false,
-          },
-        });
-      } else {
-        await updateSchedule.mutateAsync({
-          executionId: event.executionId,
-          data: {
-            scheduledDate: target.dayIso,
-            scheduledEndDate: target.dayIso,
-            allDay: true,
           },
         });
       }

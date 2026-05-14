@@ -3,16 +3,16 @@ import type { CalendarEvent } from '@/types/calendar';
 import { GanttBarV2 } from '../primitives/GanttBarV2';
 
 interface DraggableBarProps {
-  event: CalendarEvent;
-  startSlot: number;
-  spanSlots: number;
-  laneRow?: number;
-  hasConflict?: boolean;
-  laneId: string;
-  resourceType: 'operator' | 'machine' | 'job';
-  resourceId: number | null;
-  dayIso: string;
-  onClick?: (event: CalendarEvent) => void;
+  readonly event: CalendarEvent;
+  readonly startSlot: number;
+  readonly spanSlots: number;
+  readonly laneRow?: number;
+  readonly hasConflict?: boolean;
+  readonly laneId: string;
+  readonly resourceType: 'operator' | 'machine' | 'job';
+  readonly resourceId: number | null;
+  readonly dayIso: string;
+  readonly onClick?: (event: CalendarEvent) => void;
 }
 
 export function DraggableBar({

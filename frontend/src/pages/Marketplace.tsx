@@ -133,7 +133,7 @@ export function Marketplace() {
           </h1>
           {!isLoading && totalElements > 0 && (
             <p className="text-sm text-neutral-500" style={{ marginTop: 2 }}>
-              {totalElements} anúncio{totalElements !== 1 ? 's' : ''} encontrado{totalElements !== 1 ? 's' : ''}
+              {totalElements} anúncio{totalElements === 1 ? '' : 's'} encontrado{totalElements === 1 ? '' : 's'}
             </p>
           )}
         </div>
@@ -176,7 +176,7 @@ export function Marketplace() {
       {/* Category pills */}
       <div style={{ marginBottom: 20 }}>
         <CategoryFilter
-          selected={category as ListingCategory | null}
+          selected={category}
           onSelect={(cat) => updateParams({ category: cat ?? '' })}
         />
       </div>
@@ -260,7 +260,7 @@ export function Marketplace() {
       </div>
 
       {/* Content */}
-      {isLoading ? (
+      {isLoading && (
         <div
           style={{
             display: 'grid',
@@ -268,8 +268,8 @@ export function Marketplace() {
             gap: 16,
           }}
         >
-          {Array.from({ length: 8 }).map((_, i) => (
-            <div key={i} style={{ borderRadius: 16, border: '1px solid #e5e5e5', backgroundColor: 'white', overflow: 'hidden' }}>
+          {['mk-0', 'mk-1', 'mk-2', 'mk-3', 'mk-4', 'mk-5', 'mk-6', 'mk-7'].map(k => (
+            <div key={k} style={{ borderRadius: 16, border: '1px solid #e5e5e5', backgroundColor: 'white', overflow: 'hidden' }}>
               <div style={{ height: 192 }}>
                 <Skeleton className="w-full h-full" />
               </div>
@@ -281,7 +281,8 @@ export function Marketplace() {
             </div>
           ))}
         </div>
-      ) : listings.length === 0 ? (
+      )}
+      {!isLoading && listings.length === 0 && (
         <EmptyState
           illustration={<ShoppingBag className="h-16 w-16 text-neutral-300" />}
           title="Nenhum anúncio encontrado"
@@ -293,7 +294,8 @@ export function Marketplace() {
             </Button>
           }
         />
-      ) : viewMode === 'grid' ? (
+      )}
+      {!isLoading && listings.length > 0 && viewMode === 'grid' && (
         <>
           <div
             style={{
@@ -335,7 +337,8 @@ export function Marketplace() {
             </div>
           )}
         </>
-      ) : (
+      )}
+      {!isLoading && listings.length > 0 && viewMode !== 'grid' && (
         <AzoresMap
           pins={mapPins}
           height="clamp(300px, 60vh, 600px)"

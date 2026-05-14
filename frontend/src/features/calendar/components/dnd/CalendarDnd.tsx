@@ -8,16 +8,30 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from '@dnd-kit/core';
-import type { CalendarEvent, ConflictResponse } from '@/types/calendar';
-import { GhostBar } from '../primitives/GhostBar';
+import type { CalendarEvent } from '@/types/calendar';
+// GhostBar is re-exported below; not imported here directly
 import { useDragReschedule, type DragSession, type DropTarget } from '../../hooks/useDragReschedule';
 import { SLOTS_PER_DAY, snapSlot } from '../../utils/timeMath';
 import { toast } from 'sonner';
 
 interface CalendarDndProps {
-  events: CalendarEvent[];
-  conflicts: ConflictResponse[];
-  children: ReactNode;
+  readonly events: CalendarEvent[];
+  readonly children: ReactNode;
+}
+
+function findLaneAtPoint(x: number, y: number): {
+  el: HTMLElement;
+  laneId: string;
+  rect: DOMRect;
+} | null {
+  const stack = document.elementsFromPoint(x, y);
+  for (const node of stack) {
+    const el = node as HTMLElement;
+    if (el.dataset?.laneId) {
+      return { el, laneId: el.dataset.laneId, rect: el.getBoundingClientRect() };
+    }
+  }
+  return null;
 }
 
 export function CalendarDnd({ events, children }: CalendarDndProps) {
@@ -35,25 +49,10 @@ export function CalendarDnd({ events, children }: CalendarDndProps) {
       pointerRef.current = { x: e.clientX, y: e.clientY };
       updateTargetFromPointer();
     }
-    window.addEventListener('pointermove', onMove);
-    return () => window.removeEventListener('pointermove', onMove);
+    globalThis.addEventListener('pointermove', onMove);
+    return () => globalThis.removeEventListener('pointermove', onMove);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [drag.session]);
-
-  function findLaneAtPoint(x: number, y: number): {
-    el: HTMLElement;
-    laneId: string;
-    rect: DOMRect;
-  } | null {
-    const stack = document.elementsFromPoint(x, y);
-    for (const node of stack) {
-      const el = node as HTMLElement;
-      if (el.dataset?.laneId) {
-        return { el, laneId: el.dataset.laneId, rect: el.getBoundingClientRect() };
-      }
-    }
-    return null;
-  }
 
   function updateTargetFromPointer() {
     if (!drag.session) return;
@@ -187,7 +186,7 @@ function parseHHMM(value?: string | null): number | null {
 }
 
 function extractDaysCount(el: HTMLElement): number {
-  const raw = el.getAttribute('data-days-count');
+  const raw = el.dataset.daysCount;
   if (raw) {
     const n = Number(raw);
     if (Number.isFinite(n) && n > 0) return n;
@@ -196,9 +195,9 @@ function extractDaysCount(el: HTMLElement): number {
 }
 
 function extractDays(el: HTMLElement): string[] {
-  const raw = el.getAttribute('data-days');
+  const raw = el.dataset.days;
   if (!raw) return [];
   return raw.split(',');
 }
 
-export { GhostBar };
+export { GhostBar } from '../primitives/GhostBar';

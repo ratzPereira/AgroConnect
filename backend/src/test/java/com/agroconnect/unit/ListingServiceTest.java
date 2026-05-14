@@ -653,7 +653,8 @@ class ListingServiceTest {
         when(listingPhotoRepository.findByListingIdOrderBySortOrderAsc(1L)).thenReturn(Collections.emptyList());
 
         Page<ListingSummaryResponse> result = service.search(
-                "ANIMALS", null, null, null, null, null, null, null, pageable);
+                new ListingService.ListingSearchCriteria("ANIMALS", null, null, null, null, null, null, null),
+                pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -674,7 +675,8 @@ class ListingServiceTest {
         when(listingPhotoRepository.findByListingIdOrderBySortOrderAsc(1L)).thenReturn(Collections.emptyList());
 
         Page<ListingSummaryResponse> result = service.search(
-                null, "Terceira", null, null, null, null, null, null, pageable);
+                new ListingService.ListingSearchCriteria(null, "Terceira", null, null, null, null, null, null),
+                pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -699,7 +701,8 @@ class ListingServiceTest {
         when(listingPhotoRepository.findByListingIdOrderBySortOrderAsc(1L)).thenReturn(Collections.emptyList());
 
         Page<ListingSummaryResponse> result = service.search(
-                null, null, null, minPrice, maxPrice, null, null, null, pageable);
+                new ListingService.ListingSearchCriteria(null, null, null, minPrice, maxPrice, null, null, null),
+                pageable);
 
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
@@ -716,7 +719,8 @@ class ListingServiceTest {
                 .thenReturn(emptyPage);
 
         Page<ListingSummaryResponse> result = service.search(
-                null, null, null, null, null, 38.7167, -27.2167, 25.0, pageable);
+                new ListingService.ListingSearchCriteria(null, null, null, null, null, 38.7167, -27.2167, 25.0),
+                pageable);
 
         assertNotNull(result);
         assertEquals(0, result.getTotalElements());
@@ -738,7 +742,8 @@ class ListingServiceTest {
         when(listingPhotoRepository.findByListingIdOrderBySortOrderAsc(anyLong())).thenReturn(Collections.emptyList());
 
         Page<ListingSummaryResponse> result = service.search(
-                null, null, null, null, null, null, null, null, pageable);
+                new ListingService.ListingSearchCriteria(null, null, null, null, null, null, null, null),
+                pageable);
 
         assertEquals(2, result.getTotalElements());
     }
@@ -1000,7 +1005,8 @@ class ListingServiceTest {
         when(listingPhotoRepository.findByListingIdOrderBySortOrderAsc(1L)).thenReturn(List.of(photo));
 
         Page<ListingSummaryResponse> result = service.search(
-                null, null, null, null, null, null, null, null, pageable);
+                new ListingService.ListingSearchCriteria(null, null, null, null, null, null, null, null),
+                pageable);
 
         assertEquals(1, result.getTotalElements());
         assertEquals("http://localhost:9000/photo1.jpg", result.getContent().get(0).firstPhotoUrl());

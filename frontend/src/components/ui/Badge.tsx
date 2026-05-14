@@ -5,11 +5,11 @@ type BadgeVariant = 'default' | 'success' | 'warning' | 'danger' | 'info' | 'neu
 type BadgeSize = 'sm' | 'md';
 
 interface BadgeProps {
-  variant?: BadgeVariant;
-  size?: BadgeSize;
-  dot?: boolean;
-  children: ReactNode;
-  className?: string;
+  readonly variant?: BadgeVariant;
+  readonly size?: BadgeSize;
+  readonly dot?: boolean;
+  readonly children: ReactNode;
+  readonly className?: string;
 }
 
 const variantStyles: Record<BadgeVariant, string> = {

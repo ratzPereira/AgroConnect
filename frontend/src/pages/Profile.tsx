@@ -116,41 +116,41 @@ export function Profile() {
           )}
         </div>
 
-        {isLoading ? (
+        {isLoading && (
           <div className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="space-y-1.5">
+              {['pf-0', 'pf-1', 'pf-2', 'pf-3'].map(k => (
+                <div key={k} className="space-y-1.5">
                   <Skeleton.Line className="h-3 w-20" />
                   <Skeleton.Line className="h-5 w-40" />
                 </div>
               ))}
             </div>
           </div>
-        ) : profile ? (
-          isEditing ? (
-            isProviderProfile(profile) ? (
-              <ProviderEditForm
-                profile={profile}
-                email={user?.email ?? ''}
-                onCancel={() => setIsEditing(false)}
-                onSaved={() => {
-                  setIsEditing(false);
-                  queryClient.invalidateQueries({ queryKey: ['my-profile'] });
-                }}
-              />
-            ) : (
-              <ClientEditForm
-                profile={profile as ClientProfileData}
-                email={user?.email ?? ''}
-                onCancel={() => setIsEditing(false)}
-                onSaved={() => {
-                  setIsEditing(false);
-                  queryClient.invalidateQueries({ queryKey: ['my-profile'] });
-                }}
-              />
-            )
-          ) : (
+        )}
+        {!isLoading && profile && isEditing && isProviderProfile(profile) && (
+          <ProviderEditForm
+            profile={profile}
+            email={user?.email ?? ''}
+            onCancel={() => setIsEditing(false)}
+            onSaved={() => {
+              setIsEditing(false);
+              queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+            }}
+          />
+        )}
+        {!isLoading && profile && isEditing && !isProviderProfile(profile) && (
+          <ClientEditForm
+            profile={profile as ClientProfileData}
+            email={user?.email ?? ''}
+            onCancel={() => setIsEditing(false)}
+            onSaved={() => {
+              setIsEditing(false);
+              queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+            }}
+          />
+        )}
+        {!isLoading && profile && !isEditing && (
             <>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-5">
                 {isProviderProfile(profile) ? (
@@ -218,8 +218,8 @@ export function Profile() {
                 </div>
               )}
             </>
-          )
-        ) : (
+        )}
+        {!isLoading && !profile && (
           <p className="text-sm text-neutral-500">
             Nao foi possivel carregar os dados do perfil.
           </p>
@@ -310,10 +310,10 @@ export function Profile() {
 // --- Edit Forms ---
 
 interface ClientEditFormProps {
-  profile: ClientProfileData;
-  email: string;
-  onCancel: () => void;
-  onSaved: () => void;
+  readonly profile: ClientProfileData;
+  readonly email: string;
+  readonly onCancel: () => void;
+  readonly onSaved: () => void;
 }
 
 function ClientEditForm({ profile, email, onCancel, onSaved }: ClientEditFormProps) {
@@ -340,7 +340,7 @@ function ClientEditForm({ profile, email, onCancel, onSaved }: ClientEditFormPro
           onChange={(e) => setName(e.target.value)}
         />
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+          <span className="block text-sm font-medium text-neutral-700 mb-1.5">Email</span>
           <p className="text-sm text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-200">
             {email}
           </p>
@@ -367,10 +367,10 @@ function ClientEditForm({ profile, email, onCancel, onSaved }: ClientEditFormPro
 }
 
 interface ProviderEditFormProps {
-  profile: ProviderProfileData;
-  email: string;
-  onCancel: () => void;
-  onSaved: () => void;
+  readonly profile: ProviderProfileData;
+  readonly email: string;
+  readonly onCancel: () => void;
+  readonly onSaved: () => void;
 }
 
 function ProviderEditForm({ profile, email, onCancel, onSaved }: ProviderEditFormProps) {
@@ -412,7 +412,7 @@ function ProviderEditForm({ profile, email, onCancel, onSaved }: ProviderEditFor
           onChange={(e) => setNif(e.target.value)}
         />
         <div>
-          <label className="block text-sm font-medium text-neutral-700 mb-1.5">Email</label>
+          <span className="block text-sm font-medium text-neutral-700 mb-1.5">Email</span>
           <p className="text-sm text-neutral-500 bg-neutral-50 rounded-lg px-3 py-2 border border-neutral-200">
             {email}
           </p>
@@ -461,9 +461,9 @@ function ProviderEditForm({ profile, email, onCancel, onSaved }: ProviderEditFor
 // --- Display Components ---
 
 interface ProfileFieldProps {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
+  readonly icon: React.ReactNode;
+  readonly label: string;
+  readonly value: string;
 }
 
 function ProfileField({ icon, label, value }: ProfileFieldProps) {

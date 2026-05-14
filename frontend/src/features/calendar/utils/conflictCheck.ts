@@ -10,40 +10,47 @@ export interface ProposedSchedule {
   machineIds: number[];
 }
 
+function sharesResource(e: CalendarEvent, proposed: ProposedSchedule): boolean {
+  const sharesOperator = e.assignments.some((a) => proposed.operatorIds.includes(a.teamMemberId));
+  const sharesMachine = e.assignments.some(
+    (a) => a.machineId != null && proposed.machineIds.includes(a.machineId),
+  );
+  return sharesOperator || sharesMachine;
+}
+
+function checkAgainstEvent(
+  e: CalendarEvent,
+  proposed: ProposedSchedule,
+): { conflict: boolean; reason?: string } | null {
+  if (e.executionId === proposed.executionId) return null;
+  if (e.scheduledDate > proposed.dayIso || e.scheduledEndDate < proposed.dayIso) return null;
+  if (!sharesResource(e, proposed)) return null;
+  if (e.scheduledAllDay) {
+    return { conflict: true, reason: `Sobrepõe-se a "${e.requestTitle}" (dia inteiro)` };
+  }
+  const start = parseTime(e.scheduledStartTime);
+  const end = parseTime(e.scheduledEndTime);
+  if (!start || !end) return null;
+
+  const otherStartSlot = e.scheduledDate === proposed.dayIso ? toSlot(start.hour, start.minute) : 0;
+  const otherEndSlot = e.scheduledEndDate === proposed.dayIso ? toSlot(end.hour, end.minute) : SLOTS_PER_DAY;
+  const proposedEnd = proposed.startSlot + proposed.spanSlots;
+  if (proposed.startSlot < otherEndSlot && proposedEnd > otherStartSlot) {
+    return {
+      conflict: true,
+      reason: `Sobrepõe-se a "${e.requestTitle}" (${formatTime(start)}–${formatTime(end)})`,
+    };
+  }
+  return null;
+}
+
 export function eventsConflict(
   proposed: ProposedSchedule,
   others: CalendarEvent[],
 ): { conflict: boolean; reason?: string } {
   for (const e of others) {
-    if (e.executionId === proposed.executionId) continue;
-    if (e.scheduledDate > proposed.dayIso || e.scheduledEndDate < proposed.dayIso) continue;
-
-    const sharesOperator = e.assignments.some((a) => proposed.operatorIds.includes(a.teamMemberId));
-    const sharesMachine = e.assignments.some(
-      (a) => a.machineId != null && proposed.machineIds.includes(a.machineId),
-    );
-    if (!sharesOperator && !sharesMachine) continue;
-
-    if (e.scheduledAllDay) {
-      return { conflict: true, reason: `Sobrepõe-se a "${e.requestTitle}" (dia inteiro)` };
-    }
-
-    const isFirstDay = e.scheduledDate === proposed.dayIso;
-    const isLastDay = e.scheduledEndDate === proposed.dayIso;
-    const start = parseTime(e.scheduledStartTime);
-    const end = parseTime(e.scheduledEndTime);
-    if (!start || !end) continue;
-
-    const otherStartSlot = isFirstDay ? toSlot(start.hour, start.minute) : 0;
-    const otherEndSlot = isLastDay ? toSlot(end.hour, end.minute) : SLOTS_PER_DAY;
-
-    const proposedEnd = proposed.startSlot + proposed.spanSlots;
-    if (proposed.startSlot < otherEndSlot && proposedEnd > otherStartSlot) {
-      return {
-        conflict: true,
-        reason: `Sobrepõe-se a "${e.requestTitle}" (${formatTime(start)}–${formatTime(end)})`,
-      };
-    }
+    const result = checkAgainstEvent(e, proposed);
+    if (result) return result;
   }
   return { conflict: false };
 }

@@ -235,8 +235,9 @@ export function MachineDetail() {
         <CardBody>
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-neutral-600">De</label>
+              <label htmlFor="md-from" className="block text-xs font-medium text-neutral-600">De</label>
               <input
+                id="md-from"
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
@@ -244,8 +245,9 @@ export function MachineDetail() {
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-neutral-600">Até</label>
+              <label htmlFor="md-to" className="block text-xs font-medium text-neutral-600">Até</label>
               <input
+                id="md-to"
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
@@ -327,9 +329,8 @@ export function MachineDetail() {
 
             {activeTab === 'jobs' && (
               <>
-                {jobsLoading ? (
-                  <Skeleton.Table />
-                ) : jobsPageData && jobsPageData.content.length > 0 ? (
+                {jobsLoading && <Skeleton.Table />}
+                {!jobsLoading && jobsPageData && jobsPageData.content.length > 0 && (
                   <Card>
                     <div className="overflow-x-auto">
                       <table className="w-full text-sm">
@@ -376,7 +377,8 @@ export function MachineDetail() {
                       </div>
                     )}
                   </Card>
-                ) : (
+                )}
+                {!jobsLoading && (!jobsPageData || jobsPageData.content.length === 0) && (
                   <Card><CardBody>
                     <p className="text-sm text-neutral-500 text-center py-8">Sem trabalhos no período.</p>
                   </CardBody></Card>
@@ -391,9 +393,8 @@ export function MachineDetail() {
                     <Plus className="h-4 w-4" />Adicionar manutenção
                   </Button>
                 </div>
-                {maintenanceLoading ? (
-                  <Skeleton.Table />
-                ) : maintenanceList && maintenanceList.length > 0 ? (
+                {maintenanceLoading && <Skeleton.Table />}
+                {!maintenanceLoading && maintenanceList && maintenanceList.length > 0 && (
                   <div className="space-y-2">
                     {maintenanceList.map((log) => (
                       <Card key={log.id}>
@@ -410,7 +411,7 @@ export function MachineDetail() {
                               <p className="text-xs text-neutral-500">
                                 {log.performedAt}
                                 {log.workshopName ? ` • ${log.workshopName}` : ''}
-                                {log.cost != null ? ` • ${currency(log.cost)}` : ''}
+                                {log.cost == null ? '' : ` • ${currency(log.cost)}`}
                               </p>
                               {log.nextDueAt && (
                                 <p className="text-xs text-neutral-500 mt-0.5">Próx.: {log.nextDueAt}</p>
@@ -431,7 +432,8 @@ export function MachineDetail() {
                       </Card>
                     ))}
                   </div>
-                ) : (
+                )}
+                {!maintenanceLoading && (!maintenanceList || maintenanceList.length === 0) && (
                   <Card><CardBody>
                     <p className="text-sm text-neutral-500 text-center py-8">Sem manutenções registadas.</p>
                   </CardBody></Card>
@@ -446,9 +448,8 @@ export function MachineDetail() {
                     <Plus className="h-4 w-4" />Adicionar despesa
                   </Button>
                 </div>
-                {expensesLoading ? (
-                  <Skeleton.Table />
-                ) : expensesList && expensesList.length > 0 ? (
+                {expensesLoading && <Skeleton.Table />}
+                {!expensesLoading && expensesList && expensesList.length > 0 && (
                   <div className="space-y-2">
                     {expensesList.map((exp) => (
                       <Card key={exp.id}>
@@ -483,7 +484,8 @@ export function MachineDetail() {
                       </Card>
                     ))}
                   </div>
-                ) : (
+                )}
+                {!expensesLoading && (!expensesList || expensesList.length === 0) && (
                   <Card><CardBody>
                     <p className="text-sm text-neutral-500 text-center py-8">Sem despesas registadas.</p>
                   </CardBody></Card>

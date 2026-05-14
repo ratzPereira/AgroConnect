@@ -4,12 +4,12 @@ import { cn } from '@/utils/cn';
 import type { CalendarEvent } from '@/types/calendar';
 
 interface AllDayBandProps {
-  events: CalendarEvent[];
-  days?: number;
-  dayLabels?: string[];
-  emptyHint?: string;
-  rightActions?: ReactNode;
-  onEventClick?: (event: CalendarEvent) => void;
+  readonly events: CalendarEvent[];
+  readonly days?: number;
+  readonly dayLabels?: string[];
+  readonly emptyHint?: string;
+  readonly rightActions?: ReactNode;
+  readonly onEventClick?: (event: CalendarEvent) => void;
 }
 
 const URGENCY_CHIP: Record<string, string> = {

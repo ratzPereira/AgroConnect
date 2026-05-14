@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { Loader2 } from 'lucide-react';
 
 interface ReviewListProps {
-  providerId: number;
+  readonly providerId: number;
 }
 
 export function ReviewList({ providerId }: ReviewListProps) {

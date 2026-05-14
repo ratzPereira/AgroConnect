@@ -5,9 +5,9 @@ import { ArrowRight } from 'lucide-react';
 import type { Transaction } from '@/types/transaction';
 
 interface TransactionDetailModalProps {
-  transaction: Transaction | null;
-  open: boolean;
-  onClose: () => void;
+  readonly transaction: Transaction | null;
+  readonly open: boolean;
+  readonly onClose: () => void;
 }
 
 export function TransactionDetailModal({ transaction, open, onClose }: TransactionDetailModalProps) {

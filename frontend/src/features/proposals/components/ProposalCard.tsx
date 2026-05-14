@@ -18,10 +18,10 @@ const pricingLabels: Record<string, string> = {
 };
 
 interface ProposalCardProps {
-  proposal: ProposalResponse;
-  isRequestOwner?: boolean;
-  onAccept?: (id: number) => void;
-  acceptLoading?: boolean;
+  readonly proposal: ProposalResponse;
+  readonly isRequestOwner?: boolean;
+  readonly onAccept?: (id: number) => void;
+  readonly acceptLoading?: boolean;
 }
 
 export function ProposalCard({ proposal, isRequestOwner, onAccept, acceptLoading }: ProposalCardProps) {

@@ -19,10 +19,10 @@ const markerIcon = L.divIcon({
 });
 
 interface LocationPickerProps {
-  lat: number | null;
-  lng: number | null;
-  onChange: (lat: number, lng: number) => void;
-  center?: { lat: number; lng: number; zoom: number };
+  readonly lat: number | null;
+  readonly lng: number | null;
+  readonly onChange: (lat: number, lng: number) => void;
+  readonly center?: { lat: number; lng: number; zoom: number };
 }
 
 function ClickHandler({ onChange }: { onChange: (lat: number, lng: number) => void }) {

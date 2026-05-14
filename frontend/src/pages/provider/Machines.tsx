@@ -92,13 +92,14 @@ export function Machines() {
         </Card>
       )}
 
-      {isLoading ? (
+      {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Skeleton.Card />
           <Skeleton.Card />
           <Skeleton.Card />
         </div>
-      ) : machines && machines.length > 0 ? (
+      )}
+      {!isLoading && machines && machines.length > 0 && (
         <motion.div
           variants={listContainerVariants}
           initial="hidden"
@@ -138,7 +139,8 @@ export function Machines() {
             </motion.div>
           ))}
         </motion.div>
-      ) : (
+      )}
+      {!isLoading && (!machines || machines.length === 0) && (
         <EmptyState
           illustration={<EmptyRequests className="w-48 h-auto" />}
           title="Sem máquinas registadas"

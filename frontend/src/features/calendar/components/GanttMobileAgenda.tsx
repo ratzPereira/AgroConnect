@@ -5,9 +5,9 @@ import { cn } from '@/utils/cn';
 import type { CalendarEvent } from '@/types/calendar';
 
 interface GanttMobileAgendaProps {
-  events: CalendarEvent[];
-  year: number;
-  month: number;
+  readonly events: CalendarEvent[];
+  readonly year: number;
+  readonly month: number;
 }
 
 const URGENCY_BADGE: Record<string, { variant: 'danger' | 'warning' | 'default' | 'info'; label: string }> = {

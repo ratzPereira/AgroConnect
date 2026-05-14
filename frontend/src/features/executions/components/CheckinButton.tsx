@@ -5,8 +5,8 @@ import { Button } from '@/components/ui/Button';
 import { MapPin } from 'lucide-react';
 
 interface CheckinButtonProps {
-  executionId: number;
-  requestId: number;
+  readonly executionId: number;
+  readonly requestId: number;
 }
 
 export function CheckinButton({ executionId, requestId }: CheckinButtonProps) {

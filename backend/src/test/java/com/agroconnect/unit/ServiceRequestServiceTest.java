@@ -89,7 +89,6 @@ class ServiceRequestServiceTest {
     private ServiceRequestService service;
 
     private User clientUser;
-    private User otherUser;
     private ClientProfile clientProfile;
     private ServiceCategory category;
 
@@ -108,7 +107,6 @@ class ServiceRequestServiceTest {
         ReflectionTestUtils.setField(service, "minioPublicEndpoint", "http://localhost:9000");
 
         clientUser = UserFixture.aClientUser().build();
-        otherUser = UserFixture.aClientUser().id(999L).email("other@email.pt").build();
         clientProfile = UserFixture.aClientProfile().user(clientUser).build();
         category = ServiceRequestFixture.aCategory().build();
     }
@@ -1515,7 +1513,6 @@ class ServiceRequestServiceTest {
         @Test
         void getActiveJobsForProvider_shouldReturnActiveJobs() {
             ProviderProfile provider = UserFixture.aProviderProfile().build();
-            User pvUser = UserFixture.aProviderUser().build();
 
             ServiceRequest request = ServiceRequestFixture.aRequest()
                     .status(RequestStatus.IN_PROGRESS)

@@ -81,18 +81,17 @@ function formatDate(dateStr: string): string {
   });
 }
 
+function getStarClass(i: number, rating: number): string {
+  if (i < Math.floor(rating)) return 'fill-amber-400 text-amber-400';
+  if (i < Math.ceil(rating) && rating % 1 >= 0.5) return 'fill-amber-400/50 text-amber-400';
+  return 'text-neutral-200';
+}
+
 function renderStars(rating: number) {
   return Array.from({ length: 5 }, (_, i) => (
     <Star
-      key={i}
-      className={cn(
-        'h-3.5 w-3.5',
-        i < Math.floor(rating)
-          ? 'fill-amber-400 text-amber-400'
-          : i < Math.ceil(rating) && rating % 1 >= 0.5
-            ? 'fill-amber-400/50 text-amber-400'
-            : 'text-neutral-200',
-      )}
+      key={`star-${i}`}
+      className={cn('h-3.5 w-3.5', getStarClass(i, rating))}
     />
   ));
 }
@@ -260,12 +259,12 @@ export function ListingDetail() {
 
             {/* Price block */}
             <div className="flex items-baseline gap-3 mb-6">
-              {listing.price !== null ? (
+              {listing.price === null ? (
+                <span className="text-lg font-medium italic text-neutral-400">Preço sob consulta</span>
+              ) : (
                 <span className="text-3xl font-extrabold text-neutral-900 tracking-tight">
                   {formatPrice(listing.price)}
                 </span>
-              ) : (
-                <span className="text-lg font-medium italic text-neutral-400">Preço sob consulta</span>
               )}
               {listing.priceNegotiable && (
                 <span className="inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold uppercase tracking-wide bg-amber-50 text-amber-600 ring-1 ring-amber-200/60">
@@ -356,7 +355,7 @@ export function ListingDetail() {
                       size="sm"
                       className="w-full"
                       onClick={() => {
-                        navigator.clipboard.writeText(window.location.href);
+                        navigator.clipboard.writeText(globalThis.location.href);
                         toast.success('Link copiado');
                       }}
                     >
@@ -378,15 +377,15 @@ export function ListingDetail() {
                   </div>
                   <div className="min-w-0">
                     <p className="font-semibold text-neutral-900 truncate">{sellerName}</p>
-                    {listing.sellerRating != null ? (
+                    {listing.sellerRating == null ? (
+                      <p className="text-xs text-neutral-400 mt-0.5">Vendedor novo</p>
+                    ) : (
                       <div className="flex items-center gap-1 mt-0.5">
                         {renderStars(listing.sellerRating)}
                         <span className="text-xs text-neutral-500 ml-0.5">
                           {listing.sellerRating.toFixed(1)}
                         </span>
                       </div>
-                    ) : (
-                      <p className="text-xs text-neutral-400 mt-0.5">Vendedor novo</p>
                     )}
                   </div>
                 </div>

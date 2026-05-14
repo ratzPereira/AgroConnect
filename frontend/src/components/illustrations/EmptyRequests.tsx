@@ -1,5 +1,5 @@
 interface IllustrationProps {
-  className?: string;
+  readonly className?: string;
 }
 
 export function EmptyRequests({ className }: IllustrationProps) {

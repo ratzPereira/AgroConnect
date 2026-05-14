@@ -7,10 +7,10 @@ import { Button } from '@/components/ui/Button';
 import type { ProposalAcceptResponse } from '@/types/stripe';
 
 interface PaymentModalProps {
-  open: boolean;
-  onClose: () => void;
-  acceptance: ProposalAcceptResponse | null;
-  onSucceeded: () => void;
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly acceptance: ProposalAcceptResponse | null;
+  readonly onSucceeded: () => void;
 }
 
 const stripePromiseCache = new Map<string, Promise<Stripe | null>>();
@@ -59,9 +59,9 @@ export function PaymentModal({ open, onClose, acceptance, onSucceeded }: Payment
 }
 
 interface PaymentFormProps {
-  acceptance: ProposalAcceptResponse;
-  onSucceeded: () => void;
-  onClose: () => void;
+  readonly acceptance: ProposalAcceptResponse;
+  readonly onSucceeded: () => void;
+  readonly onClose: () => void;
 }
 
 function PaymentForm({ acceptance, onSucceeded, onClose }: PaymentFormProps) {

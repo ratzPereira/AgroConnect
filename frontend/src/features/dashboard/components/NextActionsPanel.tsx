@@ -4,7 +4,7 @@ import type { ServiceRequestSummary } from '@/types/request';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 
 interface NextActionsPanelProps {
-  requests: ServiceRequestSummary[];
+  readonly requests: ServiceRequestSummary[];
 }
 
 interface Action {

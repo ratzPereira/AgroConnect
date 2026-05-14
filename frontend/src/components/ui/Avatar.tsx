@@ -6,12 +6,12 @@ type AvatarSize = 'xs' | 'sm' | 'md' | 'lg' | 'xl';
 type AvatarStatus = 'online' | 'offline' | 'busy';
 
 interface AvatarProps {
-  src?: string;
-  alt?: string;
-  name?: string;
-  size?: AvatarSize;
-  status?: AvatarStatus;
-  className?: string;
+  readonly src?: string;
+  readonly alt?: string;
+  readonly name?: string;
+  readonly size?: AvatarSize;
+  readonly status?: AvatarStatus;
+  readonly className?: string;
 }
 
 const sizeStyles: Record<AvatarSize, string> = {
@@ -39,7 +39,7 @@ const statusColors: Record<AvatarStatus, string> = {
 function getInitials(name: string): string {
   const parts = name.trim().split(/\s+/);
   if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
-  return (parts[0].charAt(0) + parts[parts.length - 1].charAt(0)).toUpperCase();
+  return (parts[0].charAt(0) + (parts.at(-1)?.charAt(0) ?? '')).toUpperCase();
 }
 
 export function Avatar({ src, alt, name, size = 'md', status, className }: AvatarProps) {
@@ -81,9 +81,9 @@ export function Avatar({ src, alt, name, size = 'md', status, className }: Avata
 }
 
 interface AvatarGroupProps {
-  children: ReactNode;
-  max?: number;
-  className?: string;
+  readonly children: ReactNode;
+  readonly max?: number;
+  readonly className?: string;
 }
 
 export function AvatarGroup({ children, max, className }: AvatarGroupProps) {
@@ -94,7 +94,7 @@ export function AvatarGroup({ children, max, className }: AvatarGroupProps) {
   return (
     <div className={cn('flex -space-x-2', className)}>
       {visible.map((child, i) => (
-        <div key={i} className="ring-2 ring-white rounded-full">
+        <div key={`av-${i}`} className="ring-2 ring-white rounded-full">
           {child}
         </div>
       ))}

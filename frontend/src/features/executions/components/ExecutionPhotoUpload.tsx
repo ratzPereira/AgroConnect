@@ -6,8 +6,8 @@ import { Upload } from 'lucide-react';
 import axios from 'axios';
 
 interface ExecutionPhotoUploadProps {
-  executionId: number;
-  requestId: number;
+  readonly executionId: number;
+  readonly requestId: number;
 }
 
 export function ExecutionPhotoUpload({ executionId, requestId }: ExecutionPhotoUploadProps) {

@@ -2,9 +2,9 @@ import type { ReactNode } from 'react';
 import { cn } from '@/utils/cn';
 
 interface CardProps {
-  children: ReactNode;
-  className?: string;
-  onClick?: () => void;
+  readonly children: ReactNode;
+  readonly className?: string;
+  readonly onClick?: () => void;
 }
 
 export function Card({ children, className, onClick }: CardProps) {
@@ -12,20 +12,13 @@ export function Card({ children, className, onClick }: CardProps) {
 
   if (onClick) {
     return (
-      <div
-        className={cn(baseClasses, 'cursor-pointer', className)}
+      <button
+        type="button"
+        className={cn(baseClasses, 'cursor-pointer text-left w-full', className)}
         onClick={onClick}
-        onKeyDown={(e) => {
-          if (e.key === 'Enter' || e.key === ' ') {
-            e.preventDefault();
-            onClick();
-          }
-        }}
-        role="button"
-        tabIndex={0}
       >
         {children}
-      </div>
+      </button>
     );
   }
 
@@ -33,8 +26,8 @@ export function Card({ children, className, onClick }: CardProps) {
 }
 
 interface CardSectionProps {
-  children: ReactNode;
-  className?: string;
+  readonly children: ReactNode;
+  readonly className?: string;
 }
 
 export function CardHeader({ children, className }: CardSectionProps) {

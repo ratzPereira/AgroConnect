@@ -16,7 +16,7 @@ const statusConfig: Record<RequestStatus, { label: string; className: string }> 
 };
 
 interface RequestStatusBadgeProps {
-  status: RequestStatus;
+  readonly status: RequestStatus;
 }
 
 export function RequestStatusBadge({ status }: RequestStatusBadgeProps) {

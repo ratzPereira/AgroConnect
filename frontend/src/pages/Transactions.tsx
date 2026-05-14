@@ -33,9 +33,8 @@ export function Transactions() {
         </p>
       </div>
 
-      {isLoading ? (
-        <Skeleton.Table />
-      ) : data && data.content.length > 0 ? (
+      {isLoading && <Skeleton.Table />}
+      {!isLoading && data && data.content.length > 0 && (
         <>
           <motion.div
             variants={listContainerVariants}
@@ -73,7 +72,8 @@ export function Transactions() {
             </div>
           )}
         </>
-      ) : (
+      )}
+      {!isLoading && (!data || data.content.length === 0) && (
         <EmptyState
           illustration={<EmptyTransactions className="w-48 h-auto" />}
           title="Nenhuma transação ainda"

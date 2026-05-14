@@ -4,7 +4,7 @@ import type { ActiveJob } from '@/types/pin';
 import { Card, CardHeader, CardBody } from '@/components/ui/Card';
 
 interface ProviderJobsListProps {
-  jobs: ActiveJob[];
+  readonly jobs: ActiveJob[];
 }
 
 function getNextAction(job: ActiveJob): { text: string; icon: React.ReactNode; color: string } {

@@ -5,10 +5,14 @@ import type { CalendarEvent } from '@/types/calendar';
 import type { CalendarFilters } from '../../hooks/useCalendarFilters';
 
 interface FilterPopoverProps {
-  events: CalendarEvent[];
-  filters: CalendarFilters;
-  onChange: (next: Partial<CalendarFilters>) => void;
-  onClear: () => void;
+  readonly events: CalendarEvent[];
+  readonly filters: CalendarFilters;
+  readonly onChange: (next: Partial<CalendarFilters>) => void;
+  readonly onClear: () => void;
+}
+
+function toggle<T extends string | number>(list: T[], value: T): T[] {
+  return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
 }
 
 const URGENCY_LABELS = { LOW: 'Baixa', MEDIUM: 'Média', HIGH: 'Alta' } as const;
@@ -51,9 +55,9 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
     return {
       operators: Array.from(operators.entries()).sort((a, b) => a[1].localeCompare(b[1])),
       machines: Array.from(machines.entries()).sort((a, b) => a[1].localeCompare(b[1])),
-      categories: Array.from(categories).sort(),
-      islands: Array.from(islands).sort(),
-      statuses: Array.from(statuses).sort(),
+      categories: Array.from(categories).sort((a, b) => a.localeCompare(b)),
+      islands: Array.from(islands).sort((a, b) => a.localeCompare(b)),
+      statuses: Array.from(statuses).sort((a, b) => a.localeCompare(b)),
     };
   }, [events]);
 
@@ -65,10 +69,6 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
     filters.statuses.length +
     filters.islands.length +
     (filters.includeAllDay ? 0 : 1);
-
-  function toggle<T extends string | number>(list: T[], value: T): T[] {
-    return list.includes(value) ? list.filter((v) => v !== value) : [...list, value];
-  }
 
   return (
     <div className="relative" ref={ref}>
@@ -116,7 +116,7 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
               title="Urgência"
               items={(['HIGH', 'MEDIUM', 'LOW'] as const).map((u) => ({ id: u, label: URGENCY_LABELS[u] }))}
               selected={filters.urgencies}
-              onToggle={(id) => onChange({ urgencies: toggle(filters.urgencies, id as 'LOW' | 'MEDIUM' | 'HIGH') })}
+              onToggle={(id) => onChange({ urgencies: toggle(filters.urgencies, id) })}
             />
             {statuses.length > 0 && (
               <FilterGroup
@@ -131,7 +131,7 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
                 title="Operadores"
                 items={operators.map(([id, label]) => ({ id, label }))}
                 selected={filters.operatorIds}
-                onToggle={(id) => onChange({ operatorIds: toggle(filters.operatorIds, id as number) })}
+                onToggle={(id) => onChange({ operatorIds: toggle(filters.operatorIds, id) })}
               />
             )}
             {machines.length > 0 && (
@@ -139,7 +139,7 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
                 title="Máquinas"
                 items={machines.map(([id, label]) => ({ id, label }))}
                 selected={filters.machineIds}
-                onToggle={(id) => onChange({ machineIds: toggle(filters.machineIds, id as number) })}
+                onToggle={(id) => onChange({ machineIds: toggle(filters.machineIds, id) })}
               />
             )}
             {categories.length > 0 && (
@@ -165,7 +165,7 @@ export function FilterPopover({ events, filters, onChange, onClear }: FilterPopo
                 onChange={(e) => onChange({ includeAllDay: e.target.checked })}
                 className="h-3.5 w-3.5 rounded border-neutral-300 text-primary-600"
               />
-              Incluir eventos de dia inteiro
+              <span>Incluir eventos de dia inteiro</span>
             </label>
           </div>
         </div>

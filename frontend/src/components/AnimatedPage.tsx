@@ -3,8 +3,8 @@ import { motion } from 'framer-motion';
 import { useMotionConfig } from '@/hooks/useMotionConfig';
 
 interface AnimatedPageProps {
-  children: ReactNode;
-  className?: string;
+  readonly children: ReactNode;
+  readonly className?: string;
 }
 
 export function AnimatedPage({ children, className }: AnimatedPageProps) {

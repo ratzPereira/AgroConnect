@@ -4,8 +4,8 @@ import { format } from 'date-fns';
 import type { Transaction } from '@/types/transaction';
 
 interface TransactionCardProps {
-  transaction: Transaction;
-  onClick?: () => void;
+  readonly transaction: Transaction;
+  readonly onClick?: () => void;
 }
 
 export function TransactionCard({ transaction, onClick }: TransactionCardProps) {

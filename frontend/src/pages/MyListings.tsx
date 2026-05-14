@@ -32,6 +32,13 @@ const STATUS_LABELS: Record<ListingStatus, string> = {
   REMOVED: 'Removido',
 };
 
+function getEmptyTitle(tab: string): string {
+  if (tab === 'all') return 'Sem anúncios';
+  if (tab === 'ACTIVE') return 'Sem anúncios ativos';
+  if (tab === 'SOLD') return 'Sem anúncios vendidos';
+  return 'Sem anúncios em rascunho';
+}
+
 const STATUS_BADGE_VARIANTS: Record<ListingStatus, 'default' | 'success' | 'warning' | 'danger' | 'neutral'> = {
   DRAFT: 'neutral',
   ACTIVE: 'success',
@@ -118,8 +125,8 @@ export function MyListings() {
       {/* Stats bar */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {statsLoading ? (
-          Array.from({ length: 4 }).map((_, i) => (
-            <Skeleton.Stat key={i} />
+          ['ss-0', 'ss-1', 'ss-2', 'ss-3'].map(k => (
+            <Skeleton.Stat key={k} />
           ))
         ) : (
           <>
@@ -163,10 +170,10 @@ export function MyListings() {
       >
         {() => (
           <>
-            {isLoading ? (
+            {isLoading && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
+                {['sk-0', 'sk-1', 'sk-2', 'sk-3'].map(k => (
+                  <div key={k} className="rounded-xl border border-neutral-200 bg-white overflow-hidden">
                     <Skeleton className="aspect-[16/10] w-full" />
                     <div className="p-3 space-y-2">
                       <Skeleton.Line className="h-4 w-3/4" />
@@ -176,14 +183,11 @@ export function MyListings() {
                   </div>
                 ))}
               </div>
-            ) : listings.length === 0 ? (
+            )}
+            {!isLoading && listings.length === 0 && (
               <EmptyState
                 illustration={<ShoppingBag className="h-16 w-16 text-neutral-300" />}
-                title={
-                  activeTab === 'all'
-                    ? 'Sem anúncios'
-                    : `Sem anúncios ${activeTab === 'ACTIVE' ? 'ativos' : activeTab === 'SOLD' ? 'vendidos' : 'em rascunho'}`
-                }
+                title={getEmptyTitle(activeTab)}
                 description="Comece a vender publicando o seu primeiro anúncio."
                 action={
                   <Button onClick={() => navigate('/marketplace/new')}>
@@ -192,7 +196,8 @@ export function MyListings() {
                   </Button>
                 }
               />
-            ) : (
+            )}
+            {!isLoading && listings.length > 0 && (
               <>
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {listings.map((listing) => (

@@ -20,6 +20,7 @@ public class StripeAccountService {
 
     private static final Logger log = LoggerFactory.getLogger(StripeAccountService.class);
     private static final String DEFAULT_COUNTRY = "PT";
+    private static final String PROVIDER_NOT_FOUND = "Perfil de provider não encontrado.";
 
     private final ProviderProfileRepository providerRepository;
     private final StripeService stripeService;
@@ -27,7 +28,7 @@ public class StripeAccountService {
     @Transactional
     public StripeOnboardingResponse startOnboarding(Long userId) {
         ProviderProfile provider = providerRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de provider não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(PROVIDER_NOT_FOUND));
 
         if (provider.getStripeAccountId() == null) {
             Account account = stripeService.createExpressAccount(
@@ -50,7 +51,7 @@ public class StripeAccountService {
 
     public StripeAccountStatusResponse getStatus(Long userId) {
         ProviderProfile provider = providerRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de provider não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(PROVIDER_NOT_FOUND));
 
         if (provider.getStripeAccountId() == null) {
             return StripeAccountStatusResponse.notConnected();
@@ -72,7 +73,7 @@ public class StripeAccountService {
     @Transactional
     public StripeAccountStatusResponse syncFromStripe(Long userId) {
         ProviderProfile provider = providerRepository.findByUserId(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("Perfil de provider não encontrado."));
+                .orElseThrow(() -> new ResourceNotFoundException(PROVIDER_NOT_FOUND));
 
         if (provider.getStripeAccountId() == null) {
             return StripeAccountStatusResponse.notConnected();

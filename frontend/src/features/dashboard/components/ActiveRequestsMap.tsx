@@ -3,8 +3,8 @@ import { cn } from '@/utils/cn';
 import 'leaflet/dist/leaflet.css';
 
 interface ActiveRequestsMapProps {
-  activeCount: number;
-  className?: string;
+  readonly activeCount: number;
+  readonly className?: string;
 }
 
 export function ActiveRequestsMap({ activeCount, className }: ActiveRequestsMapProps) {

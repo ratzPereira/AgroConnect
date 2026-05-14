@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/utils/cn';
 
 interface ActiveRequestCardsProps {
-  requests: ServiceRequestSummary[];
+  readonly requests: ServiceRequestSummary[];
 }
 
 const STATUS_LABELS: Record<string, string> = {

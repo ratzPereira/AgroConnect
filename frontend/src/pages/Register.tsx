@@ -192,7 +192,7 @@ export function Register() {
         <form onSubmit={handleSubmit(onSubmit)}>
           {/* Role selection */}
           <div className="mb-5">
-            <label className="block text-sm font-medium mb-2.5" style={{ color: '#374151' }}>Tipo de conta</label>
+            <span className="block text-sm font-medium mb-2.5" style={{ color: '#374151' }}>Tipo de conta</span>
             <div className="grid grid-cols-2 gap-3">
               <label
                 className="relative flex flex-col items-center gap-2.5 rounded-xl border-2 px-4 py-5 text-sm font-medium cursor-pointer transition-all"

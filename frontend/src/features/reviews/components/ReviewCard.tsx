@@ -4,7 +4,7 @@ import { format } from 'date-fns';
 import type { Review } from '@/types/review';
 
 interface ReviewCardProps {
-  review: Review;
+  readonly review: Review;
 }
 
 export function ReviewCard({ review }: ReviewCardProps) {

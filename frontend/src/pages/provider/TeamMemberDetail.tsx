@@ -118,9 +118,9 @@ export function TeamMemberDetail() {
             {[member.email, member.phone].filter(Boolean).join(' • ') || 'Sem contactos'}
           </p>
           <p className="text-xs font-medium text-neutral-700 mt-1">
-            {member.hourlyRate != null
-              ? `${Number(member.hourlyRate).toFixed(2)} €/h`
-              : <span className="text-neutral-400">Sem taxa horária</span>}
+            {member.hourlyRate == null
+              ? <span className="text-neutral-400">Sem taxa horária</span>
+              : `${Number(member.hourlyRate).toFixed(2)} €/h`}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -139,8 +139,9 @@ export function TeamMemberDetail() {
         <CardBody>
           <div className="flex flex-wrap items-end gap-3">
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-neutral-600">De</label>
+              <label htmlFor="tm-from" className="block text-xs font-medium text-neutral-600">De</label>
               <input
+                id="tm-from"
                 type="date"
                 value={from}
                 onChange={(e) => setFrom(e.target.value)}
@@ -148,8 +149,9 @@ export function TeamMemberDetail() {
               />
             </div>
             <div className="space-y-1">
-              <label className="block text-xs font-medium text-neutral-600">Até</label>
+              <label htmlFor="tm-to" className="block text-xs font-medium text-neutral-600">Até</label>
               <input
+                id="tm-to"
                 type="date"
                 value={to}
                 onChange={(e) => setTo(e.target.value)}
@@ -210,9 +212,8 @@ export function TeamMemberDetail() {
       )}
 
       <h2 className="text-sm font-semibold text-neutral-700 mb-3">Trabalhos realizados</h2>
-      {jobsLoading ? (
-        <Skeleton.Table />
-      ) : jobsPageData && jobsPageData.content.length > 0 ? (
+      {jobsLoading && <Skeleton.Table />}
+      {!jobsLoading && jobsPageData && jobsPageData.content.length > 0 && (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -263,7 +264,8 @@ export function TeamMemberDetail() {
             </div>
           )}
         </Card>
-      ) : (
+      )}
+      {!jobsLoading && (!jobsPageData || jobsPageData.content.length === 0) && (
         <Card><CardBody>
           <p className="text-sm text-neutral-500 text-center py-8">Sem trabalhos no período.</p>
         </CardBody></Card>
@@ -308,7 +310,7 @@ export function TeamMemberDetail() {
               type="number"
               min="0"
               step="0.01"
-              defaultValue={member.hourlyRate != null ? String(member.hourlyRate) : ''}
+              defaultValue={member.hourlyRate == null ? '' : String(member.hourlyRate)}
               className={INPUT_CLASS}
             />
           </FormField>

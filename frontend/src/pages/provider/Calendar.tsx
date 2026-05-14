@@ -97,12 +97,13 @@ export function ProviderCalendar() {
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_320px]">
         <div className="space-y-4 min-w-0">
-          <CalendarDnd events={filteredEvents} conflicts={conflicts}>
-            {eventsLoading ? (
+          <CalendarDnd events={filteredEvents}>
+            {eventsLoading && (
               <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
                 A carregar agenda…
               </div>
-            ) : view === 'day' ? (
+            )}
+            {!eventsLoading && view === 'day' && (
               <DayView
                 events={filteredEvents}
                 conflicts={conflicts}
@@ -110,10 +111,11 @@ export function ProviderCalendar() {
                 lane={lane}
                 enableDnd
                 onEventClick={(e) =>
-                  handleEventClick(e, (window.event as MouseEvent) ?? { clientX: 200, clientY: 200 })
+                  handleEventClick(e, { clientX: 200, clientY: 200 })
                 }
               />
-            ) : view === 'week' ? (
+            )}
+            {!eventsLoading && view === 'week' && (
               <WeekView
                 events={filteredEvents}
                 conflicts={conflicts}
@@ -121,10 +123,11 @@ export function ProviderCalendar() {
                 lane={lane}
                 enableDnd
                 onEventClick={(e) =>
-                  handleEventClick(e, (window.event as MouseEvent) ?? { clientX: 200, clientY: 200 })
+                  handleEventClick(e, { clientX: 200, clientY: 200 })
                 }
               />
-            ) : (
+            )}
+            {!eventsLoading && view === 'month' && (
               <MonthView
                 events={filteredEvents}
                 conflicts={conflicts}

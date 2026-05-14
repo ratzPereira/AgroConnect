@@ -4,11 +4,11 @@ import 'leaflet/dist/leaflet.css';
 import { useGeolocation } from '@/hooks/useGeolocation';
 
 interface CheckinMapProps {
-  targetLat: number;
-  targetLon: number;
-  checkedIn?: boolean;
-  checkinLat?: number;
-  checkinLon?: number;
+  readonly targetLat: number;
+  readonly targetLon: number;
+  readonly checkedIn?: boolean;
+  readonly checkinLat?: number;
+  readonly checkinLon?: number;
 }
 
 const JOB_SITE_ICON = L.divIcon({

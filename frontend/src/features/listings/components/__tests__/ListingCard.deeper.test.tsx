@@ -119,18 +119,12 @@ describe('ListingCard — deeper coverage', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
-  it('calls onClick on Enter keydown', () => {
+  it('renders as native button (keyboard handled by browser)', () => {
     const onClick = vi.fn();
     render(<ListingCard listing={baseListing} onClick={onClick} />);
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
-    expect(onClick).toHaveBeenCalledOnce();
-  });
-
-  it('does not call onClick on non-Enter keydown', () => {
-    const onClick = vi.fn();
-    render(<ListingCard listing={baseListing} onClick={onClick} />);
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Space' });
-    expect(onClick).not.toHaveBeenCalled();
+    const button = screen.getByRole('button');
+    expect(button.tagName).toBe('BUTTON');
+    expect(button).toHaveAttribute('type', 'button');
   });
 
   it('shows placeholder icon when no photo URL', () => {

@@ -6,8 +6,8 @@ import { cn } from '@/utils/cn';
 import type { ServiceRequestSummary, RequestStatus } from '@/types/request';
 
 interface RecentRequestsProps {
-  requests: ServiceRequestSummary[];
-  className?: string;
+  readonly requests: ServiceRequestSummary[];
+  readonly className?: string;
 }
 
 const statusLabel: Record<string, string> = {

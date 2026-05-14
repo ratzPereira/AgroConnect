@@ -56,11 +56,11 @@ describe('ListingCard', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
-  it('calls onClick on Enter keydown', () => {
+  it('renders as native button (keyboard handled by browser)', () => {
     const onClick = vi.fn();
     render(<ListingCard listing={baseListing} onClick={onClick} />);
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
-    expect(onClick).toHaveBeenCalledOnce();
+    const button = screen.getByRole('button');
+    expect(button.tagName).toBe('BUTTON');
   });
 
   it('renders condition badge when condition is provided', () => {

@@ -48,6 +48,12 @@ const TERMINAL_LABELS: Record<string, string> = {
   DISPUTED: 'Em Disputa',
 };
 
+function stepStatus(index: number, currentIndex: number): 'completed' | 'active' | 'upcoming' {
+  if (index < currentIndex) return 'completed';
+  if (index === currentIndex) return 'active';
+  return 'upcoming';
+}
+
 function buildTimelineSteps(status: string): Array<{ label: string; status: 'completed' | 'active' | 'upcoming' }> {
   const allSteps = [
     { key: 'DRAFT', label: 'Rascunho' },
@@ -61,16 +67,11 @@ function buildTimelineSteps(status: string): Array<{ label: string; status: 'com
   ];
 
   let currentIndex = allSteps.findIndex((s) => s.key === status);
-
   if (currentIndex === -1 && status in TERMINAL_LABELS) {
     allSteps.push({ key: status, label: TERMINAL_LABELS[status] });
     currentIndex = allSteps.length - 1;
   }
-
-  return allSteps.map((step, index) => ({
-    label: step.label,
-    status: index < currentIndex ? 'completed' as const : index === currentIndex ? 'active' as const : 'upcoming' as const,
-  }));
+  return allSteps.map((step, index) => ({ label: step.label, status: stepStatus(index, currentIndex) }));
 }
 
 export function RequestDetail() {
@@ -87,19 +88,19 @@ export function RequestDetail() {
   const { data: request, isLoading: requestLoading } = useQuery({
     queryKey: ['request', requestId],
     queryFn: () => getRequest(requestId),
-    enabled: !isNaN(requestId),
+    enabled: !Number.isNaN(requestId),
   });
 
   const { data: proposals, isLoading: proposalsLoading } = useQuery({
     queryKey: ['proposals', requestId],
     queryFn: () => getRequestProposals(requestId),
-    enabled: !isNaN(requestId),
+    enabled: !Number.isNaN(requestId),
   });
 
   const { data: reviews } = useQuery({
     queryKey: ['request-reviews', requestId],
     queryFn: () => getRequestReviews(requestId),
-    enabled: !isNaN(requestId) && !!request && REVIEW_STATUSES.has(request.status),
+    enabled: !Number.isNaN(requestId) && !!request && REVIEW_STATUSES.has(request.status),
   });
 
   const cancelMutation = useMutation({
@@ -331,13 +332,14 @@ export function RequestDetail() {
               </h2>
             </CardHeader>
             <CardBody>
-              {proposalsLoading ? (
+              {proposalsLoading && (
                 <div className="space-y-3">
-                  {Array.from({ length: 3 }).map((_, i) => (
-                    <Skeleton.Card key={i} />
+                  {['sk-0', 'sk-1', 'sk-2'].map(k => (
+                    <Skeleton.Card key={k} />
                   ))}
                 </div>
-              ) : proposals && proposals.length > 0 ? (
+              )}
+              {!proposalsLoading && proposals && proposals.length > 0 && (
                 <div className="space-y-3">
                   {proposals.map((proposal) => (
                     <ProposalCard
@@ -352,7 +354,8 @@ export function RequestDetail() {
                     />
                   ))}
                 </div>
-              ) : (
+              )}
+              {!proposalsLoading && (!proposals || proposals.length === 0) && (
                 <p className="text-sm text-neutral-500 text-center py-6">
                   Ainda não existem propostas para este pedido.
                 </p>

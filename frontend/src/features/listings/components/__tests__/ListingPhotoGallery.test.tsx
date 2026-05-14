@@ -32,13 +32,8 @@ describe('ListingPhotoGallery', () => {
     const photos = ['https://example.com/photo1.jpg'];
     render(<ListingPhotoGallery photos={photos} />);
 
-    // Click on the photo to open the lightbox
-    const photoContainer = screen.getByAltText('Foto 1').closest('div[class*="cursor-pointer"]');
-    if (photoContainer) {
-      fireEvent.click(photoContainer);
-    }
+    fireEvent.click(screen.getByLabelText('Abrir foto'));
 
-    // Lightbox should show a close button
     expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
   });
 

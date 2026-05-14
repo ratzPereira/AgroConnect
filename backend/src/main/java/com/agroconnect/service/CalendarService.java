@@ -411,14 +411,19 @@ public class CalendarService {
             String resourceType = parts[0];
             Long resourceId = Long.valueOf(parts[1]);
             for (Map.Entry<LocalDate, List<ServiceExecution>> dateEntry : entry.getValue().entrySet()) {
-                List<ServiceExecution> execs = dateEntry.getValue();
-                if (execs.size() <= 1) continue;
-                List<ServiceExecution> overlapping = filterTimeOverlapping(execs, dateEntry.getKey());
-                if (overlapping.size() <= 1) continue;
-                conflicts.add(buildConflictResponse(dateEntry.getKey(), resourceType, resourceId, overlapping));
+                appendConflictIfAny(conflicts, resourceType, resourceId, dateEntry.getKey(), dateEntry.getValue());
             }
         }
         return conflicts;
+    }
+
+    private void appendConflictIfAny(List<ConflictResponse> conflicts,
+                                     String resourceType, Long resourceId,
+                                     LocalDate date, List<ServiceExecution> execs) {
+        if (execs.size() <= 1) return;
+        List<ServiceExecution> overlapping = filterTimeOverlapping(execs, date);
+        if (overlapping.size() <= 1) return;
+        conflicts.add(buildConflictResponse(date, resourceType, resourceId, overlapping));
     }
 
     /**
@@ -432,15 +437,21 @@ public class CalendarService {
 
         List<ServiceExecution> result = new ArrayList<>();
         for (int i = 0; i < execs.size(); i++) {
-            for (int j = 0; j < execs.size(); j++) {
-                if (i == j) continue;
-                if (overlapOnDate(execs.get(i), execs.get(j), date)) {
-                    if (!result.contains(execs.get(i))) result.add(execs.get(i));
-                    break;
-                }
+            if (hasAnyOverlap(execs, i, date) && !result.contains(execs.get(i))) {
+                result.add(execs.get(i));
             }
         }
         return result;
+    }
+
+    private boolean hasAnyOverlap(List<ServiceExecution> execs, int index, LocalDate date) {
+        ServiceExecution candidate = execs.get(index);
+        for (int j = 0; j < execs.size(); j++) {
+            if (j != index && overlapOnDate(candidate, execs.get(j), date)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private boolean isAllDayOnDate(ServiceExecution exec, LocalDate date) {
@@ -533,7 +544,7 @@ public class CalendarService {
         long workdays = countWeekdays(from, to);
         if (workdays == 0) return BigDecimal.ZERO;
 
-        long capacityMinutes = (long) active.size() * workdays * WORK_DAY_MINUTES;
+        long capacityMinutes = active.size() * workdays * WORK_DAY_MINUTES;
         if (capacityMinutes == 0) return BigDecimal.ZERO;
 
         long scheduledMinutes = 0;

@@ -4,19 +4,18 @@ import { SLOTS_PER_DAY } from '../../utils/timeMath';
 import { TimeGridBackground } from './TimeAxis';
 
 interface ResourceLaneProps {
-  label: string;
-  sublabel?: string;
-  icon?: ReactNode;
-  days?: number;
-  rowsCount?: number;
-  rowHeight?: number;
-  className?: string;
-  children?: ReactNode;
-  dropTargetProps?: Record<string, unknown>;
-  dropRef?: (node: HTMLElement | null) => void;
-  isDropActive?: boolean;
-  onLaneClick?: (slotIndex: number) => void;
-  'data-lane-id'?: string;
+  readonly label: string;
+  readonly sublabel?: string;
+  readonly icon?: ReactNode;
+  readonly days?: number;
+  readonly rowsCount?: number;
+  readonly rowHeight?: number;
+  readonly className?: string;
+  readonly children?: ReactNode;
+  readonly dropTargetProps?: Record<string, unknown>;
+  readonly dropRef?: (node: HTMLElement | null) => void;
+  readonly isDropActive?: boolean;
+  readonly 'data-lane-id'?: string;
 }
 
 export function ResourceLane({
@@ -31,21 +30,10 @@ export function ResourceLane({
   dropTargetProps,
   dropRef,
   isDropActive = false,
-  onLaneClick,
   ...rest
 }: ResourceLaneProps) {
   const totalSlots = SLOTS_PER_DAY * days;
   const safeRows = Math.max(1, rowsCount);
-
-  function handleClick(e: React.MouseEvent<HTMLDivElement>) {
-    if (!onLaneClick) return;
-    const target = e.currentTarget;
-    const rect = target.getBoundingClientRect();
-    const offsetX = e.clientX - rect.left;
-    const slotWidth = rect.width / totalSlots;
-    const slotIndex = Math.floor(offsetX / slotWidth);
-    onLaneClick(slotIndex);
-  }
 
   return (
     <div
@@ -64,15 +52,7 @@ export function ResourceLane({
         </div>
       </div>
 
-      <div
-        ref={dropRef}
-        className="relative flex-1"
-        {...dropTargetProps}
-        {...rest}
-        onClick={handleClick}
-        role={onLaneClick ? 'button' : undefined}
-        tabIndex={onLaneClick ? 0 : undefined}
-      >
+      <div ref={dropRef} className="relative flex-1" {...dropTargetProps} {...rest}>
         <TimeGridBackground days={days} />
         <div
           className="relative grid h-full"

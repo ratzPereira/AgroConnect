@@ -28,13 +28,14 @@ export function StripeReturn() {
     <AnimatedPage className="max-w-lg mx-auto">
       <Card>
         <CardBody className="text-center py-10">
-          {isLoading ? (
+          {isLoading && (
             <>
               <Loader2 className="h-12 w-12 text-primary-600 animate-spin mx-auto mb-4" />
               <h1 className="text-lg font-semibold text-neutral-900 mb-1">A verificar configuração</h1>
               <p className="text-sm text-neutral-500">A sincronizar com a Stripe...</p>
             </>
-          ) : isActive ? (
+          )}
+          {!isLoading && isActive && (
             <>
               <CheckCircle2 className="h-12 w-12 text-leaf-600 mx-auto mb-4" />
               <h1 className="text-lg font-semibold text-neutral-900 mb-1">Configuração concluída</h1>
@@ -45,7 +46,8 @@ export function StripeReturn() {
                 Ver detalhes da conta
               </Button>
             </>
-          ) : (
+          )}
+          {!isLoading && !isActive && (
             <>
               <AlertCircle className="h-12 w-12 text-warning-600 mx-auto mb-4" />
               <h1 className="text-lg font-semibold text-neutral-900 mb-1">Configuração incompleta</h1>

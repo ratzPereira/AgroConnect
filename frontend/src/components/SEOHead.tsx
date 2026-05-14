@@ -1,12 +1,12 @@
 const BASE_URL = import.meta.env.VITE_BASE_URL as string | undefined ?? 'https://agroconnect.pt';
 
 interface SEOHeadProps {
-  title: string;
-  description: string;
-  path: string;
-  ogImage?: string;
-  ogType?: string;
-  jsonLd?: Record<string, unknown>;
+  readonly title: string;
+  readonly description: string;
+  readonly path: string;
+  readonly ogImage?: string;
+  readonly ogType?: string;
+  readonly jsonLd?: Record<string, unknown>;
 }
 
 export function SEOHead({

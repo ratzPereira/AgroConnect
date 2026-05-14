@@ -81,8 +81,8 @@ public class InventoryMovementService {
         item.setCostPerUnit(cost);
         inventoryItemRepository.save(item);
 
-        return appendMovement(item, MovementType.INITIAL, qty, cost,
-                qty, cost, "Saldo inicial", null, actorUserId);
+        return appendMovement(new MovementSpec(item, MovementType.INITIAL, qty, cost,
+                qty, cost, "Saldo inicial", null, actorUserId));
     }
 
     @Transactional
@@ -101,8 +101,8 @@ public class InventoryMovementService {
         item.setCostPerUnit(newWac);
         inventoryItemRepository.save(item);
 
-        InventoryMovement movement = appendMovement(item, MovementType.PURCHASE,
-                addedQty, addedCost, newQty, newWac, dto.reason(), null, userId);
+        InventoryMovement movement = appendMovement(new MovementSpec(item, MovementType.PURCHASE,
+                addedQty, addedCost, newQty, newWac, dto.reason(), null, userId));
 
         log.info("PURCHASE {} of {} units @ {} on item {} (newQty={}, newWac={})",
                 movement.getId(), addedQty, addedCost, itemId, newQty, newWac);
@@ -133,8 +133,8 @@ public class InventoryMovementService {
         item.setCostPerUnit(newWac);
         inventoryItemRepository.save(item);
 
-        InventoryMovement movement = appendMovement(item, MovementType.ADJUSTMENT_IN,
-                addedQty, storedUnitCost, newQty, newWac, dto.reason(), null, userId);
+        InventoryMovement movement = appendMovement(new MovementSpec(item, MovementType.ADJUSTMENT_IN,
+                addedQty, storedUnitCost, newQty, newWac, dto.reason(), null, userId));
 
         log.info("ADJUSTMENT_IN {} of {} units on item {} (newQty={}, newWac={})",
                 movement.getId(), addedQty, itemId, newQty, newWac);
@@ -155,8 +155,8 @@ public class InventoryMovementService {
         item.setQuantity(newQty);
         inventoryItemRepository.save(item);
 
-        InventoryMovement movement = appendMovement(item, MovementType.ADJUSTMENT_OUT,
-                signedDelta, null, newQty, item.getCostPerUnit(), dto.reason(), null, userId);
+        InventoryMovement movement = appendMovement(new MovementSpec(item, MovementType.ADJUSTMENT_OUT,
+                signedDelta, null, newQty, item.getCostPerUnit(), dto.reason(), null, userId));
 
         log.info("ADJUSTMENT_OUT {} of {} units on item {} (newQty={})",
                 movement.getId(), removedQty, itemId, newQty);
@@ -188,8 +188,8 @@ public class InventoryMovementService {
         item.setQuantity(newQty);
         inventoryItemRepository.save(item);
 
-        InventoryMovement movement = appendMovement(item, MovementType.CONSUMPTION,
-                signedDelta, null, newQty, item.getCostPerUnit(), reason, execution, actorUserId);
+        InventoryMovement movement = appendMovement(new MovementSpec(item, MovementType.CONSUMPTION,
+                signedDelta, null, newQty, item.getCostPerUnit(), reason, execution, actorUserId));
 
         log.info("CONSUMPTION {} of {} units on item {} (execution {}, newQty={})",
                 movement.getId(), removedQty, itemId,
@@ -197,27 +197,30 @@ public class InventoryMovementService {
         return movement;
     }
 
-    private InventoryMovement appendMovement(InventoryItem item,
-                                             MovementType type,
-                                             BigDecimal quantityDelta,
-                                             BigDecimal unitCost,
-                                             BigDecimal quantityAfter,
-                                             BigDecimal wacAfter,
-                                             String reason,
-                                             ServiceExecution execution,
-                                             Long actorUserId) {
-        User actor = userRepository.findById(actorUserId)
+    private record MovementSpec(
+            InventoryItem item,
+            MovementType type,
+            BigDecimal quantityDelta,
+            BigDecimal unitCost,
+            BigDecimal quantityAfter,
+            BigDecimal wacAfter,
+            String reason,
+            ServiceExecution execution,
+            Long actorUserId) {}
+
+    private InventoryMovement appendMovement(MovementSpec spec) {
+        User actor = userRepository.findById(spec.actorUserId())
                 .orElseThrow(() -> new ResourceNotFoundException(ERR_USER_NOT_FOUND));
 
         InventoryMovement movement = InventoryMovement.builder()
-                .item(item)
-                .movementType(type)
-                .quantityDelta(quantityDelta)
-                .unitCost(unitCost)
-                .quantityAfter(quantityAfter)
-                .wacAfter(wacAfter)
-                .reason(reason)
-                .execution(execution)
+                .item(spec.item())
+                .movementType(spec.type())
+                .quantityDelta(spec.quantityDelta())
+                .unitCost(spec.unitCost())
+                .quantityAfter(spec.quantityAfter())
+                .wacAfter(spec.wacAfter())
+                .reason(spec.reason())
+                .execution(spec.execution())
                 .actor(actor)
                 .build();
         return inventoryMovementRepository.save(movement);

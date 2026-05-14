@@ -32,8 +32,6 @@ class ChatControllerIT extends TestContainersConfig {
     @Autowired private UserRepository userRepository;
 
     private static String clientToken;
-    private static String providerToken;
-    private static String outsiderToken;
 
     @Test
     @Order(1)
@@ -57,48 +55,6 @@ class ChatControllerIT extends TestContainersConfig {
                 .andExpect(status().isOk())
                 .andReturn();
         clientToken = objectMapper.readTree(clientResult.getResponse().getContentAsString())
-                .get("accessToken").asText();
-
-        // Register provider
-        RegisterRequest providerReg = new RegisterRequest(
-                "chat-provider@test.pt", "Password1", "Password1",
-                "Chat Provider", "+351922000004", "PROVIDER_MANAGER", "ChatAgro Lda", "444555004");
-        mockMvc.perform(post("/v1/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(providerReg)))
-                .andExpect(status().isCreated());
-
-        User providerUser = userRepository.findByEmail("chat-provider@test.pt").orElseThrow();
-        providerUser.setEmailVerified(true);
-        userRepository.save(providerUser);
-
-        MvcResult providerResult = mockMvc.perform(post("/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new LoginRequest("chat-provider@test.pt", "Password1"))))
-                .andExpect(status().isOk())
-                .andReturn();
-        providerToken = objectMapper.readTree(providerResult.getResponse().getContentAsString())
-                .get("accessToken").asText();
-
-        // Register outsider
-        RegisterRequest outsiderReg = new RegisterRequest(
-                "chat-outsider@test.pt", "Password1", "Password1",
-                "Chat Outsider", "+351911000003", "CLIENT", null, null);
-        mockMvc.perform(post("/v1/auth/register")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(outsiderReg)))
-                .andExpect(status().isCreated());
-
-        User outsiderUser = userRepository.findByEmail("chat-outsider@test.pt").orElseThrow();
-        outsiderUser.setEmailVerified(true);
-        userRepository.save(outsiderUser);
-
-        MvcResult outsiderResult = mockMvc.perform(post("/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(new LoginRequest("chat-outsider@test.pt", "Password1"))))
-                .andExpect(status().isOk())
-                .andReturn();
-        outsiderToken = objectMapper.readTree(outsiderResult.getResponse().getContentAsString())
                 .get("accessToken").asText();
     }
 

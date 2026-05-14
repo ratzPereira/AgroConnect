@@ -2,7 +2,7 @@ import { cn } from '@/utils/cn';
 import type { GanttRow } from '@/types/calendar';
 
 interface GanttSidebarProps {
-  rows: GanttRow[];
+  readonly rows: GanttRow[];
 }
 
 const BAR_HEIGHT = 34;

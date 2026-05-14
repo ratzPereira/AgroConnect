@@ -32,7 +32,6 @@ describe('GanttBarComponent', () => {
     bar: mockBar,
     left: 25,
     width: 10,
-    rowIndex: 0,
     subIndex: 0,
   };
 

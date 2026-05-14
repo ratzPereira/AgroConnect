@@ -9,12 +9,12 @@ import { Skeleton } from '@/components/ui/Skeleton';
 import type { CalendarEvent, ConflictResponse, GanttView, GanttRow, GanttBar } from '@/types/calendar';
 
 interface GanttChartProps {
-  events: CalendarEvent[];
-  conflicts: ConflictResponse[];
-  isLoading: boolean;
-  year: number;
-  month: number;
-  onChangeMonth: (year: number, month: number) => void;
+  readonly events: CalendarEvent[];
+  readonly conflicts: ConflictResponse[];
+  readonly isLoading: boolean;
+  readonly year: number;
+  readonly month: number;
+  readonly onChangeMonth: (year: number, month: number) => void;
 }
 
 const MONTH_NAMES = [
@@ -235,7 +235,7 @@ export function GanttChart({ events, conflicts, isLoading, year, month, onChange
       {/* Summary bar */}
       {!isLoading && events.length > 0 && (
         <div className="flex items-center gap-4 mt-3 px-1 text-xs text-neutral-400">
-          <span>{events.length} trabalho{events.length !== 1 ? 's' : ''}</span>
+          <span>{events.length} trabalho{events.length === 1 ? '' : 's'}</span>
           <span className="h-3 w-px bg-neutral-200" />
           <div className="flex items-center gap-3">
             <span className="flex items-center gap-1">

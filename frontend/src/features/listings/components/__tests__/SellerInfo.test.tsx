@@ -22,7 +22,6 @@ vi.mock('@/components/ui/Card', () => ({
 }));
 
 const defaultProps = {
-  sellerId: 1,
   sellerName: 'Maria Santos',
   sellerRating: 4.5,
   sellerListingCount: 8,

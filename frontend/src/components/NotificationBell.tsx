@@ -95,12 +95,12 @@ export function NotificationBell() {
                   }}
                   className={cn(
                     'w-full text-left px-4 py-3 border-b border-neutral-50 last:border-0 transition-colors',
-                    !notification.read
-                      ? 'bg-green-50/50 hover:bg-green-50'
-                      : 'hover:bg-neutral-50',
+                    notification.read
+                      ? 'hover:bg-neutral-50'
+                      : 'bg-green-50/50 hover:bg-green-50',
                   )}
                 >
-                  <p className={cn('text-sm', !notification.read ? 'font-semibold text-neutral-900' : 'font-medium text-neutral-700')}>{notification.title}</p>
+                  <p className={cn('text-sm', notification.read ? 'font-medium text-neutral-700' : 'font-semibold text-neutral-900')}>{notification.title}</p>
                   <p className="text-xs text-neutral-500 mt-0.5 line-clamp-2">
                     {notification.body}
                   </p>

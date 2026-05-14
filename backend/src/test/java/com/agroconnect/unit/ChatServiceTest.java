@@ -109,7 +109,6 @@ class ChatServiceTest {
     @Test
     void sendMessage_givenNonParticipant_shouldThrowForbidden() {
         SendMessageDto dto = new SendMessageDto("Tentativa não autorizada");
-        User outsider = UserFixture.aClientUser().id(99L).email("outsider@test.pt").build();
 
         when(requestRepository.findById(1L)).thenReturn(Optional.of(awardedRequest));
         when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(acceptedProposal));

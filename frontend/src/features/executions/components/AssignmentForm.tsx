@@ -17,8 +17,8 @@ interface Machine {
 }
 
 interface AssignmentFormProps {
-  executionId: number;
-  requestId: number;
+  readonly executionId: number;
+  readonly requestId: number;
 }
 
 export function AssignmentForm({ executionId, requestId }: AssignmentFormProps) {

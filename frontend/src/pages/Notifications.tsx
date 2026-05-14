@@ -76,13 +76,14 @@ export function Notifications() {
         </Button>
       </div>
 
-      {isLoading ? (
+      {isLoading && (
         <div className="space-y-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton.Card key={i} />
+          {['sk-0', 'sk-1', 'sk-2', 'sk-3', 'sk-4'].map(k => (
+            <Skeleton.Card key={k} />
           ))}
         </div>
-      ) : data && data.content.length > 0 ? (
+      )}
+      {!isLoading && data && data.content.length > 0 && (
         <>
           <motion.div
             variants={listContainerVariants}
@@ -156,7 +157,8 @@ export function Notifications() {
             </div>
           )}
         </>
-      ) : (
+      )}
+      {!isLoading && (!data || data.content.length === 0) && (
         <EmptyState
           illustration={<EmptyNotifications className="w-48 h-auto" />}
           title="Tudo em dia!"

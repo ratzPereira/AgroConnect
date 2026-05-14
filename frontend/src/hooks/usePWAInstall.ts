@@ -16,8 +16,8 @@ export function usePWAInstall() {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);
     }
-    window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    globalThis.addEventListener('beforeinstallprompt', handler);
+    return () => globalThis.removeEventListener('beforeinstallprompt', handler);
   }, []);
 
   const canInstall = !!deferredPrompt && !dismissed;

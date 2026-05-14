@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/Button';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface ConfirmationPanelProps {
-  requestId: number;
+  readonly requestId: number;
 }
 
 export function ConfirmationPanel({ requestId }: ConfirmationPanelProps) {
@@ -54,24 +54,7 @@ export function ConfirmationPanel({ requestId }: ConfirmationPanelProps) {
           abra uma disputa.
         </p>
 
-        {!showDisputeForm ? (
-          <div className="flex gap-3">
-            <Button
-              onClick={() => confirmMutation.mutate()}
-              loading={confirmMutation.isPending}
-            >
-              <CheckCircle2 className="h-4 w-4" />
-              Confirmar Conclusão
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() => setShowDisputeForm(true)}
-            >
-              <AlertTriangle className="h-4 w-4" />
-              Abrir Disputa
-            </Button>
-          </div>
-        ) : (
+        {showDisputeForm ? (
           <div className="space-y-3">
             <div className="space-y-1.5">
               <label htmlFor="disputeReason" className="block text-sm font-medium text-neutral-700">
@@ -106,6 +89,23 @@ export function ConfirmationPanel({ requestId }: ConfirmationPanelProps) {
                 Cancelar
               </Button>
             </div>
+          </div>
+        ) : (
+          <div className="flex gap-3">
+            <Button
+              onClick={() => confirmMutation.mutate()}
+              loading={confirmMutation.isPending}
+            >
+              <CheckCircle2 className="h-4 w-4" />
+              Confirmar Conclusão
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => setShowDisputeForm(true)}
+            >
+              <AlertTriangle className="h-4 w-4" />
+              Abrir Disputa
+            </Button>
           </div>
         )}
 

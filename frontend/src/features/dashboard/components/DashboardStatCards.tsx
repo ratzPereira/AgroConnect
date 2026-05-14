@@ -14,8 +14,8 @@ interface StatConfig {
 }
 
 interface DashboardStatCardsProps {
-  stats: StatConfig[];
-  className?: string;
+  readonly stats: StatConfig[];
+  readonly className?: string;
 }
 
 export function DashboardStatCards({ stats, className }: DashboardStatCardsProps) {

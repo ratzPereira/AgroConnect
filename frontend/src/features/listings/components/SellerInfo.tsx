@@ -3,11 +3,10 @@ import { Button } from '@/components/ui/Button';
 import { Card, CardBody } from '@/components/ui/Card';
 
 interface SellerInfoProps {
-  sellerId: number;
-  sellerName: string;
-  sellerRating: number | null;
-  sellerListingCount: number;
-  onContact: () => void;
+  readonly sellerName: string;
+  readonly sellerRating: number | null;
+  readonly sellerListingCount: number;
+  readonly onContact: () => void;
 }
 
 function renderStars(rating: number): React.ReactNode {
@@ -18,15 +17,15 @@ function renderStars(rating: number): React.ReactNode {
   for (let i = 0; i < 5; i++) {
     if (i < fullStars) {
       stars.push(
-        <Star key={i} className="h-4 w-4 fill-warning-400 text-warning-400" />,
+        <Star key={`star-${i}`} className="h-4 w-4 fill-warning-400 text-warning-400" />,
       );
     } else if (i === fullStars && hasHalf) {
       stars.push(
-        <Star key={i} className="h-4 w-4 fill-warning-400/50 text-warning-400" />,
+        <Star key={`star-${i}`} className="h-4 w-4 fill-warning-400/50 text-warning-400" />,
       );
     } else {
       stars.push(
-        <Star key={i} className="h-4 w-4 text-neutral-300" />,
+        <Star key={`star-${i}`} className="h-4 w-4 text-neutral-300" />,
       );
     }
   }

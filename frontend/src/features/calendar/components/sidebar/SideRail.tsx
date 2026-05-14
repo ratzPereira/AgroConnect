@@ -6,10 +6,10 @@ import type { CalendarAlerts, CalendarEvent } from '@/types/calendar';
 import { parseIsoDate } from '../../utils/viewRange';
 
 interface SideRailProps {
-  alerts: CalendarAlerts | undefined;
-  events: CalendarEvent[];
-  isLoading: boolean;
-  anchorIso: string;
+  readonly alerts: CalendarAlerts | undefined;
+  readonly events: CalendarEvent[];
+  readonly isLoading: boolean;
+  readonly anchorIso: string;
 }
 
 function formatDate(iso: string): string {
@@ -101,14 +101,16 @@ export function SideRail({ alerts, events, isLoading, anchorIso }: SideRailProps
             </span>
           )}
         </header>
-        {isLoading ? (
+        {isLoading && (
           <div className="space-y-2">
             <div className="h-12 animate-pulse rounded bg-neutral-100" />
             <div className="h-12 animate-pulse rounded bg-neutral-100" />
           </div>
-        ) : alertItems.length === 0 ? (
+        )}
+        {!isLoading && alertItems.length === 0 && (
           <p className="rounded-md bg-leaf-50 px-3 py-3 text-xs text-leaf-800">Sem alertas. Tudo a correr bem.</p>
-        ) : (
+        )}
+        {!isLoading && alertItems.length > 0 && (
           <ul className="space-y-1.5">
             {alertItems.slice(0, 8).map((a) => {
               const Icon = a.icon;
@@ -152,9 +154,10 @@ export function SideRail({ alerts, events, isLoading, anchorIso }: SideRailProps
           <h3 className="text-sm font-semibold text-neutral-800">Próximos trabalhos</h3>
           <CalendarClock className="h-4 w-4 text-neutral-400" />
         </header>
-        {upcoming.length === 0 ? (
+        {upcoming.length === 0 && (
           <p className="text-xs text-neutral-500">Sem trabalhos agendados a seguir.</p>
-        ) : (
+        )}
+        {upcoming.length > 0 && (
           <ul className="space-y-1.5">
             {upcoming.map((e) => (
               <li key={e.executionId}>

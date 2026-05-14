@@ -111,7 +111,7 @@ public class ProposalService {
                 "NEW_PROPOSAL",
                 "Nova proposta recebida",
                 "Recebeu uma nova proposta de " + provider.getCompanyName() + " para o pedido \"" + request.getTitle() + "\".",
-                "{\"requestId\":" + request.getId() + "}"
+                requestIdPayload(request.getId())
         );
 
         log.info("Proposal created: {} for request {} by provider {}", proposal.getId(), requestId, provider.getId());
@@ -236,7 +236,7 @@ public class ProposalService {
                 "PROPOSAL_ACCEPTED",
                 "Proposta aceite",
                 "A sua proposta para o pedido \"" + request.getTitle() + "\" foi aceite e o pagamento está em escrow.",
-                "{\"requestId\":" + request.getId() + "}"
+                requestIdPayload(request.getId())
         );
 
         List<Proposal> rejected = proposalRepository.findByRequestId(request.getId()).stream()
@@ -248,7 +248,7 @@ public class ProposalService {
                     "PROPOSAL_REJECTED",
                     "Proposta não selecionada",
                     "A sua proposta para o pedido \"" + request.getTitle() + "\" não foi selecionada.",
-                    "{\"requestId\":" + request.getId() + "}"
+                    requestIdPayload(request.getId())
             );
         }
 
@@ -308,5 +308,9 @@ public class ProposalService {
 
         return proposalRepository.findByProviderIdOrderByCreatedAtDesc(provider.getId(), pageable)
                 .map(ProposalMapper::toResponse);
+    }
+
+    private static String requestIdPayload(Long requestId) {
+        return "{\"requestId\":" + requestId + "}";
     }
 }

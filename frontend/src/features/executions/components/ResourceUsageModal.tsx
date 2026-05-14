@@ -9,10 +9,10 @@ import type { InventoryItem } from '@/types/inventory';
 import { Loader2 } from 'lucide-react';
 
 interface ResourceUsageModalProps {
-  open: boolean;
-  onClose: () => void;
-  executionId: number;
-  requestId: number;
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly executionId: number;
+  readonly requestId: number;
 }
 
 const unitLabels: Record<InventoryItem['unit'], string> = { KG: 'kg', L: 'L', UNIT: 'un' };
@@ -107,11 +107,12 @@ export function ResourceUsageModal({ open, onClose, executionId, requestId }: Re
           <label htmlFor="ru-item" className="block text-sm font-medium text-neutral-700 mb-1">
             Produto
           </label>
-          {isLoading ? (
+          {isLoading && (
             <div className="flex items-center gap-2 text-sm text-neutral-500">
               <Loader2 className="h-4 w-4 animate-spin" /> A carregar inventário…
             </div>
-          ) : items && items.length > 0 ? (
+          )}
+          {!isLoading && items && items.length > 0 && (
             <select
               id="ru-item"
               value={itemId}
@@ -127,7 +128,8 @@ export function ResourceUsageModal({ open, onClose, executionId, requestId }: Re
                 </option>
               ))}
             </select>
-          ) : (
+          )}
+          {!isLoading && (!items || items.length === 0) && (
             <p className="text-sm text-neutral-500">
               Sem itens no inventário. Adicione produtos antes de registar consumo.
             </p>

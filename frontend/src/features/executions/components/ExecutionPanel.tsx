@@ -23,11 +23,11 @@ function getErrorMessage(error: unknown, fallback: string): string {
 }
 
 interface ExecutionPanelProps {
-  requestId: number;
-  requestStatus: RequestStatus;
-  isProvider: boolean;
-  targetLat?: number;
-  targetLon?: number;
+  readonly requestId: number;
+  readonly requestStatus: RequestStatus;
+  readonly isProvider: boolean;
+  readonly targetLat?: number;
+  readonly targetLon?: number;
 }
 
 /**
@@ -185,7 +185,7 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
               />
             </div>
           )}
-          {isCheckedIn ? (
+          {isCheckedIn && (
             <div className="text-sm text-neutral-700 bg-green-50 rounded-lg px-3 py-2">
               <p>
                 Check-in realizado em{' '}
@@ -200,14 +200,16 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
                 </p>
               )}
             </div>
-          ) : isProvider && (requestStatus === 'AWARDED' || requestStatus === 'IN_PROGRESS') ? (
+          )}
+          {!isCheckedIn && isProvider && (requestStatus === 'AWARDED' || requestStatus === 'IN_PROGRESS') && (
             <div className="space-y-2">
               {targetLat != null && targetLon != null && (
                 <DistanceIndicator targetLat={targetLat} targetLon={targetLon} />
               )}
               <CheckinButton executionId={execution.id} requestId={requestId} />
             </div>
-          ) : (
+          )}
+          {!isCheckedIn && !(isProvider && (requestStatus === 'AWARDED' || requestStatus === 'IN_PROGRESS')) && (
             <p className="text-sm text-neutral-500">Check-in ainda não realizado.</p>
           )}
         </div>
@@ -243,12 +245,7 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
             <h3 className="text-xs font-semibold text-neutral-500 uppercase tracking-wider mb-2">
               Concluir Serviço
             </h3>
-            {!showCompleteForm ? (
-              <Button onClick={() => setShowCompleteForm(true)}>
-                <CheckCircle2 className="h-4 w-4" />
-                Marcar como Concluído
-              </Button>
-            ) : (
+            {showCompleteForm ? (
               <div className="space-y-3">
                 <div className="space-y-1.5">
                   <label htmlFor="completeNotes" className="block text-sm font-medium text-neutral-700">
@@ -294,6 +291,11 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
                   </p>
                 )}
               </div>
+            ) : (
+              <Button onClick={() => setShowCompleteForm(true)}>
+                <CheckCircle2 className="h-4 w-4" />
+                Marcar como Concluído
+              </Button>
             )}
           </div>
         )}
@@ -322,7 +324,7 @@ function ExecutionPanelContent({ requestId, requestStatus, isProvider, targetLat
                   <span className="text-sm font-medium text-neutral-500">Materiais:</span>
                   <ul className="mt-1 space-y-1">
                     {items.map((m, i) => (
-                      <li key={i} className="text-sm text-neutral-700 flex items-center gap-2">
+                      <li key={`mat-${m.product}-${i}`} className="text-sm text-neutral-700 flex items-center gap-2">
                         <span className="w-1.5 h-1.5 rounded-full bg-neutral-300 flex-shrink-0" />
                         {m.product} — {m.quantity} {m.unit}
                       </li>

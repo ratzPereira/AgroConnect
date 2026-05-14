@@ -79,7 +79,9 @@ public class ListingController {
             @Parameter(description = "Page size")
             @RequestParam(defaultValue = "20") int size) {
         Pageable pageable = PageRequest.of(page, size);
-        var result = listingService.search(category, island, q, minPrice, maxPrice, lat, lng, radius, pageable);
+        var criteria = new ListingService.ListingSearchCriteria(
+                category, island, q, minPrice, maxPrice, lat, lng, radius);
+        var result = listingService.search(criteria, pageable);
         return ResponseEntity.ok(result);
     }
 

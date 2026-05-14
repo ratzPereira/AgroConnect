@@ -3,9 +3,9 @@ import type { CalendarView } from '@/types/calendar';
 import { addDays, parseIsoDate, isoDate } from '../../utils/viewRange';
 
 interface DateNavProps {
-  view: CalendarView;
-  anchor: string;
-  onChange: (next: string) => void;
+  readonly view: CalendarView;
+  readonly anchor: string;
+  readonly onChange: (next: string) => void;
 }
 
 const MONTH_NAMES_PT = [

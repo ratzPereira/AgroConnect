@@ -10,7 +10,7 @@ const statusConfig: Record<TransactionStatus, { label: string; className: string
 };
 
 interface TransactionStatusBadgeProps {
-  status: TransactionStatus;
+  readonly status: TransactionStatus;
 }
 
 export function TransactionStatusBadge({ status }: TransactionStatusBadgeProps) {

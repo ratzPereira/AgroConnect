@@ -88,7 +88,7 @@ export function Team() {
                 <input
                   id="tm-hourly-rate"
                   name="hourlyRate"
-                  placeholder="12.50"
+                  placeholder="12.5"
                   type="number"
                   min="0"
                   step="0.01"
@@ -109,13 +109,14 @@ export function Team() {
         </Card>
       )}
 
-      {isLoading ? (
+      {isLoading && (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           <Skeleton.Card />
           <Skeleton.Card />
           <Skeleton.Card />
         </div>
-      ) : members && members.length > 0 ? (
+      )}
+      {!isLoading && members && members.length > 0 && (
         <motion.div
           variants={listContainerVariants}
           initial="hidden"
@@ -140,9 +141,9 @@ export function Team() {
                     </span>
                   </div>
                   <p className="text-xs font-medium text-neutral-700">
-                    {m.hourlyRate != null
-                      ? `${Number(m.hourlyRate).toFixed(2)} €/h`
-                      : <span className="text-neutral-400">Sem taxa horária</span>}
+                    {m.hourlyRate == null
+                      ? <span className="text-neutral-400">Sem taxa horária</span>
+                      : `${Number(m.hourlyRate).toFixed(2)} €/h`}
                   </p>
                   <div className="flex justify-end mt-3 text-neutral-400">
                     <ChevronRight className="h-4 w-4" />
@@ -152,7 +153,8 @@ export function Team() {
             </motion.div>
           ))}
         </motion.div>
-      ) : (
+      )}
+      {!isLoading && (!members || members.length === 0) && (
         <EmptyState
           illustration={<EmptyTeam className="w-48 h-auto" />}
           title="A sua equipa está vazia"

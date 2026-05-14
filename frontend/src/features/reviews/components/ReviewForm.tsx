@@ -18,7 +18,7 @@ const reviewSchema = z.object({
 type ReviewFormData = z.infer<typeof reviewSchema>;
 
 interface ReviewFormProps {
-  requestId: number;
+  readonly requestId: number;
 }
 
 export function ReviewForm({ requestId }: ReviewFormProps) {
@@ -63,7 +63,7 @@ export function ReviewForm({ requestId }: ReviewFormProps) {
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Star rating */}
           <div className="space-y-1.5">
-            <label className="block text-sm font-medium text-neutral-700">Avaliação</label>
+            <span className="block text-sm font-medium text-neutral-700">Avaliação</span>
             <div className="flex gap-1">
               {[1, 2, 3, 4, 5].map((value) => (
                 <button

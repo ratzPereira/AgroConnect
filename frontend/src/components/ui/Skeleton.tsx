@@ -2,7 +2,7 @@
 import { cn } from '@/utils/cn';
 
 interface SkeletonBaseProps {
-  className?: string;
+  readonly className?: string;
 }
 
 const shimmerClasses = 'bg-gradient-to-r from-neutral-200 via-neutral-100 to-neutral-200 bg-[length:200%_100%] animate-shimmer';
@@ -53,18 +53,22 @@ function SkeletonStat({ className }: SkeletonBaseProps) {
   );
 }
 
+const TABLE_HEADER_KEYS = ['th-0', 'th-1', 'th-2', 'th-3'];
+const TABLE_ROW_KEYS = ['tr-0', 'tr-1', 'tr-2', 'tr-3', 'tr-4'];
+const TABLE_CELL_KEYS = ['tc-0', 'tc-1', 'tc-2', 'tc-3'];
+
 function SkeletonTable({ className }: SkeletonBaseProps) {
   return (
     <div className={cn('rounded-xl border border-neutral-200 bg-white overflow-hidden', className)}>
       <div className="border-b border-neutral-200 p-4 flex gap-4">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <Line key={i} className="h-4 flex-1" />
+        {TABLE_HEADER_KEYS.map(k => (
+          <Line key={k} className="h-4 flex-1" />
         ))}
       </div>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <div key={i} className="border-b border-neutral-100 p-4 flex gap-4">
-          {Array.from({ length: 4 }).map((_, j) => (
-            <Line key={j} className="h-3 flex-1" />
+      {TABLE_ROW_KEYS.map(rowKey => (
+        <div key={rowKey} className="border-b border-neutral-100 p-4 flex gap-4">
+          {TABLE_CELL_KEYS.map(cellKey => (
+            <Line key={`${rowKey}-${cellKey}`} className="h-3 flex-1" />
           ))}
         </div>
       ))}

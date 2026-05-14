@@ -34,8 +34,6 @@ class AdminControllerIT extends TestContainersConfig {
     @Autowired private JwtService jwtService;
 
     private static String adminToken;
-    private static String clientToken;
-    private static Long adminUserId;
 
     @Test
     @Order(1)
@@ -49,7 +47,6 @@ class AdminControllerIT extends TestContainersConfig {
                 .active(true)
                 .build();
         admin = userRepository.save(admin);
-        adminUserId = admin.getId();
         adminToken = jwtService.generateAccessToken(admin);
     }
 

@@ -3,13 +3,13 @@ import { cn } from '@/utils/cn';
 import { formatTime, slotToTime } from '../../utils/timeMath';
 
 interface GhostBarProps {
-  startSlot: number;
-  spanSlots: number;
-  laneRow?: number;
-  laneRowSpan?: number;
-  hasConflict?: boolean;
-  label?: string;
-  className?: string;
+  readonly startSlot: number;
+  readonly spanSlots: number;
+  readonly laneRow?: number;
+  readonly laneRowSpan?: number;
+  readonly hasConflict?: boolean;
+  readonly label?: string;
+  readonly className?: string;
 }
 
 export function GhostBar({

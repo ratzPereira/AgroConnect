@@ -11,8 +11,8 @@ interface TimelineStep {
 }
 
 interface StatusTimelineProps {
-  steps: TimelineStep[];
-  className?: string;
+  readonly steps: TimelineStep[];
+  readonly className?: string;
 }
 
 export function StatusTimeline({ steps, className }: StatusTimelineProps) {
@@ -24,15 +24,17 @@ export function StatusTimeline({ steps, className }: StatusTimelineProps) {
         return (
           <div key={step.label} className="flex gap-3">
             <div className="flex flex-col items-center">
-              {step.status === 'completed' ? (
+              {step.status === 'completed' && (
                 <div className="flex h-6 w-6 items-center justify-center rounded-full bg-leaf-500">
                   <Check className="h-3.5 w-3.5 text-white" />
                 </div>
-              ) : step.status === 'active' ? (
+              )}
+              {step.status === 'active' && (
                 <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-primary-500 bg-white">
                   <div className="h-2 w-2 rounded-full bg-primary-500 animate-pulse" />
                 </div>
-              ) : (
+              )}
+              {step.status === 'upcoming' && (
                 <div className="flex h-6 w-6 items-center justify-center rounded-full border-2 border-neutral-300 bg-white">
                   <div className="h-2 w-2 rounded-full bg-neutral-300" />
                 </div>

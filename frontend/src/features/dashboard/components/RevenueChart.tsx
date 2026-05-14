@@ -7,8 +7,8 @@ interface RevenueDataPoint {
 }
 
 interface RevenueChartProps {
-  data: RevenueDataPoint[];
-  className?: string;
+  readonly data: RevenueDataPoint[];
+  readonly className?: string;
 }
 
 export function RevenueChart({ data, className }: RevenueChartProps) {

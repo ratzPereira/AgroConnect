@@ -14,10 +14,10 @@ interface DropdownItem {
 }
 
 interface DropdownProps {
-  trigger: ReactNode;
-  items: DropdownItem[];
-  align?: 'left' | 'right';
-  className?: string;
+  readonly trigger: ReactNode;
+  readonly items: DropdownItem[];
+  readonly align?: 'left' | 'right';
+  readonly className?: string;
 }
 
 export function Dropdown({ trigger, items, align = 'left', className }: DropdownProps) {
@@ -68,10 +68,11 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
   let actionIndex = 0;
 
   return (
-    <div ref={containerRef} className={cn('relative inline-flex', className)} onKeyDown={handleKeyDown}>
+    <div ref={containerRef} className={cn('relative inline-flex', className)}>
       <button
         type="button"
         onClick={() => setOpen(!open)}
+        onKeyDown={handleKeyDown}
         className="contents"
         aria-haspopup="menu"
         aria-expanded={open}
@@ -81,6 +82,8 @@ export function Dropdown({ trigger, items, align = 'left', className }: Dropdown
       <AnimatePresence>
         {open && (
           <motion.div
+            role="menu"
+            onKeyDown={handleKeyDown}
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.95 }}

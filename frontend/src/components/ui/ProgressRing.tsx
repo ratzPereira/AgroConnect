@@ -2,14 +2,14 @@ import type { ReactNode } from 'react';
 import { cn } from '@/utils/cn';
 
 interface ProgressRingProps {
-  value: number;
-  max?: number;
-  size?: number;
-  strokeWidth?: number;
-  color?: string;
-  trackColor?: string;
-  children?: ReactNode;
-  className?: string;
+  readonly value: number;
+  readonly max?: number;
+  readonly size?: number;
+  readonly strokeWidth?: number;
+  readonly color?: string;
+  readonly trackColor?: string;
+  readonly children?: ReactNode;
+  readonly className?: string;
 }
 
 export function ProgressRing({

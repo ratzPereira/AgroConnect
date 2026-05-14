@@ -16,10 +16,10 @@ const proposalSchema = z.object({
 type ProposalFormData = z.infer<typeof proposalSchema>;
 
 interface CreateProposalModalProps {
-  open: boolean;
-  onClose: () => void;
-  onSubmit: (data: CreateProposalDto) => Promise<void>;
-  loading?: boolean;
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly onSubmit: (data: CreateProposalDto) => Promise<void>;
+  readonly loading?: boolean;
 }
 
 export function CreateProposalModal({ open, onClose, onSubmit, loading }: CreateProposalModalProps) {

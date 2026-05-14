@@ -7,12 +7,12 @@ import { cn } from '@/utils/cn';
 type ModalSize = 'sm' | 'md' | 'lg' | 'xl';
 
 interface ModalProps {
-  open: boolean;
-  onClose: () => void;
-  title?: string;
-  size?: ModalSize;
-  children: ReactNode;
-  className?: string;
+  readonly open: boolean;
+  readonly onClose: () => void;
+  readonly title?: string;
+  readonly size?: ModalSize;
+  readonly children: ReactNode;
+  readonly className?: string;
 }
 
 const sizeStyles: Record<ModalSize, string> = {

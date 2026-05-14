@@ -6,12 +6,12 @@ import { CheckCircle2, AlertTriangle, XCircle, Info, X } from 'lucide-react';
 type AlertVariant = 'success' | 'warning' | 'danger' | 'info';
 
 interface AlertProps {
-  variant?: AlertVariant;
-  title?: string;
-  children: ReactNode;
-  dismissible?: boolean;
-  onDismiss?: () => void;
-  className?: string;
+  readonly variant?: AlertVariant;
+  readonly title?: string;
+  readonly children: ReactNode;
+  readonly dismissible?: boolean;
+  readonly onDismiss?: () => void;
+  readonly className?: string;
 }
 
 interface VariantConfig {

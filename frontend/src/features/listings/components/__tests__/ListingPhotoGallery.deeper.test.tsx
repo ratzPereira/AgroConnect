@@ -23,19 +23,12 @@ const fivePhotos = [
 
 function openLightboxForSinglePhoto() {
   render(<ListingPhotoGallery photos={singlePhoto} />);
-  const photoContainer = screen.getByAltText('Foto 1').closest('div[class*="cursor-pointer"]');
-  if (photoContainer) {
-    fireEvent.click(photoContainer);
-  }
+  fireEvent.click(screen.getByLabelText('Abrir foto'));
 }
 
 function openLightboxForMultiPhotos(photos: string[] = threePhotos) {
   render(<ListingPhotoGallery photos={photos} />);
-  // Click the main photo in the desktop grid (alt="Foto principal")
-  const mainPhoto = screen.getByAltText('Foto principal').closest('div[class*="cursor-pointer"]');
-  if (mainPhoto) {
-    fireEvent.click(mainPhoto);
-  }
+  fireEvent.click(screen.getByLabelText('Abrir foto principal'));
 }
 
 /* ── Tests ───────────────────────────────────────────────── */
@@ -204,68 +197,48 @@ describe('ListingPhotoGallery — deeper coverage', () => {
     expect(screen.queryByLabelText('Próxima foto')).not.toBeInTheDocument();
   });
 
-  it('opens lightbox via Enter key on single photo', () => {
+  it('opens lightbox via click on single photo', () => {
     render(<ListingPhotoGallery photos={singlePhoto} />);
-    const trigger = screen.getByLabelText('Abrir foto');
-    fireEvent.keyDown(trigger, { key: 'Enter' });
+    fireEvent.click(screen.getByLabelText('Abrir foto'));
     expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
   });
 
-  it('opens lightbox via Space key on single photo', () => {
-    render(<ListingPhotoGallery photos={singlePhoto} />);
-    const trigger = screen.getByLabelText('Abrir foto');
-    fireEvent.keyDown(trigger, { key: ' ' });
-    expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
-  });
-
-  it('ignores other keys on single photo trigger', () => {
-    render(<ListingPhotoGallery photos={singlePhoto} />);
-    const trigger = screen.getByLabelText('Abrir foto');
-    fireEvent.keyDown(trigger, { key: 'a' });
-    expect(screen.queryByLabelText('Fechar')).not.toBeInTheDocument();
-  });
-
-  it('opens lightbox via Enter key on main photo (desktop grid)', () => {
+  it('opens lightbox via click on main photo (desktop grid)', () => {
     render(<ListingPhotoGallery photos={threePhotos} />);
-    const main = screen.getByLabelText('Abrir foto principal');
-    fireEvent.keyDown(main, { key: 'Enter' });
+    fireEvent.click(screen.getByLabelText('Abrir foto principal'));
     expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
   });
 
-  it('opens lightbox via Space key on side photo "Foto 2"', () => {
+  it('opens lightbox via click on side photo "Foto 2"', () => {
     render(<ListingPhotoGallery photos={threePhotos} />);
-    const side = screen.getByLabelText('Abrir foto 2');
-    fireEvent.keyDown(side, { key: ' ' });
+    fireEvent.click(screen.getByLabelText('Abrir foto 2'));
     expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
   });
 
-  it('opens lightbox via Enter key on side photo "Foto 3"', () => {
+  it('opens lightbox via click on side photo "Foto 3"', () => {
     render(<ListingPhotoGallery photos={threePhotos} />);
-    const side = screen.getByLabelText('Abrir foto 3');
-    fireEvent.keyDown(side, { key: 'Enter' });
+    fireEvent.click(screen.getByLabelText('Abrir foto 3'));
     expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
   });
 
-  it('opens lightbox via Enter on "see all" placeholder for 2 photos', () => {
+  it('opens lightbox via click on "see all" placeholder for 2 photos', () => {
     const twoPhotos = threePhotos.slice(0, 2);
     render(<ListingPhotoGallery photos={twoPhotos} />);
-    const placeholder = screen.getByLabelText('Abrir galeria');
-    fireEvent.keyDown(placeholder, { key: 'Enter' });
+    fireEvent.click(screen.getByLabelText('Abrir galeria'));
     expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
   });
 
-  it('opens lightbox via Enter on mobile carousel trigger', () => {
+  it('opens lightbox via click on mobile carousel trigger', () => {
     render(<ListingPhotoGallery photos={threePhotos} />);
-    // There are multiple "Abrir foto" - mobile carousel + the side render of main photo. Pick the carousel one.
     const triggers = screen.getAllByLabelText('Abrir foto');
-    fireEvent.keyDown(triggers[triggers.length - 1], { key: 'Enter' });
+    fireEvent.click(triggers[triggers.length - 1]);
     expect(screen.getByLabelText('Fechar')).toBeInTheDocument();
   });
 
-  it('lightbox backdrop closes on Escape keyDown handler', () => {
+  it('lightbox backdrop closes on click', () => {
     openLightboxForMultiPhotos();
     const backdrop = screen.getByLabelText('Fechar visualização');
-    fireEvent.keyDown(backdrop, { key: 'Escape' });
+    fireEvent.click(backdrop);
     expect(screen.queryByLabelText('Fechar')).not.toBeInTheDocument();
   });
 });

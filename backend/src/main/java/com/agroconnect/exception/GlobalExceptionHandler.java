@@ -23,6 +23,8 @@ import java.util.stream.Collectors;
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+    private static final String VALIDATION_ERROR = "Erro de validação";
+    private static final String FORBIDDEN_ERROR = "Acesso negado";
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourceNotFoundException ex, HttpServletRequest request) {
@@ -36,12 +38,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ForbiddenException.class)
     public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, "Acesso negado", ex.getMessage(), request);
+        return buildResponse(HttpStatus.FORBIDDEN, FORBIDDEN_ERROR, ex.getMessage(), request);
     }
 
     @ExceptionHandler(ValidationException.class)
     public ResponseEntity<ErrorResponse> handleValidation(ValidationException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", ex.getMessage(), request);
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_ERROR, ex.getMessage(), request);
     }
 
     @ExceptionHandler(DuplicateEmailException.class)
@@ -59,7 +61,7 @@ public class GlobalExceptionHandler {
         String message = ex.getBindingResult().getFieldErrors().stream()
                 .map(FieldError::getDefaultMessage)
                 .collect(Collectors.joining("; "));
-        return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", message, request);
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_ERROR, message, request);
     }
 
     @ExceptionHandler(ConstraintViolationException.class)
@@ -67,19 +69,19 @@ public class GlobalExceptionHandler {
         String message = ex.getConstraintViolations().stream()
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.joining("; "));
-        return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", message, request);
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_ERROR, message, request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex, HttpServletRequest request) {
         String paramName = ex.getName();
         String message = "Valor inválido para o parâmetro '" + paramName + "'.";
-        return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação", message, request);
+        return buildResponse(HttpStatus.BAD_REQUEST, VALIDATION_ERROR, message, request);
     }
 
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
-        return buildResponse(HttpStatus.FORBIDDEN, "Acesso negado", "Não tem permissão para aceder a este recurso.", request);
+        return buildResponse(HttpStatus.FORBIDDEN, FORBIDDEN_ERROR, "Não tem permissão para aceder a este recurso.", request);
     }
 
     @ExceptionHandler(TooManyAttemptsException.class)

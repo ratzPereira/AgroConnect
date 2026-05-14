@@ -130,8 +130,8 @@ const STATS: StatConfig[] = [
 /* ── Stat counter component ── */
 
 interface StatItemProps {
-  config: StatConfig;
-  animate: boolean;
+  readonly config: StatConfig;
+  readonly animate: boolean;
 }
 
 function StatItem({ config, animate }: StatItemProps) {

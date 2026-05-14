@@ -8,8 +8,8 @@ interface BreadcrumbItem {
 }
 
 interface BreadcrumbsProps {
-  items: BreadcrumbItem[];
-  className?: string;
+  readonly items: BreadcrumbItem[];
+  readonly className?: string;
 }
 
 export function Breadcrumbs({ items, className }: BreadcrumbsProps) {

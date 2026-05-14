@@ -21,9 +21,9 @@ import { useReassignExecution } from '../../hooks/useCalendar';
 import { cn } from '@/utils/cn';
 
 interface EventPopoverProps {
-  event: CalendarEvent;
-  anchor: { x: number; y: number };
-  onClose: () => void;
+  readonly event: CalendarEvent;
+  readonly anchor: { x: number; y: number };
+  readonly onClose: () => void;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -53,7 +53,7 @@ const URGENCY_LABEL: Record<string, string> = {
 };
 
 export function EventPopover({ event, anchor, onClose }: EventPopoverProps) {
-  const ref = useRef<HTMLDivElement | null>(null);
+  const ref = useRef<HTMLDialogElement | null>(null);
   const [mode, setMode] = useState<'idle' | 'complete' | 'reassign'>('idle');
   const [notes, setNotes] = useState('');
   const [materials, setMaterials] = useState('');
@@ -129,11 +129,11 @@ export function EventPopover({ event, anchor, onClose }: EventPopoverProps) {
   const top = Math.min(Math.max(anchor.y, 12), window.innerHeight - 380);
 
   return (
-    <div
+    <dialog
       ref={ref}
-      className="fixed z-50 w-[340px] rounded-xl border border-neutral-200 bg-white shadow-xl"
+      open
+      className="fixed z-50 m-0 w-[340px] rounded-xl border border-neutral-200 bg-white shadow-xl p-0"
       style={{ left, top }}
-      role="dialog"
       aria-label={`Detalhes: ${event.requestTitle}`}
     >
       <header className="flex items-start justify-between border-b border-neutral-100 px-4 py-3">
@@ -307,7 +307,7 @@ export function EventPopover({ event, anchor, onClose }: EventPopoverProps) {
           </div>
         </footer>
       )}
-    </div>
+    </dialog>
   );
 }
 

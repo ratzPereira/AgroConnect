@@ -4,8 +4,8 @@ import { cn } from '@/utils/cn';
 import type { CalendarSummary } from '@/types/calendar';
 
 interface KpiStripProps {
-  summary: CalendarSummary | undefined;
-  isLoading: boolean;
+  readonly summary: CalendarSummary | undefined;
+  readonly isLoading: boolean;
 }
 
 interface Tile {
@@ -27,6 +27,12 @@ function formatCurrency(value: number | undefined): string {
     currency: 'EUR',
     maximumFractionDigits: 0,
   });
+}
+
+function getUtilizationTone(utilization: number): Tile['tone'] {
+  if (utilization >= 0.9) return 'danger';
+  if (utilization >= 0.7) return 'warning';
+  return 'success';
 }
 
 function formatPercent(ratio: number | undefined): string {
@@ -96,12 +102,7 @@ function buildTiles(summary: CalendarSummary | undefined): Tile[] {
       value: formatPercent(summary.operatorUtilization),
       hint: 'da capacidade total',
       icon: Gauge,
-      tone:
-        summary.operatorUtilization >= 0.9
-          ? 'danger'
-          : summary.operatorUtilization >= 0.7
-            ? 'warning'
-            : 'success',
+      tone: getUtilizationTone(summary.operatorUtilization),
     },
   ];
 }
@@ -110,8 +111,8 @@ export function KpiStrip({ summary, isLoading }: KpiStripProps) {
   if (isLoading) {
     return (
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-8">
-        {Array.from({ length: 8 }).map((_, i) => (
-          <div key={i} className="h-20 animate-pulse rounded-lg border border-neutral-200 bg-neutral-100" />
+        {['kpi-0', 'kpi-1', 'kpi-2', 'kpi-3', 'kpi-4', 'kpi-5', 'kpi-6', 'kpi-7'].map(k => (
+          <div key={k} className="h-20 animate-pulse rounded-lg border border-neutral-200 bg-neutral-100" />
         ))}
       </div>
     );

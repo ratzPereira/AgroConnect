@@ -64,8 +64,8 @@ export function useCalendarFilters() {
           setOrDel(out, 'urg', merged.urgencies.join(','));
           setOrDel(out, 'st', merged.statuses.join(','));
           setOrDel(out, 'isl', merged.islands.join(','));
-          if (!merged.includeAllDay) out.set('allDay', 'false');
-          else out.delete('allDay');
+          if (merged.includeAllDay) out.delete('allDay');
+          else out.set('allDay', 'false');
           return out;
         },
         { replace: true },
@@ -144,21 +144,27 @@ function todayIso(): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+function matchesSimpleFilters(e: CalendarEvent, filters: CalendarFilters): boolean {
+  if (!filters.includeAllDay && e.scheduledAllDay) return false;
+  if (filters.urgencies.length > 0 && !filters.urgencies.includes(e.urgency)) return false;
+  if (filters.statuses.length > 0 && !filters.statuses.includes(e.status)) return false;
+  if (filters.categories.length > 0 && !filters.categories.includes(e.categoryName)) return false;
+  if (filters.islands.length > 0 && !filters.islands.includes(e.island)) return false;
+  return true;
+}
+
+function matchesAssignmentFilters(e: CalendarEvent, filters: CalendarFilters): boolean {
+  if (filters.operatorIds.length > 0) {
+    const match = e.assignments.some((a) => filters.operatorIds.includes(a.teamMemberId));
+    if (!match) return false;
+  }
+  if (filters.machineIds.length > 0) {
+    const match = e.assignments.some((a) => a.machineId != null && filters.machineIds.includes(a.machineId));
+    if (!match) return false;
+  }
+  return true;
+}
+
 export function applyFilters(events: CalendarEvent[], filters: CalendarFilters): CalendarEvent[] {
-  return events.filter((e) => {
-    if (!filters.includeAllDay && e.scheduledAllDay) return false;
-    if (filters.urgencies.length > 0 && !filters.urgencies.includes(e.urgency)) return false;
-    if (filters.statuses.length > 0 && !filters.statuses.includes(e.status)) return false;
-    if (filters.categories.length > 0 && !filters.categories.includes(e.categoryName)) return false;
-    if (filters.islands.length > 0 && !filters.islands.includes(e.island)) return false;
-    if (filters.operatorIds.length > 0) {
-      const match = e.assignments.some((a) => filters.operatorIds.includes(a.teamMemberId));
-      if (!match) return false;
-    }
-    if (filters.machineIds.length > 0) {
-      const match = e.assignments.some((a) => a.machineId != null && filters.machineIds.includes(a.machineId));
-      if (!match) return false;
-    }
-    return true;
-  });
+  return events.filter((e) => matchesSimpleFilters(e, filters) && matchesAssignmentFilters(e, filters));
 }

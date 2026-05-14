@@ -11,13 +11,13 @@ import { buildLanesForRange } from '../../utils/laneBuilders';
 import { DAY_END_HOUR, DAY_START_HOUR } from '../../utils/timeMath';
 
 interface DayViewProps {
-  events: CalendarEvent[];
-  conflicts: ConflictResponse[];
-  dayIso: string;
-  lane: CalendarLane;
-  onEventClick?: (event: CalendarEvent) => void;
-  emptyState?: React.ReactNode;
-  enableDnd?: boolean;
+  readonly events: CalendarEvent[];
+  readonly conflicts: ConflictResponse[];
+  readonly dayIso: string;
+  readonly lane: CalendarLane;
+  readonly onEventClick?: (event: CalendarEvent) => void;
+  readonly emptyState?: React.ReactNode;
+  readonly enableDnd?: boolean;
 }
 
 const LANE_ICON = {
@@ -40,7 +40,7 @@ export function DayView({
     [events, conflicts, lane, dayIso],
   );
 
-  const Icon = LANE_ICON[lane === 'jobs' ? 'jobs' : lane === 'machines' ? 'machines' : 'operators'];
+  const Icon = LANE_ICON[lane];
 
   const isToday = dayIso === todayIso();
   const nowPercent = isToday ? computeNowPercent() : null;

@@ -4,20 +4,20 @@ import type { CalendarEvent } from '@/types/calendar';
 import { parseTime, formatTime } from '../../utils/timeMath';
 
 interface GanttBarV2Props {
-  event: CalendarEvent;
-  startSlot: number;
-  spanSlots: number;
-  laneRow?: number;
-  laneRowSpan?: number;
-  hasConflict?: boolean;
-  ghost?: boolean;
-  draggableRef?: (node: HTMLElement | null) => void;
-  dragHandleProps?: Record<string, unknown>;
-  dragListeners?: Record<string, unknown>;
-  onClick?: (event: CalendarEvent, mouse: MouseEvent<HTMLDivElement>) => void;
-  onResizeStart?: (side: 'start' | 'end', mouseEvent: MouseEvent<HTMLDivElement>) => void;
-  className?: string;
-  showResizeHandles?: boolean;
+  readonly event: CalendarEvent;
+  readonly startSlot: number;
+  readonly spanSlots: number;
+  readonly laneRow?: number;
+  readonly laneRowSpan?: number;
+  readonly hasConflict?: boolean;
+  readonly ghost?: boolean;
+  readonly draggableRef?: (node: HTMLElement | null) => void;
+  readonly dragHandleProps?: Record<string, unknown>;
+  readonly dragListeners?: Record<string, unknown>;
+  readonly onClick?: (event: CalendarEvent, mouse: MouseEvent<HTMLDivElement>) => void;
+  readonly onResizeStart?: (side: 'start' | 'end', mouseEvent: MouseEvent<HTMLDivElement>) => void;
+  readonly className?: string;
+  readonly showResizeHandles?: boolean;
 }
 
 const URGENCY_STYLES: Record<string, { bar: string; ring: string }> = {
@@ -88,6 +88,7 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
       role="button"
       tabIndex={0}
       data-execution-id={event.executionId}
+      aria-label={event.requestTitle}
       className={cn(
         'group relative my-1 mx-0.5 flex h-9 cursor-pointer items-center overflow-hidden rounded-md border px-2 shadow-sm transition-all',
         style.bar,
@@ -98,19 +99,23 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
       style={gridStyle}
       onClick={(e) => onClick?.(event, e)}
       onKeyDown={(e) => {
-        if (e.key === 'Enter') onClick?.(event, e as unknown as MouseEvent<HTMLDivElement>);
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onClick?.(event, e as unknown as MouseEvent<HTMLDivElement>);
+        }
       }}
       {...dragHandleProps}
       {...dragListeners}
     >
       {showResizeHandles && !ghost && (
-        <div
-          role="separator"
+        <button
+          type="button"
+          tabIndex={-1}
           aria-label="Redimensionar início"
           className="absolute inset-y-0 left-0 w-1.5 cursor-ew-resize bg-black/0 hover:bg-black/20"
           onMouseDown={(e) => {
             e.stopPropagation();
-            onResizeStart?.('start', e);
+            onResizeStart?.('start', e as unknown as MouseEvent<HTMLDivElement>);
           }}
         />
       )}
@@ -139,13 +144,14 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
       )}
 
       {showResizeHandles && !ghost && (
-        <div
-          role="separator"
+        <button
+          type="button"
+          tabIndex={-1}
           aria-label="Redimensionar fim"
           className="absolute inset-y-0 right-0 w-1.5 cursor-ew-resize bg-black/0 hover:bg-black/20"
           onMouseDown={(e) => {
             e.stopPropagation();
-            onResizeStart?.('end', e);
+            onResizeStart?.('end', e as unknown as MouseEvent<HTMLDivElement>);
           }}
         />
       )}

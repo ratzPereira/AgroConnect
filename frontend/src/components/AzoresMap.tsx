@@ -8,14 +8,14 @@ import { cn } from '@/utils/cn';
 import './AzoresMap.css';
 
 interface AzoresMapProps {
-  pins: RequestPin[];
-  highlightIsland?: string;
-  providerLocation?: { latitude: number; longitude: number; radiusKm: number };
-  height?: string;
-  onPinClick?: (id: number) => void;
-  selectedId?: number;
-  showClustering?: boolean;
-  colorBy?: 'status' | 'urgency';
+  readonly pins: RequestPin[];
+  readonly highlightIsland?: string;
+  readonly providerLocation?: { latitude: number; longitude: number; radiusKm: number };
+  readonly height?: string;
+  readonly onPinClick?: (id: number) => void;
+  readonly selectedId?: number;
+  readonly showClustering?: boolean;
+  readonly colorBy?: 'status' | 'urgency';
 }
 
 const STATUS_COLORS: Record<string, string> = {
@@ -34,7 +34,7 @@ const URGENCY_COLORS: Record<string, string> = {
   HIGH: '#ef4444',
 };
 
-const AZORES_CENTER: L.LatLngExpression = [38.65, -28.0];
+const AZORES_CENTER: L.LatLngExpression = [38.65, -28];
 const AZORES_ZOOM = 7;
 
 function createPinIcon(

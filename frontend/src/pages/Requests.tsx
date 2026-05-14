@@ -139,71 +139,105 @@ export function Requests() {
         </div>
       )}
 
-      {isProvider && view === 'map' ? (
-        <RequestMapView filters={filters} />
-      ) : isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <Skeleton.Card key={i} />
-          ))}
-        </div>
-      ) : data && data.content.length > 0 ? (
-        <>
-          <motion.div
-            variants={listContainerVariants}
-            initial="hidden"
-            animate="visible"
-            className="space-y-3"
-          >
-            {data.content.map((request) => (
-              <motion.div variants={listItemVariants} key={request.id}>
-                <RequestCard request={request} />
-              </motion.div>
-            ))}
-          </motion.div>
-          {data.totalPages > 1 && (
-            <div className="flex justify-center gap-2 mt-6">
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={data.first}
-                onClick={() => setPage((p) => p - 1)}
-              >
-                Anterior
-              </Button>
-              <span className="inline-flex items-center text-sm text-neutral-500">
-                {data.number + 1} / {data.totalPages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                disabled={data.last}
-                onClick={() => setPage((p) => p + 1)}
-              >
-                Seguinte
-              </Button>
-            </div>
-          )}
-        </>
-      ) : isClient ? (
-        <EmptyState
-          illustration={<EmptyRequests className="w-48 h-auto" />}
-          title="Ainda sem pedidos"
-          description="Crie o seu primeiro pedido de serviço e encontre o prestador ideal."
-          action={
-            <Button onClick={() => navigate('/requests/new')}>
-              <Plus className="h-4 w-4" />
-              Novo Pedido
-            </Button>
-          }
-        />
-      ) : (
-        <EmptyState
-          illustration={<EmptyRequests className="w-48 h-auto" />}
-          title="Sem pedidos disponíveis"
-          description="Não existem pedidos de serviço na sua área neste momento."
-        />
-      )}
-    </AnimatedPage>
+      <RequestsBody
+        isProvider={!!isProvider}
+        isClient={isClient}
+        view={view}
+        isLoading={isLoading}
+        data={data}
+        filters={filters}
+        page={page}
+        setPage={setPage}
+        navigate={navigate}
+        listContainerVariants={listContainerVariants}
+        listItemVariants={listItemVariants}
+      />
+      </AnimatedPage>
   );
 }
+
+interface RequestsBodyProps {
+  readonly isProvider: boolean;
+  readonly isClient: boolean;
+  readonly view: string;
+  readonly isLoading: boolean;
+  readonly data: Awaited<ReturnType<typeof getMyRequests>> | undefined;
+  readonly filters: FilterState;
+  readonly page: number;
+  readonly setPage: (updater: (p: number) => number) => void;
+  readonly navigate: ReturnType<typeof useNavigate>;
+  readonly listContainerVariants: ReturnType<typeof useMotionConfig>['listContainerVariants'];
+  readonly listItemVariants: ReturnType<typeof useMotionConfig>['listItemVariants'];
+}
+
+function RequestsBody({
+  isProvider, isClient, view, isLoading, data, filters, page: _page,
+  setPage, navigate, listContainerVariants, listItemVariants,
+}: RequestsBodyProps) {
+  if (isProvider && view === 'map') {
+    return <RequestMapView filters={filters} />;
+  }
+  if (isLoading) {
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {['sk-0', 'sk-1', 'sk-2', 'sk-3', 'sk-4', 'sk-5'].map(k => (
+          <Skeleton.Card key={k} />
+        ))}
+      </div>
+    );
+  }
+  if (data && data.content.length > 0) {
+    return (
+      <>
+        <motion.div
+          variants={listContainerVariants}
+          initial="hidden"
+          animate="visible"
+          className="space-y-3"
+        >
+          {data.content.map((request) => (
+            <motion.div variants={listItemVariants} key={request.id}>
+              <RequestCard request={request} />
+            </motion.div>
+          ))}
+        </motion.div>
+        {data.totalPages > 1 && (
+          <div className="flex justify-center gap-2 mt-6">
+            <Button variant="outline" size="sm" disabled={data.first} onClick={() => setPage((p) => p - 1)}>
+              Anterior
+            </Button>
+            <span className="inline-flex items-center text-sm text-neutral-500">
+              {data.number + 1} / {data.totalPages}
+            </span>
+            <Button variant="outline" size="sm" disabled={data.last} onClick={() => setPage((p) => p + 1)}>
+              Seguinte
+            </Button>
+          </div>
+        )}
+      </>
+    );
+  }
+  if (isClient) {
+    return (
+      <EmptyState
+        illustration={<EmptyRequests className="w-48 h-auto" />}
+        title="Ainda sem pedidos"
+        description="Crie o seu primeiro pedido de serviço e encontre o prestador ideal."
+        action={
+          <Button onClick={() => navigate('/requests/new')}>
+            <Plus className="h-4 w-4" />
+            Novo Pedido
+          </Button>
+        }
+      />
+    );
+  }
+  return (
+    <EmptyState
+      illustration={<EmptyRequests className="w-48 h-auto" />}
+      title="Sem pedidos disponíveis"
+      description="Não existem pedidos de serviço na sua área neste momento."
+    />
+  );
+}
+

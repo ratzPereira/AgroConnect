@@ -78,8 +78,12 @@ public class ServiceRequestService {
     private static final String EVENT_DISPUTE_RESOLVED = "DISPUTE_RESOLVED";
     private static final String LABEL_DISPUTE_RESOLVED = "Disputa resolvida";
 
-    private static final Set<RequestStatus> TERMINAL_STATES = EnumSet.of(
-            RequestStatus.RATED, RequestStatus.EXPIRED, RequestStatus.CANCELLED);
+    private static final Set<RequestStatus> CANCELLABLE_STATES = Set.of(
+            RequestStatus.DRAFT, RequestStatus.PUBLISHED, RequestStatus.WITH_PROPOSALS,
+            RequestStatus.AWARDED, RequestStatus.IN_PROGRESS, RequestStatus.AWAITING_CONFIRMATION);
+
+    private static final Set<RequestStatus> PHOTO_ALLOWED_STATES = Set.of(
+            RequestStatus.DRAFT, RequestStatus.PUBLISHED);
 
     private static final Map<RequestStatus, Set<RequestStatus>> VALID_TRANSITIONS = Map.of(
             RequestStatus.DRAFT, EnumSet.of(RequestStatus.PUBLISHED, RequestStatus.CANCELLED),
@@ -229,11 +233,6 @@ public class ServiceRequestService {
         ServiceRequest request = findByIdOrThrow(id);
         validateOwnership(request, userId);
 
-        // Only allow cancellation from states that have CANCELLED as a valid transition
-        Set<RequestStatus> CANCELLABLE_STATES = Set.of(
-            RequestStatus.DRAFT, RequestStatus.PUBLISHED, RequestStatus.WITH_PROPOSALS,
-            RequestStatus.AWARDED, RequestStatus.IN_PROGRESS, RequestStatus.AWAITING_CONFIRMATION
-        );
         if (!CANCELLABLE_STATES.contains(request.getStatus())) {
             throw new InvalidStateException("Não é possível cancelar um pedido no estado " + request.getStatus());
         }
@@ -511,8 +510,7 @@ public class ServiceRequestService {
         ServiceRequest request = findByIdOrThrow(requestId);
         validateOwnership(request, userId);
 
-        Set<RequestStatus> PHOTO_ALLOWED = Set.of(RequestStatus.DRAFT, RequestStatus.PUBLISHED);
-        if (!PHOTO_ALLOWED.contains(request.getStatus())) {
+        if (!PHOTO_ALLOWED_STATES.contains(request.getStatus())) {
             throw new InvalidStateException("Não é possível adicionar fotos neste estado.");
         }
 
@@ -552,8 +550,7 @@ public class ServiceRequestService {
         ServiceRequest request = findByIdOrThrow(requestId);
         validateOwnership(request, userId);
 
-        Set<RequestStatus> PHOTO_ALLOWED = Set.of(RequestStatus.DRAFT, RequestStatus.PUBLISHED);
-        if (!PHOTO_ALLOWED.contains(request.getStatus())) {
+        if (!PHOTO_ALLOWED_STATES.contains(request.getStatus())) {
             throw new InvalidStateException("Não é possível adicionar fotos neste estado.");
         }
 

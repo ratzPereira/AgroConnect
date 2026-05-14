@@ -2,9 +2,9 @@ import type { ChatMessage } from '@/types/chat';
 import { cn } from '@/utils/cn';
 
 interface ChatBubbleProps {
-  message: ChatMessage;
-  isOwn: boolean;
-  showAvatar: boolean;
+  readonly message: ChatMessage;
+  readonly isOwn: boolean;
+  readonly showAvatar: boolean;
 }
 
 function getInitials(name: string): string {

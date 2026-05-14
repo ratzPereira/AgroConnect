@@ -14,7 +14,7 @@ export function StripeRefresh() {
   const refreshLink = useMutation({
     mutationFn: () => startStripeOnboarding(),
     onSuccess: (response) => {
-      window.location.href = response.onboardingUrl;
+      globalThis.location.href = response.onboardingUrl;
     },
     onError: () => {
       toast.error('Não foi possível gerar um novo link. Tente novamente.');

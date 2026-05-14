@@ -3,8 +3,8 @@ import { formatDistance } from '@/utils/haversine';
 import { MapPin, Loader2, AlertCircle, CheckCircle } from 'lucide-react';
 
 interface DistanceIndicatorProps {
-  targetLat: number;
-  targetLon: number;
+  readonly targetLat: number;
+  readonly targetLon: number;
 }
 
 const MAX_CHECKIN_DISTANCE = 500;

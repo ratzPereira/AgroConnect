@@ -12,12 +12,12 @@ import type {
 import { buildConflictSet } from '../../utils/laneBuilders';
 
 interface MonthViewProps {
-  events: CalendarEvent[];
-  conflicts: ConflictResponse[];
-  year: number;
-  month: number;
-  lane: CalendarLane;
-  emptyState?: React.ReactNode;
+  readonly events: CalendarEvent[];
+  readonly conflicts: ConflictResponse[];
+  readonly year: number;
+  readonly month: number;
+  readonly lane: CalendarLane;
+  readonly emptyState?: React.ReactNode;
 }
 
 function toGanttBar(event: CalendarEvent, conflictSet: Set<number>): GanttBar {
@@ -36,31 +36,40 @@ function toGanttBar(event: CalendarEvent, conflictSet: Set<number>): GanttBar {
   };
 }
 
-function buildRows(
+function buildJobRows(events: CalendarEvent[], conflictSet: Set<number>): GanttRow[] {
+  return events.map((event) => ({
+    id: `job-${event.executionId}`,
+    label: event.requestTitle,
+    sublabel: event.categoryName,
+    bars: [toGanttBar(event, conflictSet)],
+  }));
+}
+
+function getAssignmentKeyAndName(
+  a: CalendarEvent['assignments'][number],
+  lane: 'machines' | 'operators',
+): { key: number; name: string } | null {
+  if (lane === 'machines') {
+    if (a.machineId == null) return null;
+    return { key: a.machineId, name: a.machineName ?? `Máquina #${a.machineId}` };
+  }
+  return { key: a.teamMemberId, name: a.teamMemberName };
+}
+
+function buildResourceRows(
   events: CalendarEvent[],
-  lane: CalendarLane,
+  lane: 'machines' | 'operators',
   conflictSet: Set<number>,
 ): GanttRow[] {
-  if (lane === 'jobs') {
-    return events.map((event) => ({
-      id: `job-${event.executionId}`,
-      label: event.requestTitle,
-      sublabel: event.categoryName,
-      bars: [toGanttBar(event, conflictSet)],
-    }));
-  }
-
   const map = new Map<number, { name: string; bars: GanttBar[] }>();
   for (const event of events) {
     for (const a of event.assignments) {
-      if (lane === 'machines' && a.machineId == null) continue;
-      const key = lane === 'machines' ? a.machineId : a.teamMemberId;
-      const name = lane === 'machines' ? a.machineName ?? `Máquina #${a.machineId}` : a.teamMemberName;
-      if (key == null) continue;
-      let entry = map.get(key);
+      const meta = getAssignmentKeyAndName(a, lane);
+      if (!meta) continue;
+      let entry = map.get(meta.key);
       if (!entry) {
-        entry = { name, bars: [] };
-        map.set(key, entry);
+        entry = { name: meta.name, bars: [] };
+        map.set(meta.key, entry);
       }
       entry.bars.push(toGanttBar(event, conflictSet));
     }
@@ -73,6 +82,15 @@ function buildRows(
       sublabel: `${data.bars.length} trabalho${data.bars.length > 1 ? 's' : ''}`,
       bars: data.bars,
     }));
+}
+
+function buildRows(
+  events: CalendarEvent[],
+  lane: CalendarLane,
+  conflictSet: Set<number>,
+): GanttRow[] {
+  if (lane === 'jobs') return buildJobRows(events, conflictSet);
+  return buildResourceRows(events, lane, conflictSet);
 }
 
 export function MonthView({ events, conflicts, year, month, lane, emptyState }: MonthViewProps) {

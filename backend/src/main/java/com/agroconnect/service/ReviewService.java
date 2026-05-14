@@ -132,7 +132,7 @@ public class ReviewService {
     }
 
     public java.util.List<ReviewResponse> getRequestReviews(Long requestId) {
-        ServiceRequest request = requestRepository.findById(requestId)
+        requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido de serviço não encontrado."));
 
         return reviewRepository.findByRequestId(requestId).stream()

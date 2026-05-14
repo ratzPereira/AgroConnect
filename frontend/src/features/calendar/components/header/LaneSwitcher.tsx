@@ -9,8 +9,8 @@ const OPTIONS: { key: CalendarLane; label: string; icon: typeof User }[] = [
 ];
 
 interface LaneSwitcherProps {
-  value: CalendarLane;
-  onChange: (lane: CalendarLane) => void;
+  readonly value: CalendarLane;
+  readonly onChange: (lane: CalendarLane) => void;
 }
 
 export function LaneSwitcher({ value, onChange }: LaneSwitcherProps) {

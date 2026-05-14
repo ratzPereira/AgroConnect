@@ -32,6 +32,8 @@ public class StripeService {
 
     private static final Logger log = LoggerFactory.getLogger(StripeService.class);
     private static final String CURRENCY_EUR = "eur";
+    private static final String META_TRANSACTION_ID = "transactionId";
+    private static final String TRANSFER_GROUP_PREFIX = "txn-";
 
     private final StripeProperties properties;
 
@@ -102,12 +104,12 @@ public class StripeService {
                 .setAmount(toMinorUnits(amountEur))
                 .setCurrency(CURRENCY_EUR)
                 .setReceiptEmail(customerEmail)
-                .setTransferGroup("txn-" + transactionId)
+                .setTransferGroup(TRANSFER_GROUP_PREFIX + transactionId)
                 .setAutomaticPaymentMethods(
                         PaymentIntentCreateParams.AutomaticPaymentMethods.builder()
                                 .setEnabled(true)
                                 .build())
-                .putMetadata("transactionId", String.valueOf(transactionId))
+                .putMetadata(META_TRANSACTION_ID, String.valueOf(transactionId))
                 .putMetadata("requestId", String.valueOf(requestId))
                 .putMetadata("proposalId", String.valueOf(proposalId))
                 .build();
@@ -144,8 +146,8 @@ public class StripeService {
                 .setAmount(toMinorUnits(payoutEur))
                 .setCurrency(CURRENCY_EUR)
                 .setDestination(connectedAccountId)
-                .setTransferGroup("txn-" + transactionId)
-                .putMetadata("transactionId", String.valueOf(transactionId));
+                .setTransferGroup(TRANSFER_GROUP_PREFIX + transactionId)
+                .putMetadata(META_TRANSACTION_ID, String.valueOf(transactionId));
 
         if (sourceChargeId != null) {
             paramsBuilder.setSourceTransaction(sourceChargeId);
@@ -166,7 +168,7 @@ public class StripeService {
         RefundCreateParams.Builder paramsBuilder = RefundCreateParams.builder()
                 .setPaymentIntent(paymentIntentId)
                 .setAmount(toMinorUnits(amountEur))
-                .putMetadata("transactionId", String.valueOf(transactionId));
+                .putMetadata(META_TRANSACTION_ID, String.valueOf(transactionId));
 
         if (reason != null && !reason.isBlank()) {
             paramsBuilder.putMetadata("reason", reason);

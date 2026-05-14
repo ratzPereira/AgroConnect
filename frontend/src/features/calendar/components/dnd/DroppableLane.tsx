@@ -3,15 +3,15 @@ import { useDroppable } from '@dnd-kit/core';
 import { ResourceLane } from '../primitives/ResourceLane';
 
 interface DroppableLaneProps {
-  laneId: string;
-  resourceType: 'operator' | 'machine' | 'job';
-  resourceId: number | null;
-  days: string[];
-  label: string;
-  sublabel?: string;
-  icon?: ReactNode;
-  rowsCount?: number;
-  children?: ReactNode;
+  readonly laneId: string;
+  readonly resourceType: 'operator' | 'machine' | 'job';
+  readonly resourceId: number | null;
+  readonly days: string[];
+  readonly label: string;
+  readonly sublabel?: string;
+  readonly icon?: ReactNode;
+  readonly rowsCount?: number;
+  readonly children?: ReactNode;
 }
 
 export function DroppableLane({

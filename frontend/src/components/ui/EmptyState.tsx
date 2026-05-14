@@ -2,11 +2,11 @@ import type { ReactNode } from 'react';
 import { cn } from '@/utils/cn';
 
 interface EmptyStateProps {
-  illustration?: ReactNode;
-  title: string;
-  description?: string;
-  action?: ReactNode;
-  className?: string;
+  readonly illustration?: ReactNode;
+  readonly title: string;
+  readonly description?: string;
+  readonly action?: ReactNode;
+  readonly className?: string;
 }
 
 export function EmptyState({ illustration, title, description, action, className }: EmptyStateProps) {

@@ -45,8 +45,7 @@ describe('PhotoLightbox', () => {
         onNavigate={vi.fn()}
       />,
     );
-    // The backdrop is the outermost fixed div
-    const backdrop = screen.getByAltText('Foto 1 de 3').closest('.fixed') as HTMLElement;
+    const backdrop = screen.getByRole('button', { name: 'Fechar visualização' });
     fireEvent.click(backdrop);
     expect(onClose).toHaveBeenCalledOnce();
   });
@@ -74,10 +73,9 @@ describe('PhotoLightbox', () => {
         onNavigate={vi.fn()}
       />,
     );
-    // Previous button is on the left side, only shown when hasPrev
     const buttons = container.querySelectorAll('button');
-    // Only the close button and next button should exist
-    expect(buttons.length).toBe(2);
+    // backdrop + close + next (no previous on first)
+    expect(buttons.length).toBe(3);
   });
 
   it('does not show next button on last photo', () => {
@@ -90,8 +88,8 @@ describe('PhotoLightbox', () => {
       />,
     );
     const buttons = container.querySelectorAll('button');
-    // Only the close button and previous button should exist
-    expect(buttons.length).toBe(2);
+    // backdrop + close + previous (no next on last)
+    expect(buttons.length).toBe(3);
   });
 
   it('shows both navigation buttons for middle photo', () => {
@@ -104,8 +102,8 @@ describe('PhotoLightbox', () => {
       />,
     );
     const buttons = container.querySelectorAll('button');
-    // Close button + previous + next
-    expect(buttons.length).toBe(3);
+    // backdrop + close + previous + next
+    expect(buttons.length).toBe(4);
   });
 
   it('calls onNavigate with previous index when ArrowLeft pressed', () => {

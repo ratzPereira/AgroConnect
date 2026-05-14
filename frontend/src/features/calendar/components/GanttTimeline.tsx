@@ -4,9 +4,9 @@ import { GanttBarComponent } from './GanttBar';
 import type { GanttRow } from '@/types/calendar';
 
 interface GanttTimelineProps {
-  rows: GanttRow[];
-  year: number;
-  month: number;
+  readonly rows: GanttRow[];
+  readonly year: number;
+  readonly month: number;
 }
 
 function getDaysInMonth(year: number, month: number): Date[] {
@@ -92,7 +92,9 @@ export function GanttTimeline({ rows, year, month }: GanttTimelineProps) {
               >
                 <div className={cn(
                   'text-[10px] font-medium leading-none',
-                  isToday(day) ? 'text-primary-600' : isWeekend(day) ? 'text-neutral-400' : 'text-neutral-500',
+                  isToday(day) && 'text-primary-600',
+                  !isToday(day) && isWeekend(day) && 'text-neutral-400',
+                  !isToday(day) && !isWeekend(day) && 'text-neutral-500',
                 )}>
                   {WEEKDAY_LABELS[day.getDay()]}
                 </div>
@@ -148,7 +150,6 @@ export function GanttTimeline({ rows, year, month }: GanttTimelineProps) {
                       bar={bar}
                       left={pos.left}
                       width={pos.width}
-                      rowIndex={0}
                       subIndex={subIndex}
                     />
                   );

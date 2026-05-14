@@ -1,5 +1,5 @@
 interface LandingHeroProps {
-  className?: string;
+  readonly className?: string;
 }
 
 export function LandingHero({ className }: LandingHeroProps) {

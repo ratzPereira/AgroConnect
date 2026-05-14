@@ -86,9 +86,8 @@ export function Inventory() {
         </CardBody></Card>
       )}
 
-      {isLoading ? (
-        <Skeleton.Table />
-      ) : items && items.length > 0 ? (
+      {isLoading && <Skeleton.Table />}
+      {!isLoading && items && items.length > 0 && (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -112,7 +111,7 @@ export function Inventory() {
                     <td className="hidden sm:table-cell px-6 py-3 text-neutral-600">{unitLabels[item.unit]}</td>
                     <td className="px-3 sm:px-6 py-3 text-neutral-600">{item.quantity}</td>
                     <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{item.minStockAlert ?? '—'}</td>
-                    <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{item.costPerUnit != null ? `€${item.costPerUnit}` : '—'}</td>
+                    <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{item.costPerUnit == null ? '—' : `€${item.costPerUnit}`}</td>
                     <td className="px-3 sm:px-6 py-3">{item.lowStock
                       ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-warning-100 text-warning-700">Baixo</span>
                       : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-leaf-100 text-leaf-700">OK</span>}
@@ -126,7 +125,8 @@ export function Inventory() {
             </table>
           </div>
         </Card>
-      ) : (
+      )}
+      {!isLoading && (!items || items.length === 0) && (
         <EmptyState
           illustration={<EmptyTransactions className="w-48 h-auto" />}
           title="Inventário vazio"

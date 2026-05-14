@@ -9,10 +9,10 @@ import { Loader2, Plus, Trash2, AlertTriangle, Package, Clock, TrendingUp } from
 import type { JobCosts, AssignmentCost } from '@/types/jobCosting';
 
 interface JobCostingPanelProps {
-  executionId: number;
-  requestId: number;
-  isProvider: boolean;
-  canEdit: boolean;
+  readonly executionId: number;
+  readonly requestId: number;
+  readonly isProvider: boolean;
+  readonly canEdit: boolean;
 }
 
 const eur = (n: number) =>
@@ -298,9 +298,9 @@ function AssignmentHoursRow({
             {assignment.hoursWorked}h trabalhadas
             {Number(assignment.machineHours) > 0 && ` · ${assignment.machineHours}h máquina`}
             {' · '}
-            {assignment.effectiveHourlyRate != null
-              ? `${Number(assignment.effectiveHourlyRate).toFixed(2)} €/h`
-              : <span className="text-amber-700">sem taxa</span>}
+            {assignment.effectiveHourlyRate == null
+              ? <span className="text-amber-700">sem taxa</span>
+              : `${Number(assignment.effectiveHourlyRate).toFixed(2)} €/h`}
           </p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">

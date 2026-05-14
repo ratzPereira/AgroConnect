@@ -69,7 +69,6 @@ class ListingMessageServiceTest {
 
     private User sellerUser;
     private User buyerUser;
-    private User outsiderUser;
     private Listing activeListing;
 
     @BeforeEach
@@ -81,7 +80,6 @@ class ListingMessageServiceTest {
 
         sellerUser = createTestUser(1L, Role.CLIENT);
         buyerUser = createTestUser(2L, Role.CLIENT);
-        outsiderUser = createTestUser(3L, Role.CLIENT);
         activeListing = createTestListing(10L, sellerUser, ListingStatus.ACTIVE);
     }
 

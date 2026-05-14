@@ -13,11 +13,13 @@ export interface LaneEvent {
   hasConflict: boolean;
 }
 
+export type ResourceType = 'operator' | 'machine' | 'job';
+
 export interface LaneGroup {
   id: string;
   label: string;
   sublabel?: string;
-  resourceType: 'operator' | 'machine' | 'job';
+  resourceType: ResourceType;
   resourceId: number | null;
   events: LaneEvent[];
   rowsCount: number;
@@ -125,7 +127,7 @@ export function buildLanesForRange({
   function ensureGroup(
     id: string,
     label: string,
-    resourceType: 'operator' | 'machine' | 'job',
+    resourceType: ResourceType,
     resourceId: number | null,
     sublabel?: string,
   ): LaneEvent[] {
@@ -137,48 +139,53 @@ export function buildLanesForRange({
     return entry.events;
   }
 
+  function addToOperatorLane(event: CalendarEvent, placement: LanePlacement, hasConflict: boolean) {
+    if (event.assignments.length === 0) {
+      ensureGroup('op-none', 'Sem operador', 'operator', null).push({
+        event,
+        placement: { ...placement },
+        hasConflict,
+      });
+      return;
+    }
+    for (const a of event.assignments) {
+      ensureGroup(`op-${a.teamMemberId}`, a.teamMemberName, 'operator', a.teamMemberId, 'Operador').push(
+        { event, placement: { ...placement }, hasConflict },
+      );
+    }
+  }
+
+  function addToMachineLane(event: CalendarEvent, placement: LanePlacement, hasConflict: boolean) {
+    const machineAssignments = event.assignments.filter((a) => a.machineId != null);
+    for (const a of machineAssignments) {
+      ensureGroup(
+        `m-${a.machineId}`,
+        a.machineName ?? `Máquina #${a.machineId}`,
+        'machine',
+        a.machineId,
+        'Máquina',
+      ).push({ event, placement: { ...placement }, hasConflict });
+    }
+  }
+
+  function addToJobLane(event: CalendarEvent, placement: LanePlacement, hasConflict: boolean) {
+    ensureGroup(
+      `job-${event.executionId}`,
+      event.requestTitle,
+      'job',
+      event.executionId,
+      event.categoryName,
+    ).push({ event, placement: { ...placement }, hasConflict });
+  }
+
   for (const event of events) {
     const hasConflict = conflictSet.has(event.executionId);
     for (let dayIdx = 0; dayIdx < days.length; dayIdx++) {
-      const dayIso = days[dayIdx];
-      const placement = computePlacement(event, dayIso, dayIdx);
+      const placement = computePlacement(event, days[dayIdx], dayIdx);
       if (!placement) continue;
-
-      if (lane === 'operators') {
-        if (event.assignments.length === 0) {
-          ensureGroup('op-none', 'Sem operador', 'operator', null, undefined).push({
-            event,
-            placement: { ...placement },
-            hasConflict,
-          });
-        } else {
-          for (const a of event.assignments) {
-            ensureGroup(`op-${a.teamMemberId}`, a.teamMemberName, 'operator', a.teamMemberId, 'Operador').push(
-              { event, placement: { ...placement }, hasConflict },
-            );
-          }
-        }
-      } else if (lane === 'machines') {
-        const machineAssignments = event.assignments.filter((a) => a.machineId != null);
-        if (machineAssignments.length === 0) continue;
-        for (const a of machineAssignments) {
-          ensureGroup(
-            `m-${a.machineId}`,
-            a.machineName ?? `Máquina #${a.machineId}`,
-            'machine',
-            a.machineId,
-            'Máquina',
-          ).push({ event, placement: { ...placement }, hasConflict });
-        }
-      } else {
-        ensureGroup(
-          `job-${event.executionId}`,
-          event.requestTitle,
-          'job',
-          event.executionId,
-          event.categoryName,
-        ).push({ event, placement: { ...placement }, hasConflict });
-      }
+      if (lane === 'operators') addToOperatorLane(event, placement, hasConflict);
+      else if (lane === 'machines') addToMachineLane(event, placement, hasConflict);
+      else addToJobLane(event, placement, hasConflict);
     }
   }
 

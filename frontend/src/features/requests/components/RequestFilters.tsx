@@ -21,8 +21,8 @@ export interface FilterState {
 }
 
 interface RequestFiltersProps {
-  filters: FilterState;
-  onFilterChange: (filters: FilterState) => void;
+  readonly filters: FilterState;
+  readonly onFilterChange: (filters: FilterState) => void;
 }
 
 export function RequestFilters({ filters, onFilterChange }: RequestFiltersProps) {
@@ -78,8 +78,9 @@ export function RequestFilters({ filters, onFilterChange }: RequestFiltersProps)
       {expanded && (
         <div className="flex flex-wrap gap-3 p-3 rounded-lg bg-neutral-50 border border-neutral-200">
           <div>
-            <label className="text-xs font-medium text-neutral-600 block mb-1">Urgência</label>
+            <label htmlFor="rf-urgency" className="text-xs font-medium text-neutral-600 block mb-1">Urgência</label>
             <select
+              id="rf-urgency"
               value={filters.urgency}
               onChange={(e) => onFilterChange({ ...filters, urgency: e.target.value })}
               className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
@@ -91,8 +92,9 @@ export function RequestFilters({ filters, onFilterChange }: RequestFiltersProps)
             </select>
           </div>
           <div>
-            <label className="text-xs font-medium text-neutral-600 block mb-1">Ilha</label>
+            <label htmlFor="rf-island" className="text-xs font-medium text-neutral-600 block mb-1">Ilha</label>
             <select
+              id="rf-island"
               value={filters.island}
               onChange={(e) => onFilterChange({ ...filters, island: e.target.value })}
               className="rounded-md border border-neutral-300 px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"

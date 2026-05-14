@@ -88,7 +88,7 @@ apiClient.interceptors.response.use(
 
     if (!refreshTokenValue) {
       useAuthStore.getState().logout();
-      window.location.href = '/login';
+      globalThis.location.href = '/login';
       throw error;
     }
 
@@ -109,7 +109,7 @@ apiClient.interceptors.response.use(
     } catch (refreshError) {
       processQueue(refreshError);
       useAuthStore.getState().logout();
-      window.location.href = '/login';
+      globalThis.location.href = '/login';
       throw refreshError;
     } finally {
       isRefreshing = false;

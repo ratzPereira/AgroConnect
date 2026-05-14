@@ -7,13 +7,25 @@ import { cn } from '@/utils/cn';
 import type { RequestPhoto } from '@/types/request';
 
 interface PhotoUploadProps {
-  requestId: number;
-  photos: RequestPhoto[];
-  maxPhotos?: number;
+  readonly requestId: number;
+  readonly photos: RequestPhoto[];
+  readonly maxPhotos?: number;
 }
 
 const ALLOWED_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+function validateFile(file: File): boolean {
+  if (!ALLOWED_TYPES.has(file.type)) {
+    toast.error('Formato não suportado. Use JPEG, PNG ou WebP.');
+    return false;
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    toast.error('Ficheiro demasiado grande. Máximo 5MB.');
+    return false;
+  }
+  return true;
+}
 
 export function PhotoUpload({ requestId, photos, maxPhotos = 10 }: PhotoUploadProps) {
   const queryClient = useQueryClient();
@@ -32,18 +44,6 @@ export function PhotoUpload({ requestId, photos, maxPhotos = 10 }: PhotoUploadPr
     onError: () => toast.error('Erro ao remover foto'),
     onSettled: () => setDeletingId(null),
   });
-
-  function validateFile(file: File): boolean {
-    if (!ALLOWED_TYPES.has(file.type)) {
-      toast.error('Formato não suportado. Use JPEG, PNG ou WebP.');
-      return false;
-    }
-    if (file.size > MAX_FILE_SIZE) {
-      toast.error('Ficheiro demasiado grande. Máximo 5MB.');
-      return false;
-    }
-    return true;
-  }
 
   async function uploadFile(file: File) {
     if (!validateFile(file)) return;
@@ -154,23 +154,16 @@ export function PhotoUpload({ requestId, photos, maxPhotos = 10 }: PhotoUploadPr
 
       {/* Drop zone */}
       {canAddMore && (
-        <div
+        <button
+          type="button"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={() => !uploading && fileInputRef.current?.click()}
-          onKeyDown={(e) => {
-            if ((e.key === 'Enter' || e.key === ' ') && !uploading) {
-              e.preventDefault();
-              fileInputRef.current?.click();
-            }
-          }}
-          role="button"
-          tabIndex={uploading ? -1 : 0}
+          disabled={uploading}
           aria-label="Adicionar foto"
-          aria-disabled={uploading}
           className={cn(
-            'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200',
+            'flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed cursor-pointer transition-all duration-200 w-full',
             hasPhotos ? 'py-5' : 'py-8',
             dragOver
               ? 'border-primary-400 bg-primary-50 scale-[1.01]'
@@ -178,32 +171,34 @@ export function PhotoUpload({ requestId, photos, maxPhotos = 10 }: PhotoUploadPr
             uploading && 'pointer-events-none opacity-60',
           )}
         >
-          {uploading ? (
+          {uploading && (
             <>
               <Loader2 className="h-8 w-8 text-primary-500 animate-spin" />
-              <p className="text-sm text-primary-600 font-medium">A carregar...</p>
-            </>
-          ) : dragOver ? (
-            <>
-              <Upload className="h-8 w-8 text-primary-500" />
-              <p className="text-sm text-primary-600 font-medium">Largue aqui</p>
-            </>
-          ) : (
-            <>
-              <div className="flex items-center justify-center w-10 h-10 rounded-full bg-neutral-100">
-                <ImagePlus className="h-5 w-5 text-neutral-500" />
-              </div>
-              <div className="text-center">
-                <p className="text-sm text-neutral-700 font-medium">
-                  Arraste uma imagem ou <span className="text-primary-600">clique para escolher</span>
-                </p>
-                <p className="text-xs text-neutral-400 mt-0.5">
-                  JPEG, PNG ou WebP, máx. 5MB
-                </p>
-              </div>
+              <span className="text-sm text-primary-600 font-medium">A carregar...</span>
             </>
           )}
-        </div>
+          {!uploading && dragOver && (
+            <>
+              <Upload className="h-8 w-8 text-primary-500" />
+              <span className="text-sm text-primary-600 font-medium">Largue aqui</span>
+            </>
+          )}
+          {!uploading && !dragOver && (
+            <>
+              <span className="flex items-center justify-center w-10 h-10 rounded-full bg-neutral-100">
+                <ImagePlus className="h-5 w-5 text-neutral-500" />
+              </span>
+              <span className="text-center block">
+                <span className="block text-sm text-neutral-700 font-medium">
+                  Arraste uma imagem ou <span className="text-primary-600">clique para escolher</span>
+                </span>
+                <span className="block text-xs text-neutral-400 mt-0.5">
+                  JPEG, PNG ou WebP, máx. 5MB
+                </span>
+              </span>
+            </>
+          )}
+        </button>
       )}
 
       <input

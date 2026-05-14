@@ -4,9 +4,9 @@ import type { WorkloadHeatmap as WorkloadHeatmapData } from '@/types/calendar';
 import { parseIsoDate } from '../../utils/viewRange';
 
 interface WorkloadHeatmapProps {
-  data: WorkloadHeatmapData | undefined;
-  isLoading: boolean;
-  onCellClick?: (dateIso: string) => void;
+  readonly data: WorkloadHeatmapData | undefined;
+  readonly isLoading: boolean;
+  readonly onCellClick?: (dateIso: string) => void;
 }
 
 const WORK_DAY_MINUTES = 840;
@@ -37,7 +37,7 @@ export function WorkloadHeatmap({ data, isLoading, onCellClick }: WorkloadHeatma
     for (const op of data.operators) {
       for (const date of Object.keys(op.minutesByDate)) set.add(date);
     }
-    return Array.from(set).sort();
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
   }, [data]);
 
   if (isLoading) {
@@ -45,8 +45,8 @@ export function WorkloadHeatmap({ data, isLoading, onCellClick }: WorkloadHeatma
       <section className="rounded-xl border border-neutral-200 bg-white p-4 shadow-sm">
         <div className="mb-3 h-4 w-40 animate-pulse rounded bg-neutral-100" />
         <div className="grid grid-cols-12 gap-1">
-          {Array.from({ length: 60 }).map((_, i) => (
-            <div key={i} className="h-7 animate-pulse rounded bg-neutral-100" />
+          {Array.from({ length: 60 }, (_, i) => `wh-${i}`).map(k => (
+            <div key={k} className="h-7 animate-pulse rounded bg-neutral-100" />
           ))}
         </div>
       </section>

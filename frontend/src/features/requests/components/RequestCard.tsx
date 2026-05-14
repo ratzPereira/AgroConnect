@@ -11,7 +11,7 @@ const urgencyLabels: Record<string, string> = {
 };
 
 interface RequestCardProps {
-  request: ServiceRequestSummary;
+  readonly request: ServiceRequestSummary;
 }
 
 export function RequestCard({ request }: RequestCardProps) {

@@ -11,6 +11,12 @@ const URGENCY_BADGE: Record<string, { variant: 'danger' | 'warning' | 'default' 
   LOW: { variant: 'info', label: 'Baixa' },
 };
 
+function getDateLabel(isToday: boolean, isTomorrow: boolean, startDate: Date): string {
+  if (isToday) return 'Hoje';
+  if (isTomorrow) return 'Amanhã';
+  return startDate.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' });
+}
+
 export function UpcomingJobsMini() {
   const navigate = useNavigate();
 
@@ -51,8 +57,8 @@ export function UpcomingJobsMini() {
 
       {isLoading && (
         <div className="space-y-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-14 rounded-lg bg-neutral-100 animate-pulse" />
+          {['uj-0', 'uj-1', 'uj-2'].map(k => (
+            <div key={k} className="h-14 rounded-lg bg-neutral-100 animate-pulse" />
           ))}
         </div>
       )}
@@ -101,9 +107,11 @@ export function UpcomingJobsMini() {
                     <Badge variant={urgency.variant} size="sm">{urgency.label}</Badge>
                     <span className={cn(
                       'text-[11px] font-medium',
-                      isToday ? 'text-primary-600' : isTomorrow ? 'text-warning-600' : 'text-neutral-500',
+                      isToday && 'text-primary-600',
+                      !isToday && isTomorrow && 'text-warning-600',
+                      !isToday && !isTomorrow && 'text-neutral-500',
                     )}>
-                      {isToday ? 'Hoje' : isTomorrow ? 'Amanhã' : startDate.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })}
+                      {getDateLabel(isToday, isTomorrow, startDate)}
                     </span>
                   </div>
                 </div>

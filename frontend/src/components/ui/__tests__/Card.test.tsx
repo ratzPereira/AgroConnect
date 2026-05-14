@@ -22,28 +22,23 @@ describe('Card', () => {
     expect(onClick).toHaveBeenCalledOnce();
   });
 
-  it('exposes button role and tabIndex when clickable', () => {
+  it('exposes button role and is focusable when clickable', () => {
     const onClick = vi.fn();
     render(<Card onClick={onClick}>Clickable</Card>);
     const button = screen.getByRole('button');
-    expect(button).toHaveAttribute('tabIndex', '0');
+    expect(button.tagName).toBe('BUTTON');
+    expect(button).not.toBeDisabled();
   });
 
-  it('triggers onClick on Enter key', () => {
+  it('renders as native button (Enter/Space handled by browser)', () => {
     const onClick = vi.fn();
     render(<Card onClick={onClick}>Clickable</Card>);
-    fireEvent.keyDown(screen.getByRole('button'), { key: 'Enter' });
-    expect(onClick).toHaveBeenCalledOnce();
+    const button = screen.getByRole('button');
+    expect(button.tagName).toBe('BUTTON');
+    expect(button).toHaveAttribute('type', 'button');
   });
 
-  it('triggers onClick on Space key', () => {
-    const onClick = vi.fn();
-    render(<Card onClick={onClick}>Clickable</Card>);
-    fireEvent.keyDown(screen.getByRole('button'), { key: ' ' });
-    expect(onClick).toHaveBeenCalledOnce();
-  });
-
-  it('does not trigger onClick on other keys', () => {
+  it('does not trigger onClick on unrelated keys', () => {
     const onClick = vi.fn();
     render(<Card onClick={onClick}>Clickable</Card>);
     fireEvent.keyDown(screen.getByRole('button'), { key: 'Escape' });

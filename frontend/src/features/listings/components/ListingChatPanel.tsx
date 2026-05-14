@@ -17,11 +17,11 @@ import { cn } from '@/utils/cn';
 import type { ListingMessage } from '@/types/listing';
 
 interface ListingChatPanelProps {
-  listingId: number;
-  conversationId?: number;
-  sellerId: number;
-  onClose: () => void;
-  open: boolean;
+  readonly listingId: number;
+  readonly conversationId?: number;
+  readonly sellerId: number;
+  readonly onClose: () => void;
+  readonly open: boolean;
 }
 
 const MAX_MESSAGE_LENGTH = 2000;
@@ -185,13 +185,14 @@ export function ListingChatPanel({
           onScroll={handleScroll}
           className="flex-1 overflow-y-auto space-y-2 pr-1 mb-3"
         >
-          {isLoading ? (
+          {isLoading && (
             <div className="space-y-3 py-4">
               <Skeleton.Line className="h-8 w-3/4" />
               <Skeleton.Line className="h-8 w-1/2 ml-auto" />
               <Skeleton.Line className="h-8 w-2/3" />
             </div>
-          ) : messages.length === 0 ? (
+          )}
+          {!isLoading && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <MessageSquare className="h-10 w-10 text-neutral-300 mb-3" />
               <p className="text-sm text-neutral-500">
@@ -200,7 +201,8 @@ export function ListingChatPanel({
                   : 'Envie uma mensagem ao vendedor para iniciar a conversa.'}
               </p>
             </div>
-          ) : (
+          )}
+          {!isLoading && messages.length > 0 && (
             messages.map((msg) => {
               const isOwn = msg.senderId === user?.id;
               const msgDay = new Date(msg.sentAt).toDateString();

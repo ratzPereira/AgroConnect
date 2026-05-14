@@ -8,9 +8,13 @@ interface JobStatusData {
 }
 
 interface JobStatusChartProps {
-  data: JobStatusData[];
-  total: number;
-  className?: string;
+  readonly data: JobStatusData[];
+  readonly total: number;
+  readonly className?: string;
+}
+
+function LegendLabel({ value }: { readonly value: string }) {
+  return <span className="text-xs text-neutral-600 ml-1">{value}</span>;
 }
 
 export function JobStatusChart({ data, total, className }: JobStatusChartProps) {
@@ -52,7 +56,7 @@ export function JobStatusChart({ data, total, className }: JobStatusChartProps) 
             verticalAlign="bottom"
             iconType="circle"
             iconSize={8}
-            formatter={(value: string) => <span className="text-xs text-neutral-600 ml-1">{value}</span>}
+            formatter={(value: string) => <LegendLabel value={value} />}
           />
         </PieChart>
       </ResponsiveContainer>

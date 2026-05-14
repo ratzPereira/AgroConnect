@@ -8,10 +8,10 @@ import {
 } from '../../utils/timeMath';
 
 interface TimeAxisProps {
-  days?: number;
-  className?: string;
-  showDayLabels?: boolean;
-  dayLabels?: string[];
+  readonly days?: number;
+  readonly className?: string;
+  readonly showDayLabels?: boolean;
+  readonly dayLabels?: string[];
 }
 
 export function TimeAxis({
@@ -80,8 +80,8 @@ export function TimeAxis({
 }
 
 interface TimeGridBackgroundProps {
-  days?: number;
-  className?: string;
+  readonly days?: number;
+  readonly className?: string;
 }
 
 export function TimeGridBackground({ days = 1, className }: TimeGridBackgroundProps) {

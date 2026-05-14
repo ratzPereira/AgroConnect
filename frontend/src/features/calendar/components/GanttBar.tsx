@@ -4,11 +4,10 @@ import { cn } from '@/utils/cn';
 import type { GanttBar as GanttBarType } from '@/types/calendar';
 
 interface GanttBarProps {
-  bar: GanttBarType;
-  left: number;
-  width: number;
-  rowIndex: number;
-  subIndex: number;
+  readonly bar: GanttBarType;
+  readonly left: number;
+  readonly width: number;
+  readonly subIndex: number;
 }
 
 const URGENCY_STYLES: Record<string, { bar: string; text: string }> = {
@@ -29,7 +28,7 @@ const URGENCY_STYLES: Record<string, { bar: string; text: string }> = {
 export function GanttBarComponent({ bar, left, width, subIndex }: GanttBarProps) {
   const navigate = useNavigate();
   const [showTooltip, setShowTooltip] = useState(false);
-  const barRef = useRef<HTMLDivElement>(null);
+  const barRef = useRef<HTMLButtonElement>(null);
 
   const style = URGENCY_STYLES[bar.urgency] ?? URGENCY_STYLES.MEDIUM;
   const barHeight = 34;
@@ -41,10 +40,9 @@ export function GanttBarComponent({ bar, left, width, subIndex }: GanttBarProps)
   }
 
   return (
-    <div
+    <button
+      type="button"
       ref={barRef}
-      role="button"
-      tabIndex={0}
       className={cn(
         'absolute rounded-md cursor-pointer transition-all duration-150 shadow-sm',
         'flex items-center px-2 overflow-hidden select-none',
@@ -58,7 +56,6 @@ export function GanttBarComponent({ bar, left, width, subIndex }: GanttBarProps)
         height: `${barHeight}px`,
       }}
       onClick={handleClick}
-      onKeyDown={(e) => e.key === 'Enter' && handleClick()}
       onMouseEnter={() => setShowTooltip(true)}
       onMouseLeave={() => setShowTooltip(false)}
     >
@@ -67,21 +64,17 @@ export function GanttBarComponent({ bar, left, width, subIndex }: GanttBarProps)
       </span>
 
       {showTooltip && (
-        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none">
-          <div className="bg-neutral-900 text-white rounded-lg px-3 py-2 text-xs shadow-lg whitespace-nowrap max-w-[280px]">
-            <p className="font-semibold truncate">{bar.requestTitle}</p>
-            <p className="text-neutral-300 mt-0.5">{bar.categoryName}</p>
-            <div className="flex gap-3 mt-1 text-neutral-400">
-              <span>{bar.island}, {bar.parish}</span>
-            </div>
-            <div className="flex gap-3 mt-1 text-neutral-400">
-              <span>{formatDate(bar.startDate)} — {formatDate(bar.endDate)}</span>
-            </div>
-            <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
-          </div>
-        </div>
+        <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 z-50 pointer-events-none">
+          <span className="block bg-neutral-900 text-white rounded-lg px-3 py-2 text-xs shadow-lg whitespace-nowrap max-w-[280px]">
+            <span className="block font-semibold truncate">{bar.requestTitle}</span>
+            <span className="block text-neutral-300 mt-0.5">{bar.categoryName}</span>
+            <span className="block mt-1 text-neutral-400">{bar.island}, {bar.parish}</span>
+            <span className="block mt-1 text-neutral-400">{formatDate(bar.startDate)} — {formatDate(bar.endDate)}</span>
+            <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-neutral-900" />
+          </span>
+        </span>
       )}
-    </div>
+    </button>
   );
 }
 

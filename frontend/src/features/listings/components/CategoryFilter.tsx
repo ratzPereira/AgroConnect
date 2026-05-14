@@ -4,8 +4,8 @@ import type { ListingCategory } from '@/types/listing';
 import type { ComponentType } from 'react';
 
 interface CategoryFilterProps {
-  selected: ListingCategory | null;
-  onSelect: (category: ListingCategory | null) => void;
+  readonly selected: ListingCategory | null;
+  readonly onSelect: (category: ListingCategory | null) => void;
 }
 
 interface CategoryPill {

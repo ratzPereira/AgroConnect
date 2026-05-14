@@ -13,10 +13,10 @@ interface LegalSection {
 }
 
 interface LegalPageLayoutProps {
-  title: string;
-  lastUpdated: string;
-  toc: TocItem[];
-  sections: LegalSection[];
+  readonly title: string;
+  readonly lastUpdated: string;
+  readonly toc: TocItem[];
+  readonly sections: LegalSection[];
 }
 
 export function LegalPageLayout({ title, lastUpdated, toc, sections }: LegalPageLayoutProps) {

@@ -9,12 +9,12 @@ interface Tab {
 }
 
 interface TabsProps {
-  tabs: Tab[];
-  value?: string;
-  defaultValue?: string;
-  onChange?: (id: string) => void;
-  children: (activeTab: string) => ReactNode;
-  className?: string;
+  readonly tabs: Tab[];
+  readonly value?: string;
+  readonly defaultValue?: string;
+  readonly onChange?: (id: string) => void;
+  readonly children: (activeTab: string) => ReactNode;
+  readonly className?: string;
 }
 
 export function Tabs({ tabs, value, defaultValue, onChange, children, className }: TabsProps) {
@@ -31,7 +31,7 @@ export function Tabs({ tabs, value, defaultValue, onChange, children, className 
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLButtonElement>, index: number) => {
-      let nextIndex = index;
+      let nextIndex: number;
       if (e.key === 'ArrowRight') nextIndex = (index + 1) % tabs.length;
       else if (e.key === 'ArrowLeft') nextIndex = (index - 1 + tabs.length) % tabs.length;
       else return;

@@ -161,19 +161,19 @@ export function InventoryDetail() {
         <StatCard label="Stock atual" value={`${item.quantity} ${unitLabels[item.unit]}`} />
         <StatCard
           label="Custo médio"
-          value={item.costPerUnit != null ? `€${item.costPerUnit}` : '—'}
+          value={item.costPerUnit == null ? '—' : `€${item.costPerUnit}`}
           hint="Preço médio ponderado"
         />
         <StatCard
           label="Alerta mínimo"
-          value={item.minStockAlert != null ? `${item.minStockAlert} ${unitLabels[item.unit]}` : '—'}
+          value={item.minStockAlert == null ? '—' : `${item.minStockAlert} ${unitLabels[item.unit]}`}
         />
         <StatCard
           label="Valor em stock"
           value={
-            item.costPerUnit != null
-              ? `€${(item.quantity * item.costPerUnit).toFixed(2)}`
-              : '—'
+            item.costPerUnit == null
+              ? '—'
+              : `€${(item.quantity * item.costPerUnit).toFixed(2)}`
           }
         />
       </div>
@@ -193,9 +193,8 @@ export function InventoryDetail() {
       </CardBody></Card>
 
       <h2 className="text-sm font-semibold text-neutral-700 mb-3">Histórico de movimentos</h2>
-      {movementsLoading ? (
-        <Skeleton.Table />
-      ) : movements && movements.content.length > 0 ? (
+      {movementsLoading && <Skeleton.Table />}
+      {!movementsLoading && movements && movements.content.length > 0 && (
         <Card>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -244,7 +243,8 @@ export function InventoryDetail() {
             </div>
           )}
         </Card>
-      ) : (
+      )}
+      {!movementsLoading && (!movements || movements.content.length === 0) && (
         <Card><CardBody>
           <p className="text-sm text-neutral-500 text-center py-8">Sem movimentos registados.</p>
         </CardBody></Card>

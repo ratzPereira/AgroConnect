@@ -184,7 +184,7 @@ describe('Team Page', () => {
       expect(screen.getByText('Carlos Silva')).toBeInTheDocument();
     });
 
-    const card = screen.getByText('Carlos Silva').closest('div[class*="cursor-pointer"]');
+    const card = screen.getByText('Carlos Silva').closest('button');
     expect(card).toBeTruthy();
     await user.click(card as Element);
 
@@ -210,7 +210,7 @@ describe('Team Page', () => {
     expect(screen.getByPlaceholderText('Nome')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Email')).toBeInTheDocument();
     expect(screen.getByPlaceholderText('Telefone')).toBeInTheDocument();
-    expect(screen.getByPlaceholderText('12.50')).toBeInTheDocument();
+    expect(screen.getByPlaceholderText('12.5')).toBeInTheDocument();
     expect(screen.getByText('Guardar')).toBeInTheDocument();
     expect(screen.getByText('Cancelar')).toBeInTheDocument();
   });
@@ -285,7 +285,7 @@ describe('Team Page', () => {
 
     await user.type(screen.getByPlaceholderText('Nome'), 'Joana Lopes');
     await user.type(screen.getByPlaceholderText('Email'), 'joana@example.com');
-    await user.type(screen.getByPlaceholderText('12.50'), '15.75');
+    await user.type(screen.getByPlaceholderText('12.5'), '15.75');
 
     await user.click(screen.getByText('Guardar'));
 

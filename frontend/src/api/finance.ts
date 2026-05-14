@@ -99,10 +99,10 @@ export async function exportFinanceCsv(from: string, to: string): Promise<void> 
     responseType: 'blob',
   });
   const blob = new Blob([response.data as BlobPart], { type: 'text/csv;charset=utf-8' });
-  const url = window.URL.createObjectURL(blob);
+  const url = globalThis.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.href = url;
   link.download = `transacoes_${from}_${to}.csv`;
   link.click();
-  window.URL.revokeObjectURL(url);
+  globalThis.URL.revokeObjectURL(url);
 }

@@ -9,8 +9,8 @@ const OPTIONS: { key: CalendarView; label: string; icon: typeof Calendar }[] = [
 ];
 
 interface ViewSwitcherProps {
-  value: CalendarView;
-  onChange: (view: CalendarView) => void;
+  readonly value: CalendarView;
+  readonly onChange: (view: CalendarView) => void;
 }
 
 export function ViewSwitcher({ value, onChange }: ViewSwitcherProps) {
