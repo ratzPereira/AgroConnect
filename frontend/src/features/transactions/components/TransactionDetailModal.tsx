@@ -2,6 +2,7 @@ import { Modal } from '@/components/ui/Modal';
 import { TransactionStatusBadge } from './TransactionStatusBadge';
 import { format } from 'date-fns';
 import { ArrowRight } from 'lucide-react';
+import { formatCurrency } from '@/utils/formatCurrency';
 import type { Transaction } from '@/types/transaction';
 
 interface TransactionDetailModalProps {
@@ -29,15 +30,15 @@ export function TransactionDetailModal({ transaction, open, onClose }: Transacti
         <div className="rounded-lg border border-neutral-200 divide-y divide-neutral-100">
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-neutral-600">Valor total</span>
-            <span className="text-sm font-semibold text-neutral-900">{transaction.amount.toFixed(2)} &euro;</span>
+            <span className="text-sm font-semibold text-neutral-900">{formatCurrency(transaction.amount)}</span>
           </div>
           <div className="flex items-center justify-between px-4 py-3">
             <span className="text-sm text-neutral-600">Comissão ({(transaction.commissionRate * 100).toFixed(0)}%)</span>
-            <span className="text-sm text-neutral-500">-{transaction.commissionAmount.toFixed(2)} &euro;</span>
+            <span className="text-sm text-neutral-500">-{formatCurrency(transaction.commissionAmount)}</span>
           </div>
           <div className="flex items-center justify-between px-4 py-3 bg-leaf-50/50">
             <span className="text-sm font-medium text-leaf-700">Pagamento ao prestador</span>
-            <span className="text-sm font-semibold text-leaf-700">{transaction.providerPayout.toFixed(2)} &euro;</span>
+            <span className="text-sm font-semibold text-leaf-700">{formatCurrency(transaction.providerPayout)}</span>
           </div>
         </div>
 

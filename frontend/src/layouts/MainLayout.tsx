@@ -79,6 +79,12 @@ export function MainLayout() {
 
   return (
     <div className="min-h-svh flex max-w-full overflow-x-hidden">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-[100] focus:rounded-md focus:bg-primary-600 focus:px-3 focus:py-2 focus:text-sm focus:font-medium focus:text-white focus:shadow-lg focus:outline-none focus:ring-2 focus:ring-primary-300"
+      >
+        Saltar para o conteúdo principal
+      </a>
       {/* Desktop sidebar */}
       <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200">
         <div className="flex flex-col items-center px-5 pt-7 pb-5">
@@ -119,9 +125,12 @@ export function MainLayout() {
         </div>
       </aside>
 
-      <main className="flex-1 bg-neutral-50 pb-16 lg:pb-0 overflow-x-hidden">
+      <main
+        id="main"
+        className="flex-1 bg-neutral-50 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 overflow-x-hidden"
+      >
         {/* Mobile top header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-neutral-200 bg-white lg:hidden">
+        <div className="flex items-center justify-between px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] border-b border-neutral-200 bg-white lg:hidden">
           <img src="/logotipo.png" alt="AgroConnect" className="h-8" />
           <NotificationBell />
         </div>

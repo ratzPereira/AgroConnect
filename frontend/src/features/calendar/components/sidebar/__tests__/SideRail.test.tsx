@@ -94,7 +94,7 @@ describe('SideRail', () => {
     };
     wrap(<SideRail alerts={alerts} events={[]} isLoading={false} anchorIso="2026-04-15" />);
     fireEvent.click(screen.getByRole('button', { name: /2 propostas concorrentes/ }));
-    expect(navigateMock).toHaveBeenCalledWith('/provider/requests/77');
+    expect(navigateMock).toHaveBeenCalledWith('/requests/77');
   });
 
   it('navigates to machine page when maintenance alert is clicked', () => {
@@ -119,7 +119,7 @@ describe('SideRail', () => {
     navigateMock.mockReset();
     wrap(<SideRail alerts={emptyAlerts} events={[baseEvent]} isLoading={false} anchorIso="2026-04-15" />);
     fireEvent.click(screen.getByRole('button', { name: /Lavoura/ }));
-    expect(navigateMock).toHaveBeenCalledWith('/provider/jobs/11');
+    expect(navigateMock).toHaveBeenCalledWith('/requests/11');
   });
 
   it('filters out events before the anchor date', () => {

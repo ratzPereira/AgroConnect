@@ -895,6 +895,127 @@ class CalendarServiceTest {
                 .containsEntry(LocalDate.of(2026, 4, 2), 150);
     }
 
+    // ───────── Reschedule/reassign guards (audit S1.7) ─────────
+
+    @Test
+    void updateSchedule_givenAlreadyCompletedExecution_shouldThrowValidation() {
+        execution.setCompletedAt(Instant.now());
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(100L)).thenReturn(Optional.of(execution));
+
+        ScheduleUpdateDto dto = new ScheduleUpdateDto(
+                LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7), null, null, null);
+
+        assertThatThrownBy(() -> calendarService.updateSchedule(100L, dto, 1L))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("concluída");
+    }
+
+    @Test
+    void updateSchedule_givenRequestInTerminalStatus_shouldThrowValidation() {
+        request.setStatus(RequestStatus.COMPLETED);
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(100L)).thenReturn(Optional.of(execution));
+
+        ScheduleUpdateDto dto = new ScheduleUpdateDto(
+                LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7), null, null, null);
+
+        assertThatThrownBy(() -> calendarService.updateSchedule(100L, dto, 1L))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("COMPLETED");
+    }
+
+    @Test
+    void updateSchedule_givenRequestCancelled_shouldThrowValidation() {
+        request.setStatus(RequestStatus.CANCELLED);
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(100L)).thenReturn(Optional.of(execution));
+
+        ScheduleUpdateDto dto = new ScheduleUpdateDto(
+                LocalDate.of(2026, 4, 5), LocalDate.of(2026, 4, 7), null, null, null);
+
+        assertThatThrownBy(() -> calendarService.updateSchedule(100L, dto, 1L))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    @Test
+    void reassignExecution_givenAlreadyCompletedExecution_shouldThrowValidation() {
+        execution.setCompletedAt(Instant.now());
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(100L)).thenReturn(Optional.of(execution));
+
+        ReassignExecutionDto dto = new ReassignExecutionDto(1L, 2L, null);
+
+        assertThatThrownBy(() -> calendarService.reassignExecution(100L, dto, 1L))
+                .isInstanceOf(ValidationException.class)
+                .hasMessageContaining("concluída");
+    }
+
+    @Test
+    void reassignExecution_givenRequestInTerminalStatus_shouldThrowValidation() {
+        request.setStatus(RequestStatus.RATED);
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findById(100L)).thenReturn(Optional.of(execution));
+
+        ReassignExecutionDto dto = new ReassignExecutionDto(1L, 2L, null);
+
+        assertThatThrownBy(() -> calendarService.reassignExecution(100L, dto, 1L))
+                .isInstanceOf(ValidationException.class);
+    }
+
+    // ───────── NPE-safety (audit S1.12) ─────────
+
+    @Test
+    void getCalendarEvents_givenAssignmentWithNullTeamMember_shouldSkipGracefully() {
+        ExecutionAssignment orphan = ExecutionAssignment.builder()
+                .id(99L).teamMember(null)
+                .machine(Machine.builder().id(7L).name("Trator XL").build())
+                .build();
+        ExecutionAssignment valid = ExecutionAssignment.builder()
+                .id(1L).teamMember(teamMember).build();
+        ServiceExecution exec = ServiceExecution.builder()
+                .id(100L)
+                .proposal(proposal)
+                .scheduledDate(LocalDate.of(2026, 4, 1))
+                .scheduledEndDate(LocalDate.of(2026, 4, 1))
+                .assignments(Set.of(orphan, valid))
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(exec));
+
+        List<CalendarEventResponse> events = calendarService.getCalendarEvents(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(events).hasSize(1);
+        assertThat(events.get(0).assignments())
+                .extracting(CalendarEventResponse.CalendarAssignment::teamMemberName)
+                .containsExactly("João Silva");
+    }
+
+    @Test
+    void getConflicts_givenAssignmentWithNullTeamMember_shouldNotThrow() {
+        ExecutionAssignment orphan = ExecutionAssignment.builder()
+                .id(99L).teamMember(null).build();
+        ServiceExecution exec = ServiceExecution.builder()
+                .id(100L)
+                .proposal(proposal)
+                .scheduledDate(LocalDate.of(2026, 4, 1))
+                .scheduledEndDate(LocalDate.of(2026, 4, 1))
+                .assignments(Set.of(orphan))
+                .build();
+
+        when(providerProfileRepository.findByUserId(1L)).thenReturn(Optional.of(provider));
+        when(executionRepository.findByProviderAndScheduledRange(eq(1L), any(), any()))
+                .thenReturn(List.of(exec));
+
+        List<ConflictResponse> conflicts = calendarService.getConflicts(
+                1L, LocalDate.of(2026, 4, 1), LocalDate.of(2026, 4, 30));
+
+        assertThat(conflicts).isEmpty();
+    }
+
     private Proposal otherProposalForRequest(Long requestId, String catName) {
         return Proposal.builder()
                 .id(requestId + 100)

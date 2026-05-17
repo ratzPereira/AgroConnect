@@ -71,7 +71,7 @@ export function SideRail({ alerts, events, isLoading, anchorIso }: SideRailProps
         tone: 'primary',
         title: `${pr.competingProposals} propostas concorrentes`,
         meta: pr.requestTitle,
-        onClick: () => navigate(`/provider/requests/${pr.requestId}`),
+        onClick: () => navigate(`/requests/${pr.requestId}`),
       });
     }
     return items;
@@ -163,7 +163,7 @@ export function SideRail({ alerts, events, isLoading, anchorIso }: SideRailProps
               <li key={e.executionId}>
                 <button
                   type="button"
-                  onClick={() => navigate(`/provider/jobs/${e.requestId}`)}
+                  onClick={() => navigate(`/requests/${e.requestId}`)}
                   className="flex w-full items-center gap-2 rounded-md border border-neutral-100 px-2.5 py-1.5 text-left text-xs hover:bg-neutral-50"
                 >
                   <span className="rounded bg-primary-50 px-1.5 py-0.5 font-mono text-[10px] text-primary-700">

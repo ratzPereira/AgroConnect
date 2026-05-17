@@ -1,4 +1,4 @@
-import { forwardRef, type InputHTMLAttributes } from 'react';
+import { forwardRef, useId, type InputHTMLAttributes } from 'react';
 import { cn } from '@/utils/cn';
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -8,16 +8,21 @@ interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
   ({ className, label, error, id, ...props }, ref) => {
+    const reactId = useId();
+    const inputId = id ?? `input-${reactId}`;
+    const errorId = error ? `${inputId}-error` : undefined;
     return (
       <div className="space-y-1.5">
         {label && (
-          <label htmlFor={id} className="block text-sm font-medium text-neutral-700">
+          <label htmlFor={inputId} className="block text-sm font-medium text-neutral-700">
             {label}
           </label>
         )}
         <input
           ref={ref}
-          id={id}
+          id={inputId}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={errorId}
           className={cn(
             'block w-full rounded-lg border px-3 py-2 text-sm transition-colors',
             'placeholder:text-neutral-400',
@@ -30,7 +35,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {error && (
-          <p className="text-xs text-red-600">{error}</p>
+          <p id={errorId} role="alert" className="text-xs text-red-600">
+            {error}
+          </p>
         )}
       </div>
     );

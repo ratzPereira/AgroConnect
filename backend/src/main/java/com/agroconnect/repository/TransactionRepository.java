@@ -1,9 +1,11 @@
 package com.agroconnect.repository;
 
 import com.agroconnect.model.Transaction;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -17,6 +19,14 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
     Optional<Transaction> findByRequestId(Long requestId);
 
     Optional<Transaction> findByStripePaymentIntentId(String stripePaymentIntentId);
+
+    /**
+     * Webhook-only: locks the row so concurrent deliveries of the same Stripe event
+     * (or a retry colliding with a manual operation) cannot both pass the status guard.
+     */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT t FROM Transaction t WHERE t.stripePaymentIntentId = :paymentIntentId")
+    Optional<Transaction> findByStripePaymentIntentIdForUpdate(@Param("paymentIntentId") String paymentIntentId);
 
     Optional<Transaction> findByStripeTransferId(String stripeTransferId);
 

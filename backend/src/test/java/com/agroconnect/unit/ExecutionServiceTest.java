@@ -606,6 +606,22 @@ class ExecutionServiceTest {
         }
 
         @Test
+        void complete_givenAlreadyCompletedExecution_shouldThrowInvalidState() {
+            // Audit S1.9: prevent double-completion (and the duplicate snapshot/notification side-effects).
+            ServiceExecution alreadyCompleted = ExecutionFixture.aCheckedInExecution()
+                    .proposal(acceptedProposalInProgress)
+                    .completedAt(java.time.Instant.now())
+                    .build();
+            CompleteExecutionDto dto = new CompleteExecutionDto(null, null);
+
+            when(executionRepository.findById(1L)).thenReturn(Optional.of(alreadyCompleted));
+            when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
+
+            assertThrows(InvalidStateException.class, () -> service.complete(1L, dto, 2L));
+            verify(executionRepository, never()).save(any(ServiceExecution.class));
+        }
+
+        @Test
         void complete_givenNoCheckin_shouldThrowInvalidState() {
             // Execution without checkin but with IN_PROGRESS request
             ServiceExecution noCheckin = ExecutionFixture.anExecution()

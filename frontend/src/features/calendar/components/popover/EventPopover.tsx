@@ -280,7 +280,7 @@ export function EventPopover({ event, anchor, onClose }: EventPopoverProps) {
       {mode === 'idle' && (
         <footer className="flex items-center justify-between gap-2 border-t border-neutral-100 px-4 py-2.5">
           <Link
-            to={`/provider/requests/${event.requestId}`}
+            to={`/requests/${event.requestId}`}
             className="inline-flex items-center gap-1 rounded-md px-2 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-50"
           >
             <ExternalLink className="h-3.5 w-3.5" /> Ver detalhes

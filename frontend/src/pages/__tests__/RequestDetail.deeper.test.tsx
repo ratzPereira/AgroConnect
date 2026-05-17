@@ -225,11 +225,12 @@ describe('RequestDetail — deeper coverage', () => {
     expect(skeletons.length).toBeGreaterThanOrEqual(1);
   });
 
-  it('shows "Pedido não encontrado" when request is null', async () => {
+  it('shows the 404 page when request is null', async () => {
     mockGetRequest.mockResolvedValue(null);
     renderRequestDetail();
     await waitFor(() => {
-      expect(screen.getByText(/Pedido não encontrado/)).toBeInTheDocument();
+      expect(screen.getByText('404')).toBeInTheDocument();
+      expect(screen.getByText(/Página não encontrada/)).toBeInTheDocument();
     });
   });
 

@@ -62,8 +62,14 @@ apiClient.interceptors.response.use(
     const originalRequest = error.config;
     const status = error.response?.status;
 
-    // Show toast for non-auth errors (skip 400 validation + 401 refresh)
-    if (status !== 401 && status !== 400) {
+    // Show toast for errors. 401 is handled by the refresh flow below.
+    // 400 surfaces backend validation messages (Portuguese) when available.
+    if (status === 400) {
+      const backendMessage = error.response?.data?.message;
+      if (typeof backendMessage === 'string' && backendMessage.trim().length > 0) {
+        toast.error(backendMessage, { duration: 6000 });
+      }
+    } else if (status !== 401) {
       showErrorToast(status);
     }
 

@@ -98,7 +98,7 @@ export function GanttMobileAgenda({ events, year, month }: GanttMobileAgendaProp
                   <button
                     key={`${dateStr}-${event.executionId}`}
                     type="button"
-                    onClick={() => navigate(`/provider/requests/${event.requestId}`)}
+                    onClick={() => navigate(`/requests/${event.requestId}`)}
                     className="group w-full text-left rounded-xl border border-neutral-200 bg-white p-3 hover:border-primary-300 hover:shadow-sm transition-all duration-150"
                   >
                     <div className="flex items-start gap-2">

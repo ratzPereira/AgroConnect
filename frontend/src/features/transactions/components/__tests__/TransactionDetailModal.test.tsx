@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TransactionDetailModal } from '../TransactionDetailModal';
+import { formatCurrency } from '@/utils/formatCurrency';
 import type { Transaction } from '@/types/transaction';
+import { textEquals } from '@/test/helpers/textMatchers';
 
 // Mock framer-motion to avoid animation issues in tests
 vi.mock('framer-motion', () => ({
@@ -45,17 +47,14 @@ describe('TransactionDetailModal', () => {
   it('renders transaction ID and amount', () => {
     render(<TransactionDetailModal {...defaultProps} />);
     expect(screen.getByText(/Transa\u00e7\u00e3o #42/)).toBeInTheDocument();
-    expect(screen.getByText('250.00 \u20AC')).toBeInTheDocument();
+    expect(screen.getByText(textEquals(formatCurrency(250)))).toBeInTheDocument();
   });
 
   it('shows commission breakdown', () => {
     render(<TransactionDetailModal {...defaultProps} />);
-    // Commission label with percentage
     expect(screen.getByText(/Comiss\u00e3o \(12%\)/)).toBeInTheDocument();
-    // Commission amount
-    expect(screen.getByText('-30.00 \u20AC')).toBeInTheDocument();
-    // Provider payout
-    expect(screen.getByText('220.00 \u20AC')).toBeInTheDocument();
+    expect(screen.getByText(textEquals(`-${formatCurrency(30)}`))).toBeInTheDocument();
+    expect(screen.getByText(textEquals(formatCurrency(220)))).toBeInTheDocument();
   });
 
   it('shows status explanation text', () => {

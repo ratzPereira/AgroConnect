@@ -22,6 +22,7 @@ import { WeekView } from '@/features/calendar/components/views/WeekView';
 import { MonthView } from '@/features/calendar/components/views/MonthView';
 import { CalendarDnd } from '@/features/calendar/components/dnd/CalendarDnd';
 import { EventPopover } from '@/features/calendar/components/popover/EventPopover';
+import { GanttMobileAgenda } from '@/features/calendar/components/GanttMobileAgenda';
 
 export function ProviderCalendar() {
   const {
@@ -96,51 +97,68 @@ export function ProviderCalendar() {
       </div>
 
       <div className="space-y-4">
-        <CalendarDnd events={filteredEvents}>
-          {eventsLoading && (
+        <div className="hidden md:block">
+          <CalendarDnd events={filteredEvents}>
+            {eventsLoading && (
+              <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
+                A carregar agenda…
+              </div>
+            )}
+            {!eventsLoading && view === 'day' && (
+              <DayView
+                events={filteredEvents}
+                conflicts={conflicts}
+                dayIso={anchor}
+                lane={lane}
+                enableDnd
+                onEventClick={(e, mouse) =>
+                  handleEventClick(e, { clientX: mouse.clientX, clientY: mouse.clientY })
+                }
+              />
+            )}
+            {!eventsLoading && view === 'week' && (
+              <WeekView
+                events={filteredEvents}
+                conflicts={conflicts}
+                days={days}
+                lane={lane}
+                enableDnd
+                onEventClick={(e, mouse) => handleEventClick(e, mouse)}
+              />
+            )}
+            {!eventsLoading && view === 'month' && (
+              <MonthView
+                events={filteredEvents}
+                conflicts={conflicts}
+                year={Number(anchor.slice(0, 4))}
+                month={Number(anchor.slice(5, 7)) - 1}
+                lane={lane}
+                onDayClick={(dayIso) => {
+                  setView('day');
+                  setAnchor(dayIso);
+                }}
+                onEventClick={(e, mouse) =>
+                  handleEventClick(e, { clientX: mouse.clientX, clientY: mouse.clientY })
+                }
+              />
+            )}
+          </CalendarDnd>
+        </div>
+
+        {/* Mobile-only agenda: desktop grid layouts don't fit on phones */}
+        <div className="md:hidden">
+          {eventsLoading ? (
             <div className="rounded-xl border border-neutral-200 bg-white p-8 text-center text-sm text-neutral-500 shadow-sm">
               A carregar agenda…
             </div>
-          )}
-          {!eventsLoading && view === 'day' && (
-            <DayView
+          ) : (
+            <GanttMobileAgenda
               events={filteredEvents}
-              conflicts={conflicts}
-              dayIso={anchor}
-              lane={lane}
-              enableDnd
-              onEventClick={(e, mouse) =>
-                handleEventClick(e, { clientX: mouse.clientX, clientY: mouse.clientY })
-              }
-            />
-          )}
-          {!eventsLoading && view === 'week' && (
-            <WeekView
-              events={filteredEvents}
-              conflicts={conflicts}
-              days={days}
-              lane={lane}
-              enableDnd
-              onEventClick={(e, mouse) => handleEventClick(e, mouse)}
-            />
-          )}
-          {!eventsLoading && view === 'month' && (
-            <MonthView
-              events={filteredEvents}
-              conflicts={conflicts}
               year={Number(anchor.slice(0, 4))}
               month={Number(anchor.slice(5, 7)) - 1}
-              lane={lane}
-              onDayClick={(dayIso) => {
-                setView('day');
-                setAnchor(dayIso);
-              }}
-              onEventClick={(e, mouse) =>
-                handleEventClick(e, { clientX: mouse.clientX, clientY: mouse.clientY })
-              }
             />
           )}
-        </CalendarDnd>
+        </div>
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_320px]">
           <div className="min-w-0">

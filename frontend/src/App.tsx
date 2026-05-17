@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { router } from '@/routes';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { PWAUpdatePrompt } from '@/components/PWAUpdatePrompt';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -27,6 +28,7 @@ export function App() {
           duration: 4000,
         }}
       />
+      <PWAUpdatePrompt />
     </QueryClientProvider>
   );
 }

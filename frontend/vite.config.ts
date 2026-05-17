@@ -10,7 +10,7 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
-      registerType: 'autoUpdate',
+      registerType: 'prompt',
       includeAssets: ['favicon.png', 'logotipo.png', 'logo.svg', 'robots.txt', 'sitemap.xml'],
       manifest: {
         name: 'AgroConnect — Marketplace Agrícola',

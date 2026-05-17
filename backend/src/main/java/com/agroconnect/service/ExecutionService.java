@@ -272,6 +272,10 @@ public class ExecutionService {
 
         ServiceRequest request = execution.getProposal().getRequest();
 
+        if (execution.getCompletedAt() != null) {
+            throw new InvalidStateException("Esta execução já foi concluída.");
+        }
+
         if (request.getStatus() != RequestStatus.IN_PROGRESS) {
             throw new InvalidStateException("O pedido deve estar no estado IN_PROGRESS para ser concluído.");
         }

@@ -133,6 +133,11 @@ public class ProposalService {
         ServiceRequest request = proposal.getRequest();
 
         entityManager.lock(request, LockModeType.PESSIMISTIC_WRITE);
+        // Refresh AFTER lock — Hibernate's lock() does not re-read entity state.
+        // Without this, status checks below would use a snapshot taken before another
+        // transaction could have transitioned the request.
+        entityManager.refresh(request);
+        entityManager.refresh(proposal);
 
         if (!request.getClient().getId().equals(userId)) {
             throw new ForbiddenException("Não tem permissão para aceitar esta proposta.");
@@ -214,6 +219,7 @@ public class ProposalService {
         ServiceRequest request = transaction.getRequest();
 
         entityManager.lock(request, LockModeType.PESSIMISTIC_WRITE);
+        entityManager.refresh(request);
 
         if (request.getStatus() != RequestStatus.WITH_PROPOSALS) {
             log.info("completeAcceptanceAfterPayment: request {} already in {} — skipping cascade",

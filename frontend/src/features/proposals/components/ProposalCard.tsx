@@ -1,6 +1,7 @@
 import { Card, CardBody, CardFooter } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { cn } from '@/utils/cn';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { Star } from 'lucide-react';
 import type { ProposalResponse } from '@/types/proposal';
 
@@ -54,7 +55,7 @@ export function ProposalCard({ proposal, isRequestOwner, onAccept, acceptLoading
             )}
           </div>
           <div className="text-right shrink-0">
-            <p className="text-lg font-bold text-neutral-900">{proposal.price.toFixed(2)} &euro;</p>
+            <p className="text-lg font-bold text-neutral-900">{formatCurrency(proposal.price)}</p>
             <p className="text-xs text-neutral-500">{pricingLabels[proposal.pricingModel] ?? proposal.pricingModel}</p>
             <span className={cn('inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1', config.className)}>
               {config.label}

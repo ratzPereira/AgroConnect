@@ -1,7 +1,9 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { ProposalCard } from '../ProposalCard';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { mockProposal } from '@/test/mocks/data';
+import { textEquals } from '@/test/helpers/textMatchers';
 
 describe('ProposalCard', () => {
   it('renders provider name', () => {
@@ -9,10 +11,9 @@ describe('ProposalCard', () => {
     expect(screen.getByText(mockProposal.providerName)).toBeInTheDocument();
   });
 
-  it('renders price with two decimals and euro symbol', () => {
+  it('renders price using pt-PT EUR formatting', () => {
     render(<ProposalCard proposal={mockProposal} />);
-    // price.toFixed(2) + " €" rendered via &euro;
-    expect(screen.getByText(`${mockProposal.price.toFixed(2)} \u20AC`)).toBeInTheDocument();
+    expect(screen.getByText(textEquals(formatCurrency(mockProposal.price)))).toBeInTheDocument();
   });
 
   it('renders provider rating and review count', () => {

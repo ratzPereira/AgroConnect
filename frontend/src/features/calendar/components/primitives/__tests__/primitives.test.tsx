@@ -162,7 +162,7 @@ describe('AllDayBand', () => {
     const allDay: CalendarEvent = { ...baseEvent, executionId: 7, requestId: 99, scheduledAllDay: true, requestTitle: 'Poda' };
     wrap(<AllDayBand events={[allDay]} days={1} />);
     fireEvent.click(screen.getByText('Poda'));
-    expect(navigateMock).toHaveBeenCalledWith('/provider/requests/99');
+    expect(navigateMock).toHaveBeenCalledWith('/requests/99');
   });
 
   it('renders custom rightActions in the band header', () => {

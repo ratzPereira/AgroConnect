@@ -1,12 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { TransactionCard } from '../TransactionCard';
+import { formatCurrency } from '@/utils/formatCurrency';
 import { mockTransaction } from '@/test/mocks/data';
+import { textEquals } from '@/test/helpers/textMatchers';
 
 describe('TransactionCard', () => {
-  it('renders transaction amount with two decimals and euro symbol', () => {
+  it('renders transaction amount using pt-PT EUR formatting', () => {
     render(<TransactionCard transaction={mockTransaction} />);
-    expect(screen.getByText(`${mockTransaction.amount.toFixed(2)} \u20AC`)).toBeInTheDocument();
+    expect(screen.getByText(textEquals(formatCurrency(mockTransaction.amount)))).toBeInTheDocument();
   });
 
   it('renders status badge with Portuguese label', () => {
@@ -15,14 +17,14 @@ describe('TransactionCard', () => {
     expect(screen.getByText('Libertado')).toBeInTheDocument();
   });
 
-  it('renders commission amount', () => {
+  it('renders commission amount using pt-PT EUR formatting', () => {
     render(<TransactionCard transaction={mockTransaction} />);
-    expect(screen.getByText(`${mockTransaction.commissionAmount.toFixed(2)} \u20AC`)).toBeInTheDocument();
+    expect(screen.getByText(textEquals(formatCurrency(mockTransaction.commissionAmount)))).toBeInTheDocument();
   });
 
-  it('renders provider payout', () => {
+  it('renders provider payout using pt-PT EUR formatting', () => {
     render(<TransactionCard transaction={mockTransaction} />);
-    expect(screen.getByText(`${mockTransaction.providerPayout.toFixed(2)} \u20AC`)).toBeInTheDocument();
+    expect(screen.getByText(textEquals(formatCurrency(mockTransaction.providerPayout)))).toBeInTheDocument();
   });
 
   it('renders request ID reference', () => {

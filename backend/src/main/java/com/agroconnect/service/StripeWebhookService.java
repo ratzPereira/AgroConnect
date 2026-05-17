@@ -76,7 +76,9 @@ public class StripeWebhookService {
 
     private void handlePaymentIntentSucceeded(Event event) {
         PaymentIntent intent = (PaymentIntent) deserialize(event);
-        Optional<Transaction> opt = transactionRepository.findByStripePaymentIntentId(intent.getId());
+        // Lock row before status check — without this, a duplicate webhook delivery
+        // racing with another transition could both pass the PENDING guard.
+        Optional<Transaction> opt = transactionRepository.findByStripePaymentIntentIdForUpdate(intent.getId());
         if (opt.isEmpty()) {
             log.warn("payment_intent.succeeded for unknown PaymentIntent {} — ignoring", intent.getId());
             return;

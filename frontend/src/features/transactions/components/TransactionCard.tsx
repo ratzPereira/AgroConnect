@@ -1,6 +1,7 @@
 import { Card, CardBody } from '@/components/ui/Card';
 import { TransactionStatusBadge } from './TransactionStatusBadge';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/utils/formatCurrency';
 import type { Transaction } from '@/types/transaction';
 
 interface TransactionCardProps {
@@ -27,19 +28,19 @@ export function TransactionCard({ transaction, onClick }: TransactionCardProps) 
               <div>
                 <p className="text-neutral-500 text-xs">Valor total</p>
                 <p className="font-semibold text-neutral-900">
-                  {transaction.amount.toFixed(2)} &euro;
+                  {formatCurrency(transaction.amount)}
                 </p>
               </div>
               <div>
                 <p className="text-neutral-500 text-xs">Comissão ({(transaction.commissionRate * 100).toFixed(0)}%)</p>
                 <p className="font-medium text-neutral-700">
-                  {transaction.commissionAmount.toFixed(2)} &euro;
+                  {formatCurrency(transaction.commissionAmount)}
                 </p>
               </div>
               <div>
                 <p className="text-neutral-500 text-xs">Pagamento ao prestador</p>
                 <p className="font-medium text-neutral-700">
-                  {transaction.providerPayout.toFixed(2)} &euro;
+                  {formatCurrency(transaction.providerPayout)}
                 </p>
               </div>
               <div>

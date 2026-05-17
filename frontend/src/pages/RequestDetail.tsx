@@ -25,6 +25,7 @@ import { Button } from '@/components/ui/Button';
 import { MapPin, Layers, Clock, X } from 'lucide-react';
 import type { CreateProposalDto } from '@/types/proposal';
 import type { ProposalAcceptResponse } from '@/types/stripe';
+import { NotFound } from '@/pages/NotFound';
 
 const urgencyLabels: Record<string, string> = {
   LOW: 'Baixa',
@@ -218,11 +219,7 @@ export function RequestDetail() {
   }
 
   if (!request) {
-    return (
-      <div className="text-center py-12">
-        <p className="text-sm text-neutral-500">Pedido não encontrado.</p>
-      </div>
-    );
+    return <NotFound />;
   }
 
   return (

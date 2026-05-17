@@ -234,7 +234,7 @@ describe('EventPopover', () => {
     wrap(<EventPopover event={baseEvent} anchor={{ x: 50, y: 50 }} onClose={() => {}} />);
     expect(screen.getByRole('link', { name: /Ver detalhes/ })).toHaveAttribute(
       'href',
-      '/provider/requests/7',
+      '/requests/7',
     );
   });
 });

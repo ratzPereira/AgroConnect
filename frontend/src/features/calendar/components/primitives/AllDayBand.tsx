@@ -26,7 +26,7 @@ export function AllDayBand({
 
   function handleClick(event: CalendarEvent, mouse: MouseEvent<HTMLButtonElement>) {
     if (onEventClick) onEventClick(event, mouse);
-    else navigate(`/provider/requests/${event.requestId}`);
+    else navigate(`/requests/${event.requestId}`);
   }
 
   return (

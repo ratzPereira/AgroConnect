@@ -255,6 +255,8 @@ public class CalendarService {
             throw new ForbiddenException("Não tem permissão para alterar esta execução.");
         }
 
+        ensureExecutionReschedulable(execution);
+
         if (dto.scheduledEndDate().isBefore(dto.scheduledDate())) {
             throw new ValidationException("A data de fim deve ser igual ou posterior à data de início.");
         }
@@ -296,6 +298,8 @@ public class CalendarService {
             throw new ForbiddenException("Não tem permissão para alterar esta execução.");
         }
 
+        ensureExecutionReschedulable(execution);
+
         TeamMember to = teamMemberRepository.findByIdAndProviderId(dto.toTeamMemberId(), provider.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("Operador de destino não encontrado."));
 
@@ -333,10 +337,27 @@ public class CalendarService {
 
     // ───────── Mapping helpers ─────────
 
+    private void ensureExecutionReschedulable(ServiceExecution execution) {
+        if (execution.getCompletedAt() != null) {
+            throw new ValidationException("Esta execução já está concluída e não pode ser reagendada.");
+        }
+        RequestStatus status = execution.getProposal().getRequest().getStatus();
+        if (status == RequestStatus.COMPLETED
+                || status == RequestStatus.RATED
+                || status == RequestStatus.AWAITING_CONFIRMATION
+                || status == RequestStatus.DISPUTED
+                || status == RequestStatus.CANCELLED
+                || status == RequestStatus.EXPIRED) {
+            throw new ValidationException(
+                    "Não é possível alterar a agenda de um pedido no estado " + status.name() + ".");
+        }
+    }
+
     private CalendarEventResponse toCalendarEvent(ServiceExecution exec) {
         ServiceRequest request = exec.getProposal().getRequest();
 
         List<CalendarAssignment> assignments = exec.getAssignments().stream()
+                .filter(a -> a.getTeamMember() != null)
                 .map(a -> new CalendarAssignment(
                         a.getTeamMember().getId(),
                         a.getTeamMember().getName(),
@@ -387,7 +408,10 @@ public class CalendarService {
             Map<String, Map<LocalDate, List<ServiceExecution>>> resourceSchedule,
             ServiceExecution exec, LocalDate date) {
         for (ExecutionAssignment assignment : exec.getAssignments()) {
-            registerResource(resourceSchedule, "TEAM_MEMBER:" + assignment.getTeamMember().getId(), date, exec);
+            if (assignment.getTeamMember() != null) {
+                registerResource(resourceSchedule,
+                        "TEAM_MEMBER:" + assignment.getTeamMember().getId(), date, exec);
+            }
             if (assignment.getMachine() != null) {
                 registerResource(resourceSchedule, "MACHINE:" + assignment.getMachine().getId(), date, exec);
             }
@@ -485,7 +509,9 @@ public class CalendarService {
     private String findResourceName(List<ServiceExecution> executions, String type, Long id) {
         for (ServiceExecution exec : executions) {
             for (ExecutionAssignment a : exec.getAssignments()) {
-                if ("TEAM_MEMBER".equals(type) && a.getTeamMember().getId().equals(id)) {
+                if ("TEAM_MEMBER".equals(type)
+                        && a.getTeamMember() != null
+                        && a.getTeamMember().getId().equals(id)) {
                     return a.getTeamMember().getName();
                 }
                 if ("MACHINE".equals(type) && a.getMachine() != null && a.getMachine().getId().equals(id)) {
