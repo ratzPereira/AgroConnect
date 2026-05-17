@@ -20,6 +20,7 @@ import {
   extractDaysCount,
   extractDays,
 } from './dndHelpers';
+import { DND_WEEK_CARD, DND_WEEK_DAY_SLOT } from './dndTypes';
 
 interface CalendarDndProps {
   readonly events: CalendarEvent[];
@@ -84,8 +85,21 @@ export function CalendarDnd({ events, children }: CalendarDndProps) {
   }
 
   function handleDragStart(event: DragStartEvent) {
-    const data = event.active.data.current as { event: CalendarEvent; laneId: string } | undefined;
+    const data = event.active.data.current as
+      | { type?: string; event: CalendarEvent; laneId?: string; dayIso?: string }
+      | undefined;
     if (!data) return;
+    if (data.type === DND_WEEK_CARD) {
+      const session: DragSession = {
+        event: data.event,
+        laneId: `week-${data.dayIso ?? ''}`,
+        resourceType: 'job',
+        resourceId: data.event.executionId,
+      };
+      drag.startDrag(session);
+      return;
+    }
+    if (!data.laneId) return;
     const meta = decodeLaneId(data.laneId);
     const session: DragSession = {
       event: data.event,
@@ -96,8 +110,31 @@ export function CalendarDnd({ events, children }: CalendarDndProps) {
     drag.startDrag(session);
   }
 
-  async function handleDragEnd(_event: DragEndEvent) {
+  async function handleDragEnd(event: DragEndEvent) {
     if (!drag.session) return;
+
+    const overData = event.over?.data.current as
+      | { type?: string; dayIso?: string; slotMinute?: number }
+      | undefined;
+    if (
+      overData?.type === DND_WEEK_DAY_SLOT &&
+      typeof overData.dayIso === 'string' &&
+      typeof overData.slotMinute === 'number'
+    ) {
+      try {
+        await drag.applyDrop({
+          type: DND_WEEK_DAY_SLOT,
+          dayIso: overData.dayIso,
+          slotMinute: overData.slotMinute,
+        });
+      } catch {
+        // toast handled by mutation
+      } finally {
+        setTarget(null);
+      }
+      return;
+    }
+
     if (!target) {
       drag.endDrag();
       setTarget(null);

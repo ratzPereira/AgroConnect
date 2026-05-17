@@ -2,7 +2,8 @@ import { useCallback, useState } from 'react';
 import type { CalendarEvent } from '@/types/calendar';
 import { useUpdateSchedule, useReassignExecution } from './useCalendar';
 import { eventsConflict, describeProposedTime } from '../utils/conflictCheck';
-import { slotToTime, formatTime } from '../utils/timeMath';
+import { slotToTime, formatTime, parseTime, SLOT_MINUTES } from '../utils/timeMath';
+import { DND_WEEK_DAY_SLOT } from '../components/dnd/dndTypes';
 import { toast } from 'sonner';
 
 export interface DragSession {
@@ -21,8 +22,34 @@ export interface DropTarget {
   spanSlots: number;
 }
 
+export interface WeekDaySlotDropTarget {
+  type: typeof DND_WEEK_DAY_SLOT;
+  dayIso: string;
+  slotMinute: number;
+}
+
+export type AnyDropTarget = DropTarget | WeekDaySlotDropTarget;
+
 interface UseDragRescheduleOptions {
   events: CalendarEvent[];
+}
+
+function isWeekDaySlotDropTarget(target: AnyDropTarget): target is WeekDaySlotDropTarget {
+  return 'type' in target && target.type === DND_WEEK_DAY_SLOT;
+}
+
+function minutesToHHMM(totalMinutes: number): string {
+  const clamped = Math.max(0, Math.min(24 * 60, totalMinutes));
+  const hour = Math.floor(clamped / 60);
+  const minute = clamped % 60;
+  return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+}
+
+function eventDurationMinutes(event: CalendarEvent): number {
+  const start = parseTime(event.scheduledStartTime);
+  const end = parseTime(event.scheduledEndTime);
+  if (!start || !end) return 60;
+  return Math.max(SLOT_MINUTES, end.hour * 60 + end.minute - (start.hour * 60 + start.minute));
 }
 
 export function useDragReschedule({ events }: UseDragRescheduleOptions) {
@@ -60,9 +87,28 @@ export function useDragReschedule({ events }: UseDragRescheduleOptions) {
   );
 
   const applyDrop = useCallback(
-    async (target: DropTarget) => {
+    async (target: AnyDropTarget) => {
       if (!session) return;
       const event = session.event;
+
+      if (isWeekDaySlotDropTarget(target)) {
+        const duration = eventDurationMinutes(event);
+        const startTime = minutesToHHMM(target.slotMinute);
+        const endTime = minutesToHHMM(target.slotMinute + duration);
+        await updateSchedule.mutateAsync({
+          executionId: event.executionId,
+          data: {
+            scheduledDate: target.dayIso,
+            scheduledEndDate: target.dayIso,
+            scheduledStartTime: startTime,
+            scheduledEndTime: endTime,
+            allDay: false,
+          },
+        });
+        setSession(null);
+        return;
+      }
+
       const isAllDay = event.scheduledAllDay;
       const wasOperatorLane = session.resourceType === 'operator';
       const switchingOperator =

@@ -3,18 +3,14 @@ import { MapPin, Calendar as CalendarIcon, Users } from 'lucide-react';
 import { Badge } from '@/components/ui/Badge';
 import { cn } from '@/utils/cn';
 import type { CalendarEvent } from '@/types/calendar';
+import { getEventVisualStyle } from '../utils/eventStyles';
+import { todayIso } from '../utils/timeMath';
 
 interface GanttMobileAgendaProps {
   readonly events: CalendarEvent[];
   readonly year: number;
   readonly month: number;
 }
-
-const URGENCY_BADGE: Record<string, { variant: 'danger' | 'warning' | 'default' | 'info'; label: string }> = {
-  HIGH: { variant: 'warning', label: 'Alta' },
-  MEDIUM: { variant: 'default', label: 'Média' },
-  LOW: { variant: 'info', label: 'Baixa' },
-};
 
 function groupByDate(events: CalendarEvent[]): Record<string, CalendarEvent[]> {
   const groups: Record<string, CalendarEvent[]> = {};
@@ -25,7 +21,7 @@ function groupByDate(events: CalendarEvent[]): Record<string, CalendarEvent[]> {
     const current = new Date(start);
 
     while (current <= end) {
-      const key = current.toISOString().slice(0, 10);
+      const key = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, '0')}-${String(current.getDate()).padStart(2, '0')}`;
       if (!groups[key]) groups[key] = [];
       groups[key].push(event);
       current.setDate(current.getDate() + 1);
@@ -38,12 +34,14 @@ function groupByDate(events: CalendarEvent[]): Record<string, CalendarEvent[]> {
 export function GanttMobileAgenda({ events, year, month }: GanttMobileAgendaProps) {
   const navigate = useNavigate();
   const grouped = groupByDate(events);
+  const today = todayIso();
 
-  // Only show days in the selected month
   const daysInMonth: string[] = [];
   const date = new Date(year, month, 1);
   while (date.getMonth() === month) {
-    daysInMonth.push(date.toISOString().slice(0, 10));
+    daysInMonth.push(
+      `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`,
+    );
     date.setDate(date.getDate() + 1);
   }
 
@@ -63,42 +61,65 @@ export function GanttMobileAgenda({ events, year, month }: GanttMobileAgendaProp
       {activeDays.map((dateStr) => {
         const dayDate = new Date(dateStr + 'T00:00:00');
         const dayEvents = grouped[dateStr];
-        const isToday = dateStr === new Date().toISOString().slice(0, 10);
+        const isToday = dateStr === today;
 
         return (
           <div key={dateStr}>
-            <div className={cn(
-              'flex items-center gap-2 mb-2 px-1',
-              isToday && 'text-primary-600',
-            )}>
-              <span className={cn(
-                'text-sm font-bold',
-                isToday ? 'bg-primary-500 text-white rounded-full w-7 h-7 flex items-center justify-center' : 'text-neutral-700',
-              )}>
+            <div
+              className={cn(
+                'flex items-center gap-2 mb-2 px-1',
+                isToday && 'text-primary-600',
+              )}
+            >
+              <span
+                className={cn(
+                  'text-sm font-bold',
+                  isToday
+                    ? 'bg-primary-500 text-white rounded-full w-7 h-7 flex items-center justify-center'
+                    : 'text-neutral-700',
+                )}
+              >
                 {dayDate.getDate()}
               </span>
               <span className="text-xs font-medium text-neutral-500 uppercase">
                 {dayDate.toLocaleDateString('pt-PT', { weekday: 'short' })}
               </span>
               {isToday && (
-                <Badge variant="default" size="sm">Hoje</Badge>
+                <Badge variant="default" size="sm">
+                  Hoje
+                </Badge>
               )}
             </div>
 
             <div className="space-y-2 ml-1">
               {dayEvents.map((event) => {
-                const urgency = URGENCY_BADGE[event.urgency] ?? URGENCY_BADGE.MEDIUM;
+                const visual = getEventVisualStyle(event, false);
                 return (
                   <button
                     key={`${dateStr}-${event.executionId}`}
-                    onClick={() => navigate(`/requests/${event.requestId}`)}
-                    className="w-full text-left rounded-xl border border-neutral-200 bg-white p-3 hover:border-primary-300 hover:shadow-sm transition-all duration-150"
+                    type="button"
+                    onClick={() => navigate(`/provider/requests/${event.requestId}`)}
+                    className="group w-full text-left rounded-xl border border-neutral-200 bg-white p-3 hover:border-primary-300 hover:shadow-sm transition-all duration-150"
                   >
-                    <div className="flex items-start justify-between gap-2">
-                      <p className="text-sm font-semibold text-neutral-800 leading-tight">
+                    <div className="flex items-start gap-2">
+                      <span
+                        className={cn(
+                          'mt-0.5 inline-flex h-5 items-center gap-1 rounded border px-1.5 text-[10px] font-semibold uppercase tracking-wide',
+                          visual.chipClass,
+                        )}
+                        aria-hidden
+                      >
+                        <span className="text-[11px]">{visual.statusIcon}</span>
+                      </span>
+                      <p className="flex-1 text-sm font-semibold text-neutral-800 leading-tight">
                         {event.requestTitle}
                       </p>
-                      <Badge variant={urgency.variant} size="sm">{urgency.label}</Badge>
+                      {(visual.urgencyBadge || visual.conflictBadge) && (
+                        <span className="flex flex-shrink-0 items-center gap-1">
+                          {visual.conflictBadge}
+                          {visual.urgencyBadge}
+                        </span>
+                      )}
                     </div>
                     <p className="text-xs text-neutral-500 mt-1">{event.categoryName}</p>
 

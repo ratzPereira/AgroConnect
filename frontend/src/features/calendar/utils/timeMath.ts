@@ -61,3 +61,8 @@ export function buildHourTicks(): number[] {
 export function formatHourLabel(hour: number): string {
   return `${String(hour).padStart(2, '0')}:00`;
 }
+
+export function todayIso(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

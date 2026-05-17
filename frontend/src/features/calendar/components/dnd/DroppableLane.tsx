@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useDroppable } from '@dnd-kit/core';
 import { ResourceLane } from '../primitives/ResourceLane';
+import { DND_LANE } from './dndTypes';
 
 interface DroppableLaneProps {
   readonly laneId: string;
@@ -26,9 +27,9 @@ export function DroppableLane({
   children,
 }: DroppableLaneProps) {
   const { setNodeRef, isOver } = useDroppable({
-    id: `lane:${laneId}`,
+    id: `${DND_LANE}:${laneId}`,
     data: {
-      type: 'lane',
+      type: DND_LANE,
       laneId,
       resourceType,
       resourceId,

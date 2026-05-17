@@ -1,7 +1,8 @@
-import type { ReactNode } from 'react';
+import type { MouseEvent, ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { cn } from '@/utils/cn';
 import type { CalendarEvent } from '@/types/calendar';
+import { getEventVisualStyle } from '../../utils/eventStyles';
 
 interface AllDayBandProps {
   readonly events: CalendarEvent[];
@@ -9,14 +10,8 @@ interface AllDayBandProps {
   readonly dayLabels?: string[];
   readonly emptyHint?: string;
   readonly rightActions?: ReactNode;
-  readonly onEventClick?: (event: CalendarEvent) => void;
+  readonly onEventClick?: (event: CalendarEvent, mouse: MouseEvent<HTMLButtonElement>) => void;
 }
-
-const URGENCY_CHIP: Record<string, string> = {
-  HIGH: 'bg-warning-100 text-warning-800 border-warning-400',
-  MEDIUM: 'bg-primary-100 text-primary-800 border-primary-400',
-  LOW: 'bg-secondary-100 text-secondary-800 border-secondary-400',
-};
 
 export function AllDayBand({
   events,
@@ -29,9 +24,9 @@ export function AllDayBand({
   const navigate = useNavigate();
   const allDayEvents = events.filter((e) => e.scheduledAllDay);
 
-  function handleClick(event: CalendarEvent) {
-    if (onEventClick) onEventClick(event);
-    else navigate(`/provider/jobs/${event.requestId}`);
+  function handleClick(event: CalendarEvent, mouse: MouseEvent<HTMLButtonElement>) {
+    if (onEventClick) onEventClick(event, mouse);
+    else navigate(`/provider/requests/${event.requestId}`);
   }
 
   return (
@@ -57,20 +52,23 @@ export function AllDayBand({
               {dayEvents.length === 0 ? (
                 <span className="text-[10px] italic text-neutral-400">{emptyHint}</span>
               ) : (
-                dayEvents.map((e) => (
-                  <button
-                    key={e.executionId}
-                    type="button"
-                    onClick={() => handleClick(e)}
-                    className={cn(
-                      'truncate rounded border px-2 py-1 text-left text-[11px] font-medium hover:brightness-95',
-                      URGENCY_CHIP[e.urgency] ?? URGENCY_CHIP.MEDIUM,
-                    )}
-                    title={`${e.requestTitle} — ${e.categoryName}`}
-                  >
-                    {e.requestTitle}
-                  </button>
-                ))
+                dayEvents.map((e) => {
+                  const visual = getEventVisualStyle(e, false);
+                  return (
+                    <button
+                      key={e.executionId}
+                      type="button"
+                      onClick={(mouse) => handleClick(e, mouse)}
+                      className={cn(
+                        'truncate rounded border px-2 py-1 text-left text-[11px] font-medium hover:brightness-95',
+                        visual.chipClass,
+                      )}
+                      title={`${e.requestTitle} — ${e.categoryName}`}
+                    >
+                      {e.requestTitle}
+                    </button>
+                  );
+                })
               )}
             </div>
           );

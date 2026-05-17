@@ -89,12 +89,50 @@ describe('GanttBarV2', () => {
     expect(handler).toHaveBeenCalledOnce();
   });
 
-  it('shows conflict ring when hasConflict is true', () => {
+  it('shows conflict underline when hasConflict is true', () => {
     const { container } = wrap(
       <GanttBarV2 event={baseEvent} startSlot={6} spanSlots={6} hasConflict />,
     );
     const bar = container.querySelector('[role="button"]');
-    expect(bar?.className).toMatch(/ring-danger/);
+    expect(bar?.className).toContain('border-b-2');
+    expect(bar?.className).toContain('border-danger-500');
+    expect(bar?.className).not.toContain('ring-offset');
+  });
+});
+
+describe('GanttBarV2 (status-color migration)', () => {
+  it('renders IN_PROGRESS event with primary status color', () => {
+    const { container } = wrap(
+      <GanttBarV2
+        event={{ ...baseEvent, status: 'IN_PROGRESS' }}
+        startSlot={0}
+        spanSlots={8}
+      />,
+    );
+    const bar = container.querySelector('[data-execution-id="1"]');
+    expect(bar?.className).toContain('bg-primary');
+  });
+
+  it('renders AWARDED event with sky color', () => {
+    const { container } = wrap(
+      <GanttBarV2
+        event={{ ...baseEvent, status: 'AWARDED' }}
+        startSlot={0}
+        spanSlots={8}
+      />,
+    );
+    const bar = container.querySelector('[data-execution-id="1"]');
+    expect(bar?.className).toContain('bg-sky');
+  });
+
+  it('uses underline border for conflict (not ring with offset)', () => {
+    const { container } = wrap(
+      <GanttBarV2 event={baseEvent} startSlot={0} spanSlots={8} hasConflict />,
+    );
+    const bar = container.querySelector('[data-execution-id="1"]');
+    expect(bar?.className).toContain('border-b-2');
+    expect(bar?.className).toContain('border-danger-500');
+    expect(bar?.className).not.toContain('ring-offset');
   });
 });
 
@@ -116,7 +154,7 @@ describe('AllDayBand', () => {
     const onEventClick = vi.fn();
     wrap(<AllDayBand events={[allDay]} days={1} onEventClick={onEventClick} />);
     fireEvent.click(screen.getByText('Sementeira'));
-    expect(onEventClick).toHaveBeenCalledWith(allDay);
+    expect(onEventClick).toHaveBeenCalledWith(allDay, expect.anything());
   });
 
   it('navigates to the job detail when no onEventClick is provided', () => {
@@ -124,7 +162,7 @@ describe('AllDayBand', () => {
     const allDay: CalendarEvent = { ...baseEvent, executionId: 7, requestId: 99, scheduledAllDay: true, requestTitle: 'Poda' };
     wrap(<AllDayBand events={[allDay]} days={1} />);
     fireEvent.click(screen.getByText('Poda'));
-    expect(navigateMock).toHaveBeenCalledWith('/provider/jobs/99');
+    expect(navigateMock).toHaveBeenCalledWith('/provider/requests/99');
   });
 
   it('renders custom rightActions in the band header', () => {
@@ -166,12 +204,38 @@ describe('AllDayBand', () => {
     expect(screen.getByText('Evento B')).toBeInTheDocument();
   });
 
-  it('applies urgency-specific styles to HIGH and LOW events', () => {
-    const high: CalendarEvent = { ...baseEvent, executionId: 31, scheduledAllDay: true, urgency: 'HIGH', requestTitle: 'Urgente' };
-    const low: CalendarEvent = { ...baseEvent, executionId: 32, scheduledAllDay: true, urgency: 'LOW', requestTitle: 'Tranquilo' };
-    wrap(<AllDayBand events={[high, low]} days={1} />);
-    expect(screen.getByText('Urgente').className).toMatch(/warning/);
-    expect(screen.getByText('Tranquilo').className).toMatch(/secondary/);
+  it('renders chip color by status not urgency', () => {
+    const event: CalendarEvent = {
+      ...baseEvent,
+      executionId: 41,
+      scheduledAllDay: true,
+      status: 'AWAITING_CONFIRMATION',
+      urgency: 'LOW',
+      requestTitle: 'Trabalho A',
+    };
+    wrap(<AllDayBand events={[event]} days={1} dayLabels={['2026-04-15']} />);
+    const btn = screen.getByRole('button', { name: /Trabalho A/i });
+    expect(btn.className).toContain('bg-warning');
+  });
+
+  it('applies different status colors to AWARDED vs IN_PROGRESS events', () => {
+    const awarded: CalendarEvent = {
+      ...baseEvent,
+      executionId: 51,
+      scheduledAllDay: true,
+      status: 'AWARDED',
+      requestTitle: 'AwardedJob',
+    };
+    const inProgress: CalendarEvent = {
+      ...baseEvent,
+      executionId: 52,
+      scheduledAllDay: true,
+      status: 'IN_PROGRESS',
+      requestTitle: 'RunningJob',
+    };
+    wrap(<AllDayBand events={[awarded, inProgress]} days={1} />);
+    expect(screen.getByText('AwardedJob').className).toContain('bg-sky');
+    expect(screen.getByText('RunningJob').className).toContain('bg-primary');
   });
 });
 

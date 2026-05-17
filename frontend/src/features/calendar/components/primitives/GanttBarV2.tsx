@@ -1,7 +1,8 @@
-import { forwardRef, type CSSProperties, type MouseEvent } from 'react';
+import { forwardRef, useMemo, type CSSProperties, type MouseEvent } from 'react';
 import { cn } from '@/utils/cn';
 import type { CalendarEvent } from '@/types/calendar';
 import { parseTime, formatTime } from '../../utils/timeMath';
+import { getEventVisualStyle } from '../../utils/eventStyles';
 
 interface GanttBarV2Props {
   readonly event: CalendarEvent;
@@ -19,29 +20,6 @@ interface GanttBarV2Props {
   readonly className?: string;
   readonly showResizeHandles?: boolean;
 }
-
-const URGENCY_STYLES: Record<string, { bar: string; ring: string }> = {
-  HIGH: {
-    bar: 'bg-warning-500 hover:bg-warning-600 border-warning-700 text-white',
-    ring: 'ring-warning-300',
-  },
-  MEDIUM: {
-    bar: 'bg-primary-500 hover:bg-primary-600 border-primary-700 text-white',
-    ring: 'ring-primary-300',
-  },
-  LOW: {
-    bar: 'bg-secondary-400 hover:bg-secondary-500 border-secondary-600 text-white',
-    ring: 'ring-secondary-300',
-  },
-};
-
-const STATUS_ICONS: Record<string, string> = {
-  IN_PROGRESS: '●',
-  AWAITING_CONFIRMATION: '◐',
-  COMPLETED: '✓',
-  RATED: '✓',
-  AWARDED: '○',
-};
 
 export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function GanttBarV2(
   {
@@ -62,7 +40,7 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
   },
   ref,
 ) {
-  const style = URGENCY_STYLES[event.urgency] ?? URGENCY_STYLES.MEDIUM;
+  const visual = useMemo(() => getEventVisualStyle(event, hasConflict), [event, hasConflict]);
   const safeSpan = Math.max(1, spanSlots);
   const startTime = parseTime(event.scheduledStartTime);
   const endTime = parseTime(event.scheduledEndTime);
@@ -72,7 +50,6 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
     gridRow: laneRow ? `${laneRow} / span ${laneRowSpan ?? 1}` : undefined,
   };
 
-  const statusIcon = STATUS_ICONS[event.status] ?? '·';
   const operatorName = event.assignments[0]?.teamMemberName ?? 'Sem operador';
   const machineName = event.assignments.find((a) => a.machineName)?.machineName ?? null;
 
@@ -85,15 +62,15 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
   return (
     <div
       ref={setRefs}
-      // NOSONAR: bar contains nested resize buttons, so <button> tag would be invalid HTML
-      role="button"
-      tabIndex={0}
       data-execution-id={event.executionId}
       aria-label={event.requestTitle}
+      // NOSONAR: outer <div role="button"> is required — replacing with <button> would nest the resize <button>s, which is invalid HTML
+      role="button"
+      tabIndex={0}
       className={cn(
-        'group relative my-1 mx-0.5 flex h-9 cursor-pointer items-center overflow-hidden rounded-md border px-2 shadow-sm transition-all',
-        style.bar,
-        hasConflict && cn('ring-2 ring-offset-1', 'ring-danger-400'),
+        'group relative my-1 mx-0.5 flex h-9 cursor-pointer items-center overflow-hidden rounded-md px-2 shadow-sm transition-all',
+        visual.barClass,
+        visual.borderClass,
         ghost && 'opacity-60 pointer-events-none border-dashed',
         className,
       )}
@@ -123,7 +100,7 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
 
       <span className="flex flex-1 items-center gap-1.5 truncate text-xs font-medium leading-tight">
         <span className="text-[11px] opacity-90" aria-hidden>
-          {statusIcon}
+          {visual.statusIcon}
         </span>
         <span className="truncate">{event.requestTitle}</span>
       </span>
@@ -142,6 +119,13 @@ export const GanttBarV2 = forwardRef<HTMLDivElement, GanttBarV2Props>(function G
             <span className="max-w-[80px] truncate opacity-80">· {machineName}</span>
           )}
         </div>
+      )}
+
+      {(visual.urgencyBadge || visual.conflictBadge) && (
+        <span className="ml-1 flex flex-shrink-0 items-center gap-0.5">
+          {visual.conflictBadge}
+          {visual.urgencyBadge}
+        </span>
       )}
 
       {showResizeHandles && !ghost && (

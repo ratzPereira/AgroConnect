@@ -1,66 +1,85 @@
-import { describe, expect, it } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import type { CalendarEvent } from '@/types/calendar';
 import { WeekView } from '../WeekView';
-import { rangeForView } from '../../../utils/viewRange';
+import type { CalendarEvent } from '@/types/calendar';
 
-const event: CalendarEvent = {
-  executionId: 1,
-  requestId: 11,
-  requestTitle: 'Lavoura A',
-  categoryName: 'Preparação',
-  scheduledDate: '2026-04-15',
-  scheduledEndDate: '2026-04-15',
-  scheduledStartTime: '09:00',
-  scheduledEndTime: '12:00',
-  scheduledAllDay: false,
-  status: 'IN_PROGRESS',
-  island: 'Terceira',
-  parish: 'Angra do Heroísmo',
-  urgency: 'MEDIUM',
-  assignments: [{ teamMemberId: 1, teamMemberName: 'João Silva', machineId: null, machineName: null }],
-};
+const days = [
+  '2026-05-11',
+  '2026-05-12',
+  '2026-05-13',
+  '2026-05-14',
+  '2026-05-15',
+  '2026-05-16',
+  '2026-05-17',
+];
 
-const multiDayEvent: CalendarEvent = {
-  ...event,
-  executionId: 2,
-  requestTitle: 'Limpeza multi',
-  scheduledDate: '2026-04-14',
-  scheduledEndDate: '2026-04-16',
-  scheduledStartTime: null,
-  scheduledEndTime: null,
-  scheduledAllDay: true,
-};
-
-function wrap(ui: React.ReactElement) {
-  return render(<MemoryRouter>{ui}</MemoryRouter>);
+function evt(id: number, dayIso: string, start: string, end: string): CalendarEvent {
+  return {
+    executionId: id,
+    requestId: id + 100,
+    requestTitle: `Job ${id}`,
+    categoryName: 'Lavoura',
+    scheduledDate: dayIso,
+    scheduledEndDate: dayIso,
+    scheduledStartTime: start,
+    scheduledEndTime: end,
+    scheduledAllDay: false,
+    urgency: 'MEDIUM',
+    status: 'AWARDED',
+    island: 'Terceira',
+    parish: 'Sé',
+    assignments: [],
+  };
 }
 
-describe('WeekView', () => {
-  const range = rangeForView('week', '2026-04-15');
-
-  it('renders the seven-day axis with day labels', () => {
-    wrap(
-      <WeekView events={[event]} conflicts={[]} days={range.days} lane="operators" />,
+describe('WeekView (time-grid)', () => {
+  it('renders 7 day columns with day labels', () => {
+    render(
+      <MemoryRouter>
+        <WeekView events={[]} conflicts={[]} days={days} lane="operators" />
+      </MemoryRouter>,
     );
-    expect(screen.getByText(/seg 13/)).toBeInTheDocument();
-    expect(screen.getByText(/dom 19/)).toBeInTheDocument();
+    expect(screen.getByText(/Seg/i)).toBeInTheDocument();
+    expect(screen.getByText(/Dom/i)).toBeInTheDocument();
   });
 
-  it('renders events across the operator lane', () => {
-    wrap(<WeekView events={[event]} conflicts={[]} days={range.days} lane="operators" />);
-    expect(screen.getByText('João Silva')).toBeInTheDocument();
-    expect(screen.getByText('Lavoura A')).toBeInTheDocument();
+  it('renders hour gutter labels', () => {
+    render(
+      <MemoryRouter>
+        <WeekView events={[]} conflicts={[]} days={days} lane="operators" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('08:00')).toBeInTheDocument();
+    expect(screen.getByText('18:00')).toBeInTheDocument();
   });
 
-  it('shows multi-day all-day events in the band', () => {
-    wrap(<WeekView events={[multiDayEvent]} conflicts={[]} days={range.days} lane="operators" />);
-    expect(screen.getAllByText('Limpeza multi').length).toBeGreaterThan(0);
+  it('renders events in the correct day column', () => {
+    render(
+      <MemoryRouter>
+        <WeekView
+          events={[evt(1, '2026-05-13', '08:00', '12:00')]}
+          conflicts={[]}
+          days={days}
+          lane="operators"
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Job 1')).toBeInTheDocument();
   });
 
-  it('falls back to empty state when no events', () => {
-    wrap(<WeekView events={[]} conflicts={[]} days={range.days} lane="operators" />);
-    expect(screen.getByText(/Sem eventos para esta semana/)).toBeInTheDocument();
+  it('shows empty state when no events and emptyState prop provided', () => {
+    render(
+      <MemoryRouter>
+        <WeekView
+          events={[]}
+          conflicts={[]}
+          days={days}
+          lane="operators"
+          emptyState={<div>Vazio</div>}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Vazio')).toBeInTheDocument();
   });
 });

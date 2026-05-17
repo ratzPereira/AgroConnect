@@ -68,10 +68,16 @@ describe('GanttMobileAgenda', () => {
     expect(screen.getByText('Sem trabalhos agendados neste mês')).toBeInTheDocument();
   });
 
-  it('renders urgency badges', () => {
+  it('shows high-urgency badge for HIGH events and omits it for MEDIUM', () => {
     renderAgenda();
-    // Multi-day events appear on multiple days, so there may be multiple badges
-    expect(screen.getAllByText('Média').length).toBeGreaterThanOrEqual(1);
-    expect(screen.getAllByText('Alta').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByLabelText('Urgência alta').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryAllByLabelText('Urgência média')).toHaveLength(0);
+  });
+
+  it('renders status pill via getEventVisualStyle', () => {
+    const { container } = renderAgenda();
+    // IN_PROGRESS uses bg-primary-100; AWARDED uses bg-sky-100
+    expect(container.querySelector('.bg-primary-100')).not.toBeNull();
+    expect(container.querySelector('.bg-sky-100')).not.toBeNull();
   });
 });

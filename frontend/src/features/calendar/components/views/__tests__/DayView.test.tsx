@@ -52,7 +52,7 @@ describe('DayView', () => {
     expect(screen.getByText(/Sem eventos para este dia/)).toBeInTheDocument();
   });
 
-  it('marks conflicting events with conflict ring', () => {
+  it('marks conflicting events with conflict underline', () => {
     const conflict: ConflictResponse = {
       date: '2026-04-15',
       resourceType: 'TEAM_MEMBER',
@@ -64,7 +64,8 @@ describe('DayView', () => {
       <DayView events={[timedEvent]} conflicts={[conflict]} dayIso="2026-04-15" lane="operators" />,
     );
     const bar = container.querySelector('[data-execution-id="1"]');
-    expect(bar?.className).toMatch(/ring-danger/);
+    expect(bar?.className).toContain('border-b-2');
+    expect(bar?.className).toContain('border-danger-500');
   });
 
   it('renders draggable bars inside a DndContext when enableDnd is true', () => {

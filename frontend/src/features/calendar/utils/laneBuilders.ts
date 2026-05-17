@@ -1,5 +1,6 @@
 import type { CalendarEvent, CalendarLane, ConflictResponse } from '@/types/calendar';
 import { SLOTS_PER_DAY, parseTime, timeToSlot } from './timeMath';
+import { packIntervals } from './lanePacking';
 
 export interface LanePlacement {
   startSlot: number;
@@ -74,23 +75,15 @@ export function packRows(items: LaneEvent[]): LaneEvent[] {
       ? a.placement.spanSlots - b.placement.spanSlots
       : a.placement.startSlot - b.placement.startSlot,
   );
-  const rowEnds: number[] = [];
-  for (const it of sorted) {
-    const start = it.placement.startSlot;
-    const end = start + it.placement.spanSlots;
-    let placed = false;
-    for (let r = 0; r < rowEnds.length; r++) {
-      if (rowEnds[r] <= start) {
-        it.placement.laneRow = r + 1;
-        rowEnds[r] = end;
-        placed = true;
-        break;
-      }
-    }
-    if (!placed) {
-      it.placement.laneRow = rowEnds.length + 1;
-      rowEnds.push(end);
-    }
+  const packed = packIntervals(
+    sorted.map((it) => ({
+      ref: it,
+      start: it.placement.startSlot,
+      end: it.placement.startSlot + it.placement.spanSlots,
+    })),
+  );
+  for (const p of packed) {
+    p.ref.placement.laneRow = p.laneIndex + 1;
   }
   return sorted;
 }

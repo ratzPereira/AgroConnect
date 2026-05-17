@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, type MouseEvent } from 'react';
 import { User, Wrench, Briefcase } from 'lucide-react';
 import type { CalendarEvent, CalendarLane, ConflictResponse } from '@/types/calendar';
 import { TimeAxis } from '../primitives/TimeAxis';
@@ -8,14 +8,14 @@ import { AllDayBand } from '../primitives/AllDayBand';
 import { DraggableBar } from '../dnd/DraggableBar';
 import { DroppableLane } from '../dnd/DroppableLane';
 import { buildLanesForRange } from '../../utils/laneBuilders';
-import { DAY_END_HOUR, DAY_START_HOUR } from '../../utils/timeMath';
+import { DAY_END_HOUR, DAY_START_HOUR, todayIso } from '../../utils/timeMath';
 
 interface DayViewProps {
   readonly events: CalendarEvent[];
   readonly conflicts: ConflictResponse[];
   readonly dayIso: string;
   readonly lane: CalendarLane;
-  readonly onEventClick?: (event: CalendarEvent) => void;
+  readonly onEventClick?: (event: CalendarEvent, mouse: MouseEvent<HTMLElement>) => void;
   readonly emptyState?: React.ReactNode;
   readonly enableDnd?: boolean;
 }
@@ -89,7 +89,7 @@ export function DayView({
                 resourceType={group.resourceType}
                 resourceId={group.resourceId}
                 dayIso={dayIso}
-                onClick={(e) => onEventClick?.(e)}
+                onClick={onEventClick}
               />
             ) : (
               <GanttBarV2
@@ -99,7 +99,7 @@ export function DayView({
                 spanSlots={laneEvent.placement.spanSlots}
                 laneRow={laneEvent.placement.laneRow}
                 hasConflict={laneEvent.hasConflict}
-                onClick={(e) => onEventClick?.(e)}
+                onClick={onEventClick}
                 showResizeHandles={false}
               />
             ),
@@ -134,11 +134,6 @@ export function DayView({
       </div>
     </div>
   );
-}
-
-function todayIso(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
 function computeNowPercent(): number | null {

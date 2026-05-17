@@ -109,8 +109,8 @@ export function ProviderCalendar() {
               dayIso={anchor}
               lane={lane}
               enableDnd
-              onEventClick={(e) =>
-                handleEventClick(e, { clientX: 200, clientY: 200 })
+              onEventClick={(e, mouse) =>
+                handleEventClick(e, { clientX: mouse.clientX, clientY: mouse.clientY })
               }
             />
           )}
@@ -121,9 +121,7 @@ export function ProviderCalendar() {
               days={days}
               lane={lane}
               enableDnd
-              onEventClick={(e) =>
-                handleEventClick(e, { clientX: 200, clientY: 200 })
-              }
+              onEventClick={(e, mouse) => handleEventClick(e, mouse)}
             />
           )}
           {!eventsLoading && view === 'month' && (
@@ -133,6 +131,13 @@ export function ProviderCalendar() {
               year={Number(anchor.slice(0, 4))}
               month={Number(anchor.slice(5, 7)) - 1}
               lane={lane}
+              onDayClick={(dayIso) => {
+                setView('day');
+                setAnchor(dayIso);
+              }}
+              onEventClick={(e, mouse) =>
+                handleEventClick(e, { clientX: mouse.clientX, clientY: mouse.clientY })
+              }
             />
           )}
         </CalendarDnd>

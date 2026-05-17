@@ -1,6 +1,8 @@
 import { useDraggable } from '@dnd-kit/core';
+import type { MouseEvent } from 'react';
 import type { CalendarEvent } from '@/types/calendar';
 import { GanttBarV2 } from '../primitives/GanttBarV2';
+import { DND_BAR } from './dndTypes';
 
 interface DraggableBarProps {
   readonly event: CalendarEvent;
@@ -12,7 +14,7 @@ interface DraggableBarProps {
   readonly resourceType: 'operator' | 'machine' | 'job';
   readonly resourceId: number | null;
   readonly dayIso: string;
-  readonly onClick?: (event: CalendarEvent) => void;
+  readonly onClick?: (event: CalendarEvent, mouse: MouseEvent<HTMLDivElement>) => void;
 }
 
 export function DraggableBar({
@@ -27,11 +29,11 @@ export function DraggableBar({
   dayIso,
   onClick,
 }: DraggableBarProps) {
-  const dragId = `bar:${event.executionId}:${laneId}:${dayIso}:${startSlot}`;
+  const dragId = `${DND_BAR}:${event.executionId}:${laneId}:${dayIso}:${startSlot}`;
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: dragId,
     data: {
-      type: 'bar',
+      type: DND_BAR,
       event,
       laneId,
       resourceType,
@@ -53,7 +55,7 @@ export function DraggableBar({
       draggableRef={setNodeRef}
       dragHandleProps={attributes as unknown as Record<string, unknown>}
       dragListeners={listeners as unknown as Record<string, unknown>}
-      onClick={(e) => onClick?.(e)}
+      onClick={onClick}
       showResizeHandles={false}
     />
   );

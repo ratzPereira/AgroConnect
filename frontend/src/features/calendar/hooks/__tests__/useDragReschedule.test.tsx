@@ -214,3 +214,57 @@ describe('useDragReschedule — applyDrop', () => {
     expect(result.current.session).toBeNull();
   });
 });
+
+describe('useDragReschedule — week-day-slot drop', () => {
+  it('shifts schedule to new day and slot, preserving original duration', async () => {
+    const event = makeEvent({
+      scheduledAllDay: false,
+      scheduledDate: '2026-04-15',
+      scheduledEndDate: '2026-04-15',
+      scheduledStartTime: '09:00',
+      scheduledEndTime: '11:00',
+    });
+    const { result } = renderHook(() => useDragReschedule({ events: [event] }));
+    act(() => result.current.startDrag(makeSession(event)));
+
+    await act(async () => {
+      await result.current.applyDrop({
+        type: 'week-day-slot',
+        dayIso: '2026-05-15',
+        slotMinute: 600,
+      });
+    });
+
+    expect(mutateUpdate).toHaveBeenCalledTimes(1);
+    expect(mutateUpdate).toHaveBeenCalledWith({
+      executionId: 100,
+      data: {
+        scheduledDate: '2026-05-15',
+        scheduledEndDate: '2026-05-15',
+        scheduledStartTime: '10:00',
+        scheduledEndTime: '12:00',
+        allDay: false,
+      },
+    });
+  });
+
+  it('clears session after a week-day-slot drop', async () => {
+    const event = makeEvent({
+      scheduledAllDay: false,
+      scheduledStartTime: '09:00',
+      scheduledEndTime: '11:00',
+    });
+    const { result } = renderHook(() => useDragReschedule({ events: [event] }));
+    act(() => result.current.startDrag(makeSession(event)));
+
+    await act(async () => {
+      await result.current.applyDrop({
+        type: 'week-day-slot',
+        dayIso: '2026-05-15',
+        slotMinute: 480,
+      });
+    });
+
+    expect(result.current.session).toBeNull();
+  });
+});
