@@ -56,7 +56,7 @@ export interface EventVisualStyle {
   conflictBadge: ReactNode | null;
 }
 
-function UrgencyBadge({ urgency }: { urgency: CalendarEvent['urgency'] }) {
+function renderUrgencyBadge(urgency: CalendarEvent['urgency']): ReactNode {
   if (urgency === 'HIGH') {
     return (
       <span
@@ -80,7 +80,7 @@ function UrgencyBadge({ urgency }: { urgency: CalendarEvent['urgency'] }) {
   return null;
 }
 
-function ConflictBadge() {
+function renderConflictBadge(): ReactNode {
   return (
     <span
       className="inline-flex items-center gap-0.5 rounded-sm bg-warning-100 px-1 py-0.5 text-[9px] font-bold text-warning-800"
@@ -100,7 +100,7 @@ export function getEventVisualStyle(event: CalendarEvent, hasConflict: boolean):
     chipClass: visual.chip,
     borderClass,
     statusIcon: visual.icon,
-    urgencyBadge: event.urgency !== 'MEDIUM' ? <UrgencyBadge urgency={event.urgency} /> : null,
-    conflictBadge: hasConflict ? <ConflictBadge /> : null,
+    urgencyBadge: event.urgency !== 'MEDIUM' ? renderUrgencyBadge(event.urgency) : null,
+    conflictBadge: hasConflict ? renderConflictBadge() : null,
   };
 }

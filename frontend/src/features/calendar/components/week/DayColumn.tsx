@@ -49,18 +49,16 @@ export function DayColumn({
     () => buildDayLayout(events, dayIso, conflictSet),
     [events, dayIso, conflictSet],
   );
-  const [nowTopPx, setNowTopPx] = useState<number | null>(() =>
-    isToday ? computeNowTopPx() : null,
-  );
+  const [, setNowTick] = useState(0);
   useEffect(() => {
-    if (!isToday) {
-      setNowTopPx(null);
-      return;
-    }
-    setNowTopPx(computeNowTopPx());
-    const id = setInterval(() => setNowTopPx(computeNowTopPx()), NOW_LINE_TICK_INTERVAL_MS);
+    if (!isToday) return;
+    const id = setInterval(
+      () => setNowTick((t) => t + 1),
+      NOW_LINE_TICK_INTERVAL_MS,
+    );
     return () => clearInterval(id);
   }, [isToday]);
+  const nowTopPx = isToday ? computeNowTopPx() : null;
   const hoursPerDay = DAY_END_HOUR - DAY_START_HOUR;
   const slotMinutes = useMemo(() => buildSlotMinutes(), []);
 
