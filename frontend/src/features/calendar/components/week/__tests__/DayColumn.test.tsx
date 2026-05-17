@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { DayColumn } from '../DayColumn';
 import type { CalendarEvent } from '@/types/calendar';
@@ -23,6 +23,15 @@ const events: CalendarEvent[] = [
 ];
 
 describe('DayColumn', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 4, 17, 12, 0, 0));
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('renders cards for events on this day', () => {
     render(
       <DayColumn dayIso="2026-05-17" events={events} conflictSet={new Set()} isToday={false} />,
