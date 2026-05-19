@@ -38,6 +38,7 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 @Service
@@ -49,6 +50,15 @@ public class ProposalService {
 
     private static final Set<RequestStatus> ACCEPTING_PROPOSALS = EnumSet.of(
             RequestStatus.PUBLISHED, RequestStatus.WITH_PROPOSALS);
+
+    // Stripe PaymentIntent statuses where the existing intent can still be paid by the
+    // client (Elements will resume from the same clientSecret). Anything else is dead
+    // and must be replaced. See https://stripe.com/docs/payments/paymentintents/lifecycle.
+    private static final Set<String> RESUMABLE_PI_STATUSES = Set.of(
+            "requires_payment_method",
+            "requires_confirmation",
+            "requires_action",
+            "processing");
 
     private static final String ERR_REQUEST_NOT_FOUND = "Pedido de serviço não encontrado.";
     private static final String ERR_PROPOSAL_NOT_FOUND = "Proposta não encontrada.";
@@ -161,9 +171,45 @@ public class ProposalService {
                     "O prestador ainda não concluiu a configuração de pagamentos. Tente outra proposta.");
         }
 
-        if (transactionRepository.findByRequestId(request.getId()).isPresent()) {
-            throw new InvalidStateException(
-                    "Já existe um pagamento em curso para este pedido. Conclua-o ou cancele-o antes de aceitar outra proposta.");
+        Optional<Transaction> existingTx = transactionRepository.findByRequestId(request.getId());
+        if (existingTx.isPresent()) {
+            Transaction prev = existingTx.get();
+            if (prev.getStatus() != TransactionStatus.PENDING) {
+                // HELD / RELEASED / REFUNDED — the WITH_PROPOSALS check above should have
+                // caught this already, but be defensive.
+                throw new InvalidStateException(
+                        "Já existe um pagamento em curso para este pedido. Conclua-o ou cancele-o antes de aceitar outra proposta.");
+            }
+
+            PaymentIntent prevIntent = stripeService.retrievePaymentIntent(prev.getStripePaymentIntentId());
+            boolean sameProposal = prev.getProposal().getId().equals(proposalId);
+            boolean resumable = RESUMABLE_PI_STATUSES.contains(prevIntent.getStatus());
+
+            if (sameProposal && resumable) {
+                // Client clicked accept, closed the modal without paying, then clicked
+                // accept again — return the same intent so Elements resumes seamlessly.
+                log.info("Resuming acceptance for proposal {} (transaction {}, paymentIntent {} status={})",
+                        proposalId, prev.getId(), prevIntent.getId(), prevIntent.getStatus());
+                return new ProposalAcceptResponse(
+                        prev.getId(),
+                        proposal.getId(),
+                        prevIntent.getId(),
+                        prevIntent.getClientSecret(),
+                        prev.getAmount(),
+                        stripeProperties.publishableKey()
+                );
+            }
+
+            // Switched to a different proposal, or the previous intent is dead. Cancel the
+            // old intent in Stripe (if still alive) and drop the orphan row before creating
+            // a fresh transaction below.
+            if (resumable) {
+                stripeService.cancelPaymentIntent(prevIntent.getId());
+            }
+            log.info("Discarding orphan transaction {} (paymentIntent {} status={}, sameProposal={})",
+                    prev.getId(), prevIntent.getId(), prevIntent.getStatus(), sameProposal);
+            transactionRepository.delete(prev);
+            transactionRepository.flush();
         }
 
         BigDecimal amount = proposal.getPrice();

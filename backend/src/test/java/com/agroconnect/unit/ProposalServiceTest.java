@@ -311,6 +311,12 @@ class ProposalServiceTest {
         return intent;
     }
 
+    private PaymentIntent buildPaymentIntent(String id, String secret, String status) {
+        PaymentIntent intent = buildPaymentIntent(id, secret);
+        org.mockito.Mockito.lenient().when(intent.getStatus()).thenReturn(status);
+        return intent;
+    }
+
     private void stubAcceptHappyPath(Proposal proposal, ServiceRequest request) {
         PaymentIntent fakeIntent = buildPaymentIntent("pi_test_123", "pi_test_123_secret_xyz");
         Transaction stubbedTx = ProposalFixture.aTransaction()
@@ -493,6 +499,115 @@ class ProposalServiceTest {
         when(proposalRepository.findById(999L)).thenReturn(Optional.empty());
 
         assertThrows(ResourceNotFoundException.class, () -> service.accept(999L, 1L));
+    }
+
+    @Test
+    void accept_givenSameProposalWithResumablePendingIntent_shouldResume() {
+        // Client clicked accept, closed the modal without paying, then clicked accept
+        // again — we must return the same PaymentIntent so Elements resumes.
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+        Transaction orphan = ProposalFixture.aTransaction()
+                .status(TransactionStatus.PENDING)
+                .stripePaymentIntentId("pi_orphan_123")
+                .request(requestWithProposals).proposal(proposal).build();
+        PaymentIntent resumableIntent = buildPaymentIntent(
+                "pi_orphan_123", "pi_orphan_123_secret_xyz", "requires_payment_method");
+
+        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
+        when(transactionRepository.findByRequestId(requestWithProposals.getId()))
+                .thenReturn(Optional.of(orphan));
+        when(stripeService.retrievePaymentIntent("pi_orphan_123")).thenReturn(resumableIntent);
+        when(stripeProperties.publishableKey()).thenReturn("pk_test_dummy");
+
+        ProposalAcceptResponse response = service.accept(1L, 1L);
+
+        assertEquals("pi_orphan_123", response.paymentIntentId());
+        assertEquals("pi_orphan_123_secret_xyz", response.clientSecret());
+        assertEquals(orphan.getId(), response.transactionId());
+        // No new PaymentIntent, no new transaction, no cancel — pure resume.
+        verify(stripeService, never()).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
+        verify(stripeService, never()).cancelPaymentIntent(anyString());
+        verify(transactionRepository, never()).save(any(Transaction.class));
+        verify(transactionRepository, never()).delete(any(Transaction.class));
+    }
+
+    @Test
+    void accept_givenDifferentProposalWithResumablePendingIntent_shouldCancelOldAndCreateNew() {
+        // Client started paying for proposal 99, backed out, then chose a different
+        // proposal. Old intent must be cancelled and a fresh transaction created.
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal newProposal = ProposalFixture.aProposal()
+                .id(1L).request(requestWithProposals).provider(providerProfile).build();
+        Proposal oldProposal = ProposalFixture.aProposal()
+                .id(99L).request(requestWithProposals).provider(otherProviderProfile).build();
+        Transaction orphan = ProposalFixture.aTransaction()
+                .status(TransactionStatus.PENDING)
+                .stripePaymentIntentId("pi_orphan_old")
+                .request(requestWithProposals).proposal(oldProposal).build();
+        PaymentIntent oldIntent = buildPaymentIntent(
+                "pi_orphan_old", "pi_orphan_old_secret", "requires_payment_method");
+        PaymentIntent freshIntent = buildPaymentIntent(
+                "pi_fresh_456", "pi_fresh_456_secret", "requires_payment_method");
+        Transaction freshTx = ProposalFixture.aTransaction()
+                .status(TransactionStatus.PENDING)
+                .request(requestWithProposals).proposal(newProposal).build();
+
+        when(proposalRepository.findById(1L)).thenReturn(Optional.of(newProposal));
+        when(transactionRepository.findByRequestId(requestWithProposals.getId()))
+                .thenReturn(Optional.of(orphan));
+        when(stripeService.retrievePaymentIntent("pi_orphan_old")).thenReturn(oldIntent);
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTx);
+        when(stripeService.createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong()))
+                .thenReturn(freshIntent);
+        when(stripeProperties.publishableKey()).thenReturn("pk_test_dummy");
+
+        ProposalAcceptResponse response = service.accept(1L, 1L);
+
+        assertEquals("pi_fresh_456", response.paymentIntentId());
+        verify(stripeService).cancelPaymentIntent("pi_orphan_old");
+        verify(transactionRepository).delete(orphan);
+        verify(stripeService).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
+    }
+
+    @Test
+    void accept_givenSameProposalWithDeadPendingIntent_shouldRecreateWithoutCancel() {
+        // PaymentIntent already canceled (e.g. Stripe auto-expired). Just drop the row
+        // and create fresh — no point calling cancel on a canceled intent.
+        ServiceRequest requestWithProposals = ServiceRequestFixture.aRequestWithProposals()
+                .client(clientUser).category(category).build();
+        Proposal proposal = ProposalFixture.aProposal()
+                .request(requestWithProposals).provider(providerProfile).build();
+        Transaction orphan = ProposalFixture.aTransaction()
+                .status(TransactionStatus.PENDING)
+                .stripePaymentIntentId("pi_dead_789")
+                .request(requestWithProposals).proposal(proposal).build();
+        PaymentIntent deadIntent = buildPaymentIntent(
+                "pi_dead_789", "pi_dead_789_secret", "canceled");
+        PaymentIntent freshIntent = buildPaymentIntent(
+                "pi_new_999", "pi_new_999_secret", "requires_payment_method");
+        Transaction freshTx = ProposalFixture.aTransaction()
+                .status(TransactionStatus.PENDING)
+                .request(requestWithProposals).proposal(proposal).build();
+
+        when(proposalRepository.findById(1L)).thenReturn(Optional.of(proposal));
+        when(transactionRepository.findByRequestId(requestWithProposals.getId()))
+                .thenReturn(Optional.of(orphan));
+        when(stripeService.retrievePaymentIntent("pi_dead_789")).thenReturn(deadIntent);
+        when(transactionRepository.save(any(Transaction.class))).thenReturn(freshTx);
+        when(stripeService.createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong()))
+                .thenReturn(freshIntent);
+        when(stripeProperties.publishableKey()).thenReturn("pk_test_dummy");
+
+        ProposalAcceptResponse response = service.accept(1L, 1L);
+
+        assertEquals("pi_new_999", response.paymentIntentId());
+        verify(stripeService, never()).cancelPaymentIntent(anyString());
+        verify(transactionRepository).delete(orphan);
+        verify(stripeService).createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong());
     }
 
     // ── COMPLETE ACCEPTANCE AFTER PAYMENT (webhook-driven cascade) ──

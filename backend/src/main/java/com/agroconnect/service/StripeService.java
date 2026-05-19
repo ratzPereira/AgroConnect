@@ -124,6 +124,14 @@ public class StripeService {
         }
     }
 
+    public PaymentIntent retrievePaymentIntent(String paymentIntentId) {
+        try {
+            return PaymentIntent.retrieve(paymentIntentId);
+        } catch (StripeException e) {
+            throw wrap("Falha ao consultar PaymentIntent", e);
+        }
+    }
+
     public PaymentIntent cancelPaymentIntent(String paymentIntentId) {
         try {
             PaymentIntent intent = PaymentIntent.retrieve(paymentIntentId);
