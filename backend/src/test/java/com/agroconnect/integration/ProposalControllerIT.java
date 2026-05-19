@@ -236,6 +236,10 @@ class ProposalControllerIT extends TestContainersConfig {
         // Order(7) initiated payment for this proposal. The client backed out without
         // paying and clicked accept again — we must return the SAME PaymentIntent so the
         // Stripe Elements modal resumes seamlessly (not 409, which is a UX dead-end).
+        // @MockBean is reset between test methods, so we must re-stub retrievePaymentIntent
+        // for the intent that Order(7) created in the DB.
+        StripeTestHelper.stubCreatePaymentIntent(stripeService, "pi_test_it_accept", "pi_test_it_accept_secret_xyz");
+
         mockMvc.perform(post("/v1/proposals/" + proposalId + "/accept")
                         .header("Authorization", "Bearer " + clientToken))
                 .andExpect(status().isOk())
