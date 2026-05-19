@@ -46,8 +46,13 @@ public final class StripeTestHelper {
         lenient().when(intent.getId()).thenReturn(paymentIntentId);
         lenient().when(intent.getClientSecret()).thenReturn(clientSecret);
         lenient().when(intent.getLatestCharge()).thenReturn("ch_test_" + paymentIntentId);
+        // Mirror Stripe's lifecycle: a freshly-created intent is in "requires_payment_method"
+        // until the client confirms it. ProposalService.accept treats this status as
+        // resumable (so re-accept on the same proposal returns the same intent).
+        lenient().when(intent.getStatus()).thenReturn("requires_payment_method");
         when(stripeService.createPaymentIntent(anyLong(), any(), anyString(), anyLong(), anyLong()))
                 .thenReturn(intent);
+        lenient().when(stripeService.retrievePaymentIntent(paymentIntentId)).thenReturn(intent);
         return intent;
     }
 

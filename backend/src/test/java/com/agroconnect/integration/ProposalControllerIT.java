@@ -232,12 +232,15 @@ class ProposalControllerIT extends TestContainersConfig {
 
     @Test
     @Order(8)
-    void acceptProposal_givenPaymentInProgress_shouldReturn409() throws Exception {
-        // Payment was initiated in Order(7) — a second accept must be rejected even before
-        // the webhook fires, because a transaction row already exists for this request.
+    void acceptProposal_givenSameProposalPaymentInProgress_shouldResumeExistingIntent() throws Exception {
+        // Order(7) initiated payment for this proposal. The client backed out without
+        // paying and clicked accept again — we must return the SAME PaymentIntent so the
+        // Stripe Elements modal resumes seamlessly (not 409, which is a UX dead-end).
         mockMvc.perform(post("/v1/proposals/" + proposalId + "/accept")
                         .header("Authorization", "Bearer " + clientToken))
-                .andExpect(status().isConflict());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.paymentIntentId").value("pi_test_it_accept"))
+                .andExpect(jsonPath("$.clientSecret").value("pi_test_it_accept_secret_xyz"));
     }
 
     @Test
