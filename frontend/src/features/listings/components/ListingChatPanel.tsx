@@ -101,6 +101,7 @@ export function ListingChatPanel({
             ['listing-messages', activeConvId],
             (old: { content: ListingMessage[] } | undefined) => {
               if (!old) return old;
+              if (old.content.some((m) => m.id === newMessage.id)) return old;
               return { ...old, content: [...old.content, newMessage] };
             },
           );
@@ -147,6 +148,7 @@ export function ListingChatPanel({
         ['listing-messages', activeConvId],
         (old: { content: ListingMessage[] } | undefined) => {
           if (!old) return { content: [msg], totalPages: 1, totalElements: 1, number: 0, size: 50, first: true, last: true };
+          if (old.content.some((m) => m.id === msg.id)) return old;
           return { ...old, content: [...old.content, msg] };
         },
       );

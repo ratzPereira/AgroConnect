@@ -354,7 +354,7 @@ public class ListingController {
         return ResponseEntity.ok(result);
     }
 
-    @GetMapping("/conversations/{convId}")
+    @GetMapping("/conversations/{convId}/messages")
     @Operation(
             summary = "Get conversation messages",
             description = "Returns paginated messages for a specific listing conversation. Only participants can access."

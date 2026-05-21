@@ -6,13 +6,14 @@ import { useAuthStore } from '@/stores/authStore';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { ListingPhotoGallery } from '@/features/listings/components/ListingPhotoGallery';
 import { ListingChatPanel } from '@/features/listings/components/ListingChatPanel';
+import { EditListingModal } from '@/features/listings/components/EditListingModal';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { Skeleton } from '@/components/ui/Skeleton';
 import {
   ArrowLeft, Heart, Eye, MapPin, Calendar, Package, Star,
   CheckCircle2, Trash2, MessageCircle, ShoppingBag,
-  Beef, Sprout, Wheat, Apple, Wrench, Share2, Shield, Clock,
+  Beef, Sprout, Wheat, Apple, Wrench, Share2, Shield, Clock, Pencil,
 } from 'lucide-react';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import L from 'leaflet';
@@ -118,6 +119,7 @@ export function ListingDetail() {
   const [chatOpen, setChatOpen] = useState(false);
   const [confirmSoldOpen, setConfirmSoldOpen] = useState(false);
   const [confirmRemoveOpen, setConfirmRemoveOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
 
   const listingId = Number(id);
 
@@ -319,6 +321,9 @@ export function ListingDetail() {
                 <span className="text-xs font-medium text-neutral-400 uppercase tracking-wide w-full mb-1">
                   Gerir anúncio
                 </span>
+                <Button variant="outline" size="sm" onClick={() => setEditOpen(true)}>
+                  <Pencil className="h-4 w-4" /> Editar
+                </Button>
                 <Button size="sm" onClick={() => setConfirmSoldOpen(true)}>
                   <CheckCircle2 className="h-4 w-4" /> Marcar como Vendido
                 </Button>
@@ -473,6 +478,13 @@ export function ListingDetail() {
             </Button>
           </div>
         </Modal>
+
+        {/* Edit modal */}
+        <EditListingModal
+          open={editOpen}
+          onClose={() => setEditOpen(false)}
+          listing={listing}
+        />
 
         {/* Confirm remove modal */}
         <Modal open={confirmRemoveOpen} onClose={() => setConfirmRemoveOpen(false)} title="Remover Anúncio" size="sm">

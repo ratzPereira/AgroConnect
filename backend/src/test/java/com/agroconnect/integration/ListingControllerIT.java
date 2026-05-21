@@ -3,6 +3,7 @@ package com.agroconnect.integration;
 import com.agroconnect.dto.request.CreateListingDto;
 import com.agroconnect.dto.request.LoginRequest;
 import com.agroconnect.dto.request.RegisterRequest;
+import com.agroconnect.dto.request.SendListingMessageDto;
 import com.agroconnect.dto.request.UpdateListingDto;
 import com.agroconnect.fixture.TestContainersConfig;
 import com.agroconnect.model.User;
@@ -306,5 +307,63 @@ class ListingControllerIT extends TestContainersConfig {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(updateDto)))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @Order(14)
+    void messagingFlow_sendThenGetMessages_shouldUseConversationsMessagesUrl() throws Exception {
+        // This test locks the chat URL contract that the frontend depends on.
+        // Regression: prod was returning 500 because backend exposed
+        // GET /listings/conversations/{id} (no /messages) while frontend called
+        // GET /listings/conversations/{id}/messages.
+
+        CreateListingDto createDto = new CreateListingDto(
+                "Anúncio para conversa",
+                "Listing usado para validar o endpoint GET de mensagens.",
+                new BigDecimal("50.00"),
+                false,
+                ListingCategory.PRODUCE,
+                null,
+                new BigDecimal("10"),
+                "kg",
+                38.7167,
+                -27.2167,
+                "Angra do Heroísmo",
+                "Sé",
+                "Angra do Heroísmo",
+                "Terceira");
+
+        MvcResult createResult = mockMvc.perform(post("/v1/listings")
+                        .header("Authorization", "Bearer " + sellerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(createDto)))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        Long chatListingId = objectMapper.readTree(createResult.getResponse().getContentAsString())
+                .get("id").asLong();
+
+        SendListingMessageDto firstMessage = new SendListingMessageDto("Olá, ainda está disponível?");
+        mockMvc.perform(post("/v1/listings/" + chatListingId + "/messages")
+                        .header("Authorization", "Bearer " + buyerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(firstMessage)))
+                .andExpect(status().isCreated());
+
+        MvcResult conversationsResult = mockMvc.perform(get("/v1/listings/conversations")
+                        .header("Authorization", "Bearer " + buyerToken))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        Long conversationId = objectMapper.readTree(conversationsResult.getResponse().getContentAsString())
+                .get("content").get(0).get("id").asLong();
+
+        mockMvc.perform(get("/v1/listings/conversations/" + conversationId + "/messages")
+                        .header("Authorization", "Bearer " + buyerToken)
+                        .param("page", "0")
+                        .param("size", "50"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].content").value("Olá, ainda está disponível?"));
     }
 }
