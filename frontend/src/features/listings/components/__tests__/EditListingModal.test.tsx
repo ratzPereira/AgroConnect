@@ -4,16 +4,17 @@ import userEvent from '@testing-library/user-event';
 import { EditListingModal } from '../EditListingModal';
 import type { Listing } from '@/types/listing';
 
+interface MutationConfig {
+  mutationFn?: (data: unknown) => Promise<unknown>;
+  onSuccess?: (result: unknown) => void;
+  onError?: (err: unknown) => void;
+}
+
 const mockUpdateListing = vi.fn();
 const mockToastSuccess = vi.fn();
 const mockToastError = vi.fn();
 const mockInvalidateQueries = vi.fn();
 const mockSetQueryData = vi.fn();
-let mockMutationConfig: {
-  mutationFn?: (data: unknown) => Promise<unknown>;
-  onSuccess?: (result: unknown) => void;
-  onError?: (err: unknown) => void;
-} = {};
 const mockMutate = vi.fn();
 
 vi.mock('@/api/listings', () => ({
@@ -28,20 +29,17 @@ vi.mock('sonner', () => ({
 }));
 
 vi.mock('@tanstack/react-query', () => ({
-  useMutation: vi.fn((config: typeof mockMutationConfig) => {
-    mockMutationConfig = config;
-    return {
-      mutate: (data: unknown) => {
-        mockMutate(data);
-        // Simulate the mutation flow so onSuccess fires for tests that need it
-        const result = config.mutationFn?.(data);
-        if (result instanceof Promise) {
-          result.then((r) => config.onSuccess?.(r)).catch((e) => config.onError?.(e));
-        }
-      },
-      isPending: false,
-    };
-  }),
+  useMutation: vi.fn((config: MutationConfig) => ({
+    mutate: (data: unknown) => {
+      mockMutate(data);
+      // Simulate the mutation flow so onSuccess fires for tests that need it
+      const result = config.mutationFn?.(data);
+      if (result instanceof Promise) {
+        result.then((r) => config.onSuccess?.(r)).catch((e) => config.onError?.(e));
+      }
+    },
+    isPending: false,
+  })),
   useQueryClient: vi.fn(() => ({
     invalidateQueries: mockInvalidateQueries,
     setQueryData: mockSetQueryData,
