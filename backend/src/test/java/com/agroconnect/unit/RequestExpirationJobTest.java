@@ -1,16 +1,21 @@
 package com.agroconnect.unit;
 
+import com.agroconnect.event.RequestExpiredEvent;
 import com.agroconnect.fixture.ServiceRequestFixture;
+import com.agroconnect.fixture.UserFixture;
 import com.agroconnect.model.ServiceRequest;
+import com.agroconnect.model.User;
 import com.agroconnect.model.enums.RequestStatus;
 import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.scheduler.RequestExpirationJob;
+import com.agroconnect.service.UserDisplayNameResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.Collections;
@@ -30,17 +35,25 @@ class RequestExpirationJobTest {
     @Mock
     private ServiceRequestRepository requestRepository;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
+    @Mock
+    private UserDisplayNameResolver nameResolver;
+
     private RequestExpirationJob requestExpirationJob;
 
     @BeforeEach
     void setUp() {
-        requestExpirationJob = new RequestExpirationJob(requestRepository);
+        requestExpirationJob = new RequestExpirationJob(requestRepository, eventPublisher, nameResolver);
     }
 
     @Test
     void expirePublishedRequests_givenExpired_shouldSetExpired() {
+        User client = UserFixture.aClientUser().build();
         ServiceRequest request = ServiceRequestFixture.aPublishedRequest()
                 .id(1L)
+                .client(client)
                 .status(RequestStatus.PUBLISHED)
                 .build();
 
@@ -51,6 +64,7 @@ class RequestExpirationJobTest {
 
         assertEquals(RequestStatus.EXPIRED, request.getStatus());
         verify(requestRepository).save(request);
+        verify(eventPublisher).publishEvent(any(RequestExpiredEvent.class));
     }
 
     @Test
@@ -61,16 +75,20 @@ class RequestExpirationJobTest {
         requestExpirationJob.expirePublishedRequests();
 
         verify(requestRepository, never()).save(any(ServiceRequest.class));
+        verify(eventPublisher, never()).publishEvent(any(RequestExpiredEvent.class));
     }
 
     @Test
     void expirePublishedRequests_givenMultiple_shouldExpireAll() {
+        User client = UserFixture.aClientUser().build();
         ServiceRequest request1 = ServiceRequestFixture.aPublishedRequest()
                 .id(1L)
+                .client(client)
                 .status(RequestStatus.PUBLISHED)
                 .build();
         ServiceRequest request2 = ServiceRequestFixture.aPublishedRequest()
                 .id(2L)
+                .client(client)
                 .status(RequestStatus.PUBLISHED)
                 .build();
 
@@ -82,6 +100,7 @@ class RequestExpirationJobTest {
         assertEquals(RequestStatus.EXPIRED, request1.getStatus());
         assertEquals(RequestStatus.EXPIRED, request2.getStatus());
         verify(requestRepository, times(2)).save(any(ServiceRequest.class));
+        verify(eventPublisher, times(2)).publishEvent(any(RequestExpiredEvent.class));
     }
 
     @Test

@@ -1,0 +1,11 @@
+{
+  "request": {
+    "method": "POST",
+    "url": "/emails"
+  },
+  "response": {
+    "status": 200,
+    "headers": { "Content-Type": "application/json" },
+    "jsonBody": { "id": "wiremock-stub-{{randomValue length=10 type='ALPHANUMERIC'}}" }
+  }
+}

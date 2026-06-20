@@ -36,7 +36,7 @@ class EmailServiceTest {
 
     @BeforeEach
     void setUp() {
-        emailService = new EmailService(templateEngine, restTemplate, "noreply@agroconnect.pt", "http://localhost:8000", "re_test_key");
+        emailService = new EmailService(templateEngine, restTemplate, "noreply@agroconnect.pt", "http://localhost:8000", "re_test_key", "https://api.resend.com");
     }
 
     @Test

@@ -26,11 +26,13 @@ import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.repository.UserRepository;
 import com.agroconnect.service.NotificationService;
 import com.agroconnect.service.ReviewService;
+import com.agroconnect.service.UserDisplayNameResolver;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
@@ -60,6 +62,8 @@ class ReviewServiceTest {
     @Mock private ClientProfileRepository clientProfileRepository;
     @Mock private ProviderProfileRepository providerProfileRepository;
     @Mock private NotificationService notificationService;
+    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private UserDisplayNameResolver nameResolver;
 
     private ReviewService service;
 
@@ -75,7 +79,7 @@ class ReviewServiceTest {
         service = new ReviewService(
                 reviewRepository, requestRepository, proposalRepository,
                 userRepository, clientProfileRepository, providerProfileRepository,
-                notificationService);
+                notificationService, eventPublisher, nameResolver);
 
         clientUser = UserFixture.aClientUser().build();
         providerUser = UserFixture.aProviderUser().build();

@@ -1,0 +1,13 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt">
+<body>
+<table role="presentation" th:fragment="cta(url, label)" cellspacing="0" cellpadding="0" border="0" style="margin: 24px 0;">
+    <tr>
+        <td style="background-color: #16a34a; border-radius: 6px;">
+            <a th:href="${url}" style="display: inline-block; padding: 12px 32px; color: #ffffff; text-decoration: none; font-size: 14px; font-weight: bold; font-family: Arial, sans-serif;"
+               th:text="${label}">Ver</a>
+        </td>
+    </tr>
+</table>
+</body>
+</html>

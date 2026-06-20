@@ -1,0 +1,30 @@
+cooldown 60s...
+OK   P233-login
+OK   P234-registo
+OK   P222-landing
+OK   P222-dashboard
+OK   P271-marketplace-lista
+OK   P272-marketplace-detalhe
+OK   P239-wizard-categoria
+OK   P240-wizard-passo2-formulario
+OK   P289-inventario
+OK   P289b-inventario-detalhe-timeline
+OK   P292-calendario-dia
+OK   P292-calendario-mes
+OK   P297-financeiro
+
+===== RESULTS =====
+OK   P233-login
+OK   P234-registo
+OK   P222-landing
+OK   P222-dashboard
+OK   P271-marketplace-lista
+OK   P272-marketplace-detalhe
+OK   P239-wizard-categoria
+OK   P240-wizard-passo2-formulario
+OK   P289-inventario
+OK   P289b-inventario-detalhe-timeline
+OK   P292-calendario-dia
+OK   P292-calendario-mes
+OK   P297-financeiro
+DONE

@@ -1,0 +1,95 @@
+services:
+  postgres-e2e:
+    image: postgis/postgis:16-3.4
+    container_name: agroconnect-postgres-e2e
+    environment:
+      POSTGRES_DB: agroconnect_e2e
+      POSTGRES_USER: agroconnect
+      POSTGRES_PASSWORD: agroconnect_e2e_password
+    volumes:
+      - postgres-e2e-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U agroconnect -d agroconnect_e2e"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis-e2e:
+    image: redis:7-alpine
+    container_name: agroconnect-redis-e2e
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  minio-e2e:
+    image: minio/minio
+    container_name: agroconnect-minio-e2e
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-e2e-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  wiremock:
+    image: wiremock/wiremock:3.10.0
+    container_name: agroconnect-wiremock-e2e
+    command: ["--global-response-templating", "--verbose"]
+    volumes:
+      - ./docker/wiremock/mappings:/home/wiremock/mappings:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O- http://localhost:8080/__admin/health || exit 1"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend-e2e:
+    build:
+      context: ./backend
+      dockerfile: ../docker/backend/Dockerfile
+    container_name: agroconnect-backend-e2e
+    environment:
+      SPRING_PROFILES_ACTIVE: e2e,dev
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres-e2e:5432/agroconnect_e2e
+      SPRING_DATASOURCE_USERNAME: agroconnect
+      SPRING_DATASOURCE_PASSWORD: agroconnect_e2e_password
+      SPRING_DATA_REDIS_HOST: redis-e2e
+      SPRING_DATA_REDIS_PORT: 6379
+      JWT_SECRET: e2e-jwt-secret-at-least-256-bits-long-for-hs256-algorithm-padding
+      MINIO_ENDPOINT: http://minio-e2e:9000
+      MINIO_PUBLIC_ENDPOINT: http://localhost:9000
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+      STRIPE_SECRET_KEY: sk_test_e2e_placeholder
+      STRIPE_WEBHOOK_SECRET: whsec_e2e_placeholder
+      RESEND_BASE_URL: http://wiremock:8080
+      MAIL_FROM: e2e@agroconnect.test
+      APP_BASE_URL: http://localhost:5173
+      SPRING_MAIL_PASSWORD: fake-resend-api-key
+    depends_on:
+      postgres-e2e:
+        condition: service_healthy
+      redis-e2e:
+        condition: service_healthy
+      minio-e2e:
+        condition: service_healthy
+      wiremock:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  postgres-e2e-data:
+  minio-e2e-data:

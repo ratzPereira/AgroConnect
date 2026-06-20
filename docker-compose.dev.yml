@@ -76,6 +76,11 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-sk_test_placeholder}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_placeholder}
       COMMISSION_RATE: ${COMMISSION_RATE:-0.12}
+      # Dev-only: relax rate limits so k6 load baselines measure raw endpoint
+      # performance, not the protective rate-limit cap. Not used in prod.
+      AGROCONNECT_RATELIMIT_LOGINMAX: ${AGROCONNECT_RATELIMIT_LOGINMAX:-1000000}
+      AGROCONNECT_RATELIMIT_REGISTERMAX: ${AGROCONNECT_RATELIMIT_REGISTERMAX:-1000000}
+      AGROCONNECT_RATELIMIT_APIDEFAULTMAX: ${AGROCONNECT_RATELIMIT_APIDEFAULTMAX:-10000000}
       MAIL_HOST: mailpit
       MAIL_PORT: 1025
       JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"

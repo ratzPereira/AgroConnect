@@ -1,45 +1,44 @@
 import http from 'k6/http';
 import { check, sleep } from 'k6';
+import { Rate } from 'k6/metrics';
 
-export const options = {
-  vus: 5,
-  duration: '30s',
-  thresholds: {
-    http_req_duration: ['p(95)<1000'],
-    http_req_failed: ['rate<0.1'],
-  },
+const profile = __ENV.K6_PROFILE || 'smoke';
+
+const PROFILES = {
+  smoke:  { vus: 1,  duration: '30s', thresholds: { http_req_duration: ['p(95)<200'],  errors: ['rate<0.01'] } },
+  load:   { vus: 10, duration: '2m',  thresholds: { http_req_duration: ['p(95)<1000'], errors: ['rate<0.05'] } },
+  stress: { vus: 50, duration: '1m',  thresholds: { http_req_duration: ['p(95)<2500'], errors: ['rate<0.10'] } },
 };
 
-const BASE_URL = __ENV.BASE_URL || 'http://localhost:8000/api/v1';
+const cfg = PROFILES[profile];
+if (!cfg) throw new Error(`Unknown K6_PROFILE: ${profile}`);
 
-export default function () {
-  // Login as provider
-  const loginRes = http.post(`${BASE_URL}/auth/login`, JSON.stringify({
-    email: 'antonio@exemplo.pt',
-    password: 'password123',
-  }), { headers: { 'Content-Type': 'application/json' } });
+const errorRate = new Rate('errors');
 
-  if (loginRes.status !== 200) return;
+export const options = {
+  vus: cfg.vus,
+  duration: cfg.duration,
+  thresholds: cfg.thresholds,
+  summaryTrendStats: ['min', 'med', 'avg', 'p(95)', 'p(99)', 'max'],
+};
 
-  const token = JSON.parse(loginRes.body).accessToken;
-  const authHeaders = {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Content-Type': 'application/json',
-    },
-  };
+const BASE = __ENV.BASE_URL || 'http://localhost:8080';
 
-  // List available requests
-  const listRes = http.get(`${BASE_URL}/requests/available?page=0&size=20`, authHeaders);
-  check(listRes, {
-    'available requests 200': (r) => r.status === 200,
-  });
+export function setup() {
+  const health = http.get(`${BASE}/api/actuator/health`);
+  if (health.status !== 200) throw new Error('Backend not healthy');
+  const loginRes = http.post(`${BASE}/api/v1/auth/login`,
+    JSON.stringify({ email: 'agroservicos@email.com', password: 'password123' }),
+    { headers: { 'Content-Type': 'application/json' } });
+  return { token: loginRes.json('accessToken') };
+}
 
-  // Get own proposals
-  const proposalsRes = http.get(`${BASE_URL}/proposals/mine`, authHeaders);
-  check(proposalsRes, {
-    'my proposals 200': (r) => r.status === 200,
-  });
-
+export default function (data) {
+  const params = { headers: { Authorization: `Bearer ${data.token}` } };
+  const r1 = http.get(`${BASE}/api/v1/requests/available?page=0&size=20`, params);
+  const r2 = http.get(`${BASE}/api/v1/proposals/mine?page=0&size=20`, params);
+  const ok = check(r1, { 'available 200': (r) => r.status === 200 }) &&
+             check(r2, { 'mine 200': (r) => r.status === 200 });
+  errorRate.add(!ok);
   sleep(1);
 }

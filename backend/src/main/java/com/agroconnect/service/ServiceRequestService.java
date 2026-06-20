@@ -44,6 +44,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -110,6 +111,8 @@ public class ServiceRequestService {
     private final ExecutionAssignmentRepository assignmentRepository;
     private final AuditService auditService;
     private final MinioClient minioClient;
+    private final ApplicationEventPublisher eventPublisher;
+    private final UserDisplayNameResolver nameResolver;
 
     @Value("${agroconnect.minio.bucket}")
     private String minioBucket;
@@ -303,6 +306,20 @@ public class ServiceRequestService {
                 JSON_REQUEST_ID_PREFIX + id + "}"
         );
 
+        // Only the client (request owner) can open a dispute — validateOwnership above
+        // ensures userId == client. The recipient is therefore always the provider.
+        User recipient = acceptedProposal.getProvider().getUser();
+        User opener = request.getClient();
+        eventPublisher.publishEvent(new com.agroconnect.event.DisputeOpenedEvent(
+                request.getId(),
+                request.getId(),
+                recipient.getId(),
+                recipient.getEmail(),
+                nameResolver.resolve(recipient),
+                nameResolver.resolve(opener),
+                dto.reason(),
+                Instant.now()));
+
         String clientName = getClientName(userId);
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Service request disputed: {} - reason: {}", id, dto.reason());
@@ -358,6 +375,30 @@ public class ServiceRequestService {
         }
 
         request = requestRepository.save(request);
+
+        String resolutionText = dto.resolution() == ResolveDisputeDto.Resolution.RELEASE
+                ? "Disputa resolvida a favor do prestador."
+                : "Disputa resolvida a favor do cliente.";
+
+        eventPublisher.publishEvent(new com.agroconnect.event.DisputeResolvedEvent(
+                request.getId(),
+                request.getId(),
+                request.getClient().getId(),
+                request.getClient().getEmail(),
+                nameResolver.resolve(request.getClient()),
+                resolutionText,
+                Instant.now()));
+
+        User providerUser = acceptedProposal.getProvider().getUser();
+        eventPublisher.publishEvent(new com.agroconnect.event.DisputeResolvedEvent(
+                request.getId(),
+                request.getId(),
+                providerUser.getId(),
+                providerUser.getEmail(),
+                nameResolver.resolve(providerUser),
+                resolutionText,
+                Instant.now()));
+
         String clientName = getClientName(request.getClient().getId());
         int proposalCount = proposalRepository.findByRequestId(id).size();
         log.info("Dispute resolved for request {}: {} - notes: {}", id, dto.resolution(), dto.notes());

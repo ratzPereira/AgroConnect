@@ -14,6 +14,7 @@ import com.stripe.model.Transfer;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,7 @@ public class TransactionService {
     private final AuditService auditService;
     private final StripeService stripeService;
     private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
 
     public Page<TransactionResponse> listMyTransactions(Long userId, Pageable pageable) {
         return transactionRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable)
@@ -102,6 +104,15 @@ public class TransactionService {
                         + tx.getRequest().getTitle() + "\" foi transferido para a sua conta Stripe.",
                 "{\"requestId\":" + tx.getRequest().getId() + "}"
         );
+
+        eventPublisher.publishEvent(new com.agroconnect.event.PaymentReleasedEvent(
+                tx.getId(),
+                tx.getRequest().getId(),
+                provider.getUser().getId(),
+                provider.getUser().getEmail(),
+                provider.getCompanyName(),
+                tx.getProviderPayout(),
+                Instant.now()));
     }
 
     /**

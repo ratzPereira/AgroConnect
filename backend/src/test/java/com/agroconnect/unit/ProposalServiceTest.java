@@ -28,6 +28,8 @@ import com.agroconnect.service.ExecutionService;
 import com.agroconnect.service.NotificationService;
 import com.agroconnect.service.ProposalService;
 import com.agroconnect.service.StripeService;
+import com.agroconnect.service.UserDisplayNameResolver;
+import org.springframework.context.ApplicationEventPublisher;
 import com.stripe.model.PaymentIntent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -72,6 +74,8 @@ class ProposalServiceTest {
     @Mock private StripeService stripeService;
     @Mock private StripeProperties stripeProperties;
     @Mock private jakarta.persistence.EntityManager entityManager;
+    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private UserDisplayNameResolver nameResolver;
 
     private ProposalService service;
 
@@ -89,7 +93,8 @@ class ProposalServiceTest {
                 proposalRepository, requestRepository,
                 providerProfileRepository, transactionRepository,
                 notificationService, executionService,
-                stripeService, stripeProperties, entityManager);
+                stripeService, stripeProperties, entityManager,
+                eventPublisher, nameResolver);
         ReflectionTestUtils.setField(service, "commissionRate", new BigDecimal("0.1200"));
 
         clientUser = UserFixture.aClientUser().build();

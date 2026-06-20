@@ -21,6 +21,7 @@ import com.agroconnect.repository.MachineMaintenanceLogRepository;
 import com.agroconnect.repository.ProviderProfileRepository;
 import com.agroconnect.repository.TransactionRepository;
 import com.agroconnect.service.FinanceService;
+import com.agroconnect.service.FinancialReportPdfGenerator;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -58,6 +59,7 @@ class FinanceServiceTest {
     @Mock private ExecutionAssignmentRepository assignmentRepository;
     @Mock private MachineMaintenanceLogRepository maintenanceRepository;
     @Mock private MachineExpenseRepository expenseRepository;
+    @Mock private FinancialReportPdfGenerator pdfGenerator;
 
     private FinanceService service;
 
@@ -72,7 +74,8 @@ class FinanceServiceTest {
                 resourceUsageRepository,
                 assignmentRepository,
                 maintenanceRepository,
-                expenseRepository
+                expenseRepository,
+                pdfGenerator
         );
 
         providerUser = UserFixture.aProviderUser().build();

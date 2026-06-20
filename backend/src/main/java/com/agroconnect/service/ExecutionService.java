@@ -39,6 +39,7 @@ import org.locationtech.jts.geom.PrecisionModel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,6 +70,8 @@ public class ExecutionService {
     private final MachineRepository machineRepository;
     private final NotificationService notificationService;
     private final MinioClient minioClient;
+    private final ApplicationEventPublisher eventPublisher;
+    private final UserDisplayNameResolver nameResolver;
 
     @Value("${agroconnect.minio.bucket}")
     private String minioBucket;
@@ -314,6 +317,15 @@ public class ExecutionService {
                 "O prestador concluiu o serviço \"" + request.getTitle() + "\". Por favor confirme a conclusão.",
                 "{\"requestId\":" + request.getId() + "}"
         );
+
+        ProviderProfile provider = execution.getProposal().getProvider();
+        eventPublisher.publishEvent(new com.agroconnect.event.WorkMarkedCompleteEvent(
+                request.getId(),
+                request.getClient().getId(),
+                request.getClient().getEmail(),
+                nameResolver.resolve(request.getClient()),
+                provider.getCompanyName(),
+                Instant.now()));
 
         log.info("Execution {} completed for request {}", executionId, request.getId());
         return ExecutionMapper.toResponse(execution);

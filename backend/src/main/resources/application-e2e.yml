@@ -1,0 +1,12 @@
+spring:
+  flyway:
+    clean-disabled: false
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+agroconnect:
+  email:
+    resend:
+      base-url: http://wiremock:8080

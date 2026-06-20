@@ -49,6 +49,7 @@ public class FinanceService {
     private final ExecutionAssignmentRepository assignmentRepository;
     private final MachineMaintenanceLogRepository maintenanceRepository;
     private final MachineExpenseRepository expenseRepository;
+    private final FinancialReportPdfGenerator pdfGenerator;
 
     public FinanceSummaryResponse getSummary(Long userId, Integer requestedYear) {
         ProviderProfile provider = getProviderProfile(userId);
@@ -219,6 +220,43 @@ public class FinanceService {
         }
 
         return csv.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] exportTransactionsPdf(Long userId, LocalDate from, LocalDate to) {
+        ProviderProfile provider = getProviderProfile(userId);
+
+        Instant fromInstant = from.atStartOfDay().toInstant(ZoneOffset.UTC);
+        Instant toInstant = to.plusDays(1).atStartOfDay().toInstant(ZoneOffset.UTC);
+
+        List<TransactionResponse> transactions = transactionRepository
+                .findByProviderUserIdAndDateRange(userId, fromInstant, toInstant)
+                .stream()
+                .map(TransactionMapper::toResponse)
+                .toList();
+
+        FinancialReportPdfGenerator.FinancialTotals totals = computePdfTotals(transactions);
+        FinancialReportPdfGenerator.ProviderInfo info = new FinancialReportPdfGenerator.ProviderInfo(
+                provider.getCompanyName(),
+                provider.getNif() != null ? provider.getNif() : "");
+
+        return pdfGenerator.generate(info, from, to, transactions, totals);
+    }
+
+    private FinancialReportPdfGenerator.FinancialTotals computePdfTotals(List<TransactionResponse> transactions) {
+        BigDecimal gross = transactions.stream()
+                .map(TransactionResponse::amount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal commission = transactions.stream()
+                .map(TransactionResponse::commissionAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal net = transactions.stream()
+                .map(TransactionResponse::providerPayout)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int completed = (int) transactions.stream()
+                .filter(t -> t.status() == TransactionStatus.RELEASED)
+                .count();
+        return new FinancialReportPdfGenerator.FinancialTotals(gross, commission, net, completed);
     }
 
     private static final Map<TransactionStatus, String> STATUS_LABELS = Map.of(

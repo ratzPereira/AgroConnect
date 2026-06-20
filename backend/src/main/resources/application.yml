@@ -91,6 +91,17 @@ agroconnect:
   mail:
     from: ${MAIL_FROM:noreply@agroconnect.pt}
     base-url: ${APP_BASE_URL:http://localhost:8000}
+  email:
+    resend:
+      base-url: ${RESEND_BASE_URL:https://api.resend.com}
+    async:
+      core-pool-size: 2
+      max-pool-size: 5
+      queue-capacity: 100
+    retry:
+      max-attempts: 3
+      backoff-delay-ms: 2000
+      backoff-multiplier: 2
   rate-limit:
     login-max: 5
     login-window-seconds: 60

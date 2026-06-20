@@ -36,6 +36,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 @RestController
@@ -161,6 +162,45 @@ public class FinanceController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.parseMediaType("text/csv; charset=UTF-8"))
                 .body(csv);
+    }
+
+    @GetMapping("/export.pdf")
+    @Operation(summary = "Export transactions as branded PDF report",
+            description = "Returns a branded PDF financial report for the specified date range (max 12 months).")
+    @ApiResponse(responseCode = "200", description = "PDF file download")
+    @ApiResponse(responseCode = "400", description = "Invalid date format or range > 12 months",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not a provider manager",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<byte[]> exportPdf(
+            @Parameter(description = "Start date (yyyy-MM-dd)") @RequestParam String from,
+            @Parameter(description = "End date (yyyy-MM-dd)") @RequestParam String to,
+            @AuthenticationPrincipal UserPrincipal principal) {
+        LocalDate fromDate;
+        LocalDate toDate;
+        try {
+            fromDate = LocalDate.parse(from);
+            toDate = LocalDate.parse(to);
+        } catch (DateTimeParseException e) {
+            throw new ValidationException(INVALID_DATE_MSG);
+        }
+        if (fromDate.isAfter(toDate)) {
+            throw new ValidationException("Data inicial não pode ser posterior à final.");
+        }
+        if (ChronoUnit.DAYS.between(fromDate, toDate) > 366) {
+            throw new ValidationException("Período máximo: 12 meses.");
+        }
+        byte[] pdf = financeService.exportTransactionsPdf(principal.getId(), fromDate, toDate);
+
+        String filename = "relatorio_financeiro_" + fromDate.format(DateTimeFormatter.ISO_LOCAL_DATE)
+                + "_" + toDate.format(DateTimeFormatter.ISO_LOCAL_DATE) + ".pdf";
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(pdf);
     }
 
     @GetMapping("/active-jobs")

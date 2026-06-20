@@ -1,0 +1,67 @@
+OK   P233-login
+OK   P234-registo
+OK   P222-landing
+OK   P222-dashboard
+OK   P271-marketplace-lista
+FAIL P272-marketplace-detalhe :: locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for locator('a[href^="/marketplace/"]').first()[22m
+
+OK   P246b-pedidos-lista
+FAIL P246-propostas :: locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for locator('a[href^="/requests/"]').first()[22m
+
+OK   P239-wizard-categoria
+FAIL P240/P241-wizard-steps :: locator.click: Timeout 4000ms exceeded.
+Call log:
+[2m  - waiting for locator('button, [role="button"], .cursor-pointer').filter({ hasText: /solo|lavoura|poda|plant|colheit|pulveriz|jardin|transp/i }).first()[22m
+
+OK   P289-inventario
+FAIL P289b-inventario-detalhe :: locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for locator('a[href^="/provider/inventory/"]').first()[22m
+
+OK   P292-calendario-gantt
+OK   P297-financeiro
+OK   P302-admin-dashboard
+OK   P303-admin-utilizadores
+OK   P572-swagger
+OK   P428-grafana-system
+OK   P429-grafana-business
+OK   P374-jacoco-merged
+
+===== RESULTS =====
+OK   P233-login
+OK   P234-registo
+OK   P222-landing
+OK   P222-dashboard
+OK   P271-marketplace-lista
+FAIL P272-marketplace-detalhe :: locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for locator('a[href^="/marketplace/"]').first()[22m
+
+OK   P246b-pedidos-lista
+FAIL P246-propostas :: locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for locator('a[href^="/requests/"]').first()[22m
+
+OK   P239-wizard-categoria
+FAIL P240/P241-wizard-steps :: locator.click: Timeout 4000ms exceeded.
+Call log:
+[2m  - waiting for locator('button, [role="button"], .cursor-pointer').filter({ hasText: /solo|lavoura|poda|plant|colheit|pulveriz|jardin|transp/i }).first()[22m
+
+OK   P289-inventario
+FAIL P289b-inventario-detalhe :: locator.click: Timeout 6000ms exceeded.
+Call log:
+[2m  - waiting for locator('a[href^="/provider/inventory/"]').first()[22m
+
+OK   P292-calendario-gantt
+OK   P297-financeiro
+OK   P302-admin-dashboard
+OK   P303-admin-utilizadores
+OK   P572-swagger
+OK   P428-grafana-system
+OK   P429-grafana-business
+OK   P374-jacoco-merged
+DONE

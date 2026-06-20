@@ -72,6 +72,9 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
+    // Vitest runs unit/component tests under src/. Playwright owns e2e/ — exclude
+    // it explicitly so vitest doesn't try to load `@playwright/test` describe() calls.
+    exclude: ['node_modules', 'dist', 'e2e/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'lcov', 'html'],

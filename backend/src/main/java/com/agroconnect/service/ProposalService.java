@@ -28,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -73,6 +74,8 @@ public class ProposalService {
     private final StripeService stripeService;
     private final StripeProperties stripeProperties;
     private final EntityManager entityManager;
+    private final ApplicationEventPublisher eventPublisher;
+    private final UserDisplayNameResolver nameResolver;
 
     @Value("${agroconnect.commission.rate}")
     private BigDecimal commissionRate;
@@ -125,6 +128,17 @@ public class ProposalService {
         );
 
         log.info("Proposal created: {} for request {} by provider {}", proposal.getId(), requestId, provider.getId());
+
+        eventPublisher.publishEvent(new com.agroconnect.event.ProposalReceivedEvent(
+                request.getId(),
+                proposal.getId(),
+                request.getClient().getId(),
+                request.getClient().getEmail(),
+                nameResolver.resolve(request.getClient()),
+                provider.getCompanyName(),
+                request.getTitle(),
+                Instant.now()));
+
         return ProposalMapper.toResponse(proposal);
     }
 
@@ -303,6 +317,17 @@ public class ProposalService {
                     requestIdPayload(request.getId())
             );
         }
+
+        eventPublisher.publishEvent(new com.agroconnect.event.ProposalAcceptedEvent(
+                request.getId(),
+                proposal.getId(),
+                proposal.getProvider().getUser().getId(),
+                proposal.getProvider().getUser().getEmail(),
+                proposal.getProvider().getCompanyName(),
+                nameResolver.resolve(request.getClient()),
+                request.getTitle(),
+                proposal.getPrice(),
+                Instant.now()));
 
         log.info("Acceptance cascade completed for proposal {} (transaction {})",
                 proposal.getId(), transactionId);

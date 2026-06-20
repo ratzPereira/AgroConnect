@@ -34,8 +34,10 @@ import com.agroconnect.repository.ServiceRequestRepository;
 import com.agroconnect.repository.TeamMemberRepository;
 import com.agroconnect.service.ExecutionService;
 import com.agroconnect.service.NotificationService;
+import com.agroconnect.service.UserDisplayNameResolver;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
+import org.springframework.context.ApplicationEventPublisher;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -74,6 +76,8 @@ class ExecutionServiceTest {
     @Mock private MachineRepository machineRepository;
     @Mock private NotificationService notificationService;
     @Mock private MinioClient minioClient;
+    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private UserDisplayNameResolver nameResolver;
 
     private ExecutionService service;
 
@@ -96,7 +100,7 @@ class ExecutionServiceTest {
                 executionRepository, assignmentRepository, photoRepository,
                 proposalRepository, requestRepository, providerProfileRepository,
                 teamMemberRepository, machineRepository, notificationService,
-                minioClient);
+                minioClient, eventPublisher, nameResolver);
 
         // Set @Value fields via reflection since we are not using Spring context
         setField(service, "minioBucket", "agroconnect");

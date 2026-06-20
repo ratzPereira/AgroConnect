@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="pt">
+<head>
+    <meta charset="UTF-8" />
+    <title>Recebeste uma nova avalia&ccedil;&atilde;o</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: Arial, Helvetica, sans-serif; background-color: #f5f5f5;">
+<table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0">
+    <tr><td align="center" style="padding: 40px 20px;">
+        <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0"
+               style="background-color: #ffffff; border-radius: 8px; overflow: hidden;">
+            <tr><td>
+                <div th:replace="~{email/fragments/header :: header}"></div>
+            </td></tr>
+            <tr><td style="padding: 32px 24px;">
+                <p style="font-size: 16px; color: #333; margin: 0 0 16px;">
+                    Ol&aacute; <span th:text="${rateeName}">Utilizador</span>,
+                </p>
+                <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 16px;">
+                    <strong th:text="${raterName}">...</strong> deixou-te uma nova avalia&ccedil;&atilde;o:
+                </p>
+                <p style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 16px;">
+                    Estrelas: <strong th:text="${stars} + '/5'">...</strong>
+                </p>
+                <p th:if="${comment != null and !#strings.isEmpty(comment)}" style="font-size: 14px; color: #555; line-height: 1.6; margin: 0 0 16px;">
+                    Coment&aacute;rio: <em th:text="${comment}">...</em>
+                </p>
+                <div th:replace="~{email/fragments/cta-button :: cta(${baseUrl} + '/perfil/avaliacoes', 'Ver Avalia&ccedil;&otilde;es')}"></div>
+            </td></tr>
+            <tr><td>
+                <div th:replace="~{email/fragments/footer :: footer}"></div>
+            </td></tr>
+        </table>
+    </td></tr>
+</table>
+</body>
+</html>

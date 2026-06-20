@@ -1,0 +1,121 @@
+const { chromium } = require('@playwright/test');
+const fs = require('fs');
+
+const APP = 'http://localhost:13000';
+const BACKEND = 'http://localhost:18080';
+const OUTDIR = 'C:\\Users\\João Pereira\\Desktop\\screenshots relatorio final';
+const CREDS = {
+  client: { email: 'joao.silva@email.com', password: 'password123' },
+  provider: { email: 'agroservicos@email.com', password: 'password123' },
+};
+
+const results = [];
+const ok = (n) => { results.push('OK   ' + n); console.log('OK   ' + n); };
+const fail = (n, e) => { results.push('FAIL ' + n + ' :: ' + (e && e.message ? e.message : e)); console.log('FAIL ' + n + ' :: ' + (e && e.message ? e.message : e)); };
+
+async function apiProxy(context) {
+  await context.route('**/api/v1/**', async (route) => {
+    try {
+      const req = route.request();
+      const u = new URL(req.url());
+      const headers = { ...req.headers() };
+      delete headers['origin']; delete headers['referer']; // backend 403s on cross-origin
+      const resp = await route.fetch({ url: BACKEND + u.pathname + u.search, headers });
+      await route.fulfill({ response: resp });
+    } catch (e) { await route.abort(); }
+  });
+}
+async function settle(page, ms = 1800) {
+  try { await page.waitForLoadState('networkidle', { timeout: 9000 }); } catch {}
+  await page.waitForTimeout(ms);
+}
+async function shoot(page, name, full = false) {
+  await page.screenshot({ path: OUTDIR + '\\' + name + '.png', fullPage: full });
+  ok(name);
+}
+async function loginPage(context, persona) {
+  const c = CREDS[persona];
+  const page = await context.newPage();
+  for (let attempt = 1; attempt <= 4; attempt++) {
+    await page.goto(APP + '/login', { waitUntil: 'domcontentloaded' });
+    await page.waitForTimeout(800);
+    await page.fill('#email', c.email);
+    await page.fill('#password', c.password);
+    await page.click('button:has-text("Entrar")');
+    try {
+      await page.waitForURL((u) => !u.toString().includes('/login'), { timeout: 12000 });
+      await settle(page, 1200);
+      return page;
+    } catch (e) {
+      const body = await page.evaluate(() => document.body.innerText).catch(() => '');
+      if (/muitas tentativas|demasiad|429|tente novamente/i.test(body)) {
+        console.log(`  ${persona} rate-limited, waiting 65s (attempt ${attempt})`);
+        await page.waitForTimeout(65000);
+        continue;
+      }
+      throw new Error('login did not redirect: ' + body.slice(0, 120));
+    }
+  }
+  throw new Error('login failed after retries');
+}
+async function nav(page, route, ms) {
+  await page.goto(APP + route, { waitUntil: 'domcontentloaded' });
+  await settle(page, ms);
+}
+
+(async () => {
+  fs.mkdirSync(OUTDIR, { recursive: true });
+  console.log('initial cooldown 60s for login rate-limit...');
+  const browser = await chromium.launch();
+  await browser.newContext().then((c) => c.newPage()).then((p) => p.waitForTimeout(60000));
+
+  // ---------- CLIENT (joao) ----------
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+    await apiProxy(ctx);
+    const page = await loginPage(ctx, 'client');
+    try { await nav(page, '/dashboard'); await shoot(page, 'P222-dashboard'); } catch (e) { fail('P222-dashboard', e); }
+    try { await nav(page, '/marketplace'); await shoot(page, 'P271-marketplace-lista'); } catch (e) { fail('P271-marketplace-lista', e); }
+    try {
+      const tok = await page.evaluate(() => localStorage.getItem('accessToken'));
+      const r = await ctx.request.get(BACKEND + '/api/v1/listings?page=0&size=1', { headers: { Authorization: 'Bearer ' + tok } });
+      const j = await r.json(); const id = (j.content && j.content[0] && j.content[0].id) || 4;
+      await nav(page, '/marketplace/' + id, 2200); await shoot(page, 'P272-marketplace-detalhe');
+    } catch (e) { fail('P272-marketplace-detalhe', e); }
+    try { await nav(page, '/requests/new', 1500); await shoot(page, 'P239-wizard-categoria'); } catch (e) { fail('P239-wizard-categoria', e); }
+    // best-effort: advance wizard one step
+    try {
+      const cat = page.locator('button:has-text("Continuar"), button:has-text("Seguinte")').first();
+      const anyCard = page.locator('[class*="cursor-pointer"]').first();
+      await anyCard.click({ timeout: 3000 }).catch(() => {});
+      await page.waitForTimeout(600);
+      await cat.click({ timeout: 3000 });
+      await settle(page, 1200);
+      await shoot(page, 'P240-wizard-passo2');
+    } catch (e) { fail('P240-wizard-passo2', e); }
+    await ctx.close();
+  } catch (e) { fail('client-context', e); }
+
+  // ---------- PROVIDER (agroservicos) ----------
+  try {
+    const ctx = await browser.newContext({ viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2 });
+    await apiProxy(ctx);
+    const page = await loginPage(ctx, 'provider');
+    try { await nav(page, '/provider/inventory'); await shoot(page, 'P289-inventario'); } catch (e) { fail('P289-inventario', e); }
+    try {
+      const tok = await page.evaluate(() => localStorage.getItem('accessToken'));
+      const r = await ctx.request.get(BACKEND + '/api/v1/providers/me/inventory', { headers: { Authorization: 'Bearer ' + tok } });
+      const j = await r.json(); const arr = Array.isArray(j) ? j : (j.content || []);
+      if (arr[0]) { await nav(page, '/provider/inventory/' + arr[0].id, 2000); await shoot(page, 'P289b-inventario-detalhe-timeline'); }
+      else fail('P289b-inventario-detalhe', 'no inventory items');
+    } catch (e) { fail('P289b-inventario-detalhe', e); }
+    try { await nav(page, '/provider/calendar', 2200); await shoot(page, 'P292-calendario-gantt'); } catch (e) { fail('P292-calendario-gantt', e); }
+    try { await nav(page, '/provider/finance', 2200); await shoot(page, 'P297-financeiro'); } catch (e) { fail('P297-financeiro', e); }
+    await ctx.close();
+  } catch (e) { fail('provider-context', e); }
+
+  await browser.close();
+  console.log('\n===== RESULTS =====');
+  for (const r of results) console.log(r);
+  console.log('DONE');
+})().catch((e) => { console.error('FATAL', e); process.exit(1); });

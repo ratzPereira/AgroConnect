@@ -24,11 +24,13 @@ import com.agroconnect.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
 import java.util.EnumSet;
 import java.util.Set;
 
@@ -49,6 +51,8 @@ public class ReviewService {
     private final ClientProfileRepository clientProfileRepository;
     private final ProviderProfileRepository providerProfileRepository;
     private final NotificationService notificationService;
+    private final ApplicationEventPublisher eventPublisher;
+    private final UserDisplayNameResolver nameResolver;
 
     @Transactional
     public ReviewResponse create(Long requestId, CreateReviewDto dto, Long userId) {
@@ -116,6 +120,18 @@ public class ReviewService {
         );
 
         String targetName = getDisplayName(target.getId());
+
+        eventPublisher.publishEvent(new com.agroconnect.event.RatingReceivedEvent(
+                review.getId(),
+                review.getAuthor().getId(),
+                review.getTarget().getId(),
+                review.getTarget().getEmail(),
+                nameResolver.resolve(review.getTarget()),
+                nameResolver.resolve(review.getAuthor()),
+                review.getRating(),
+                review.getComment(),
+                Instant.now()));
+
         log.info("Review created: {} by user {} for user {} on request {}",
                 review.getId(), userId, target.getId(), requestId);
         return ReviewMapper.toResponse(review, authorName, targetName);

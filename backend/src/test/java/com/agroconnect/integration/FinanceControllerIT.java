@@ -20,6 +20,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -184,5 +186,61 @@ class FinanceControllerIT extends TestContainersConfig {
         mockMvc.perform(get("/v1/providers/me/finance/export?from=2026-01-01&to=2026-01-31")
                         .header("Authorization", "Bearer " + providerToken))
                 .andExpect(status().isOk());
+    }
+
+    @Test
+    @Order(16)
+    void exportPdf_givenValidDates_shouldReturnPdf() throws Exception {
+        MvcResult result = mockMvc.perform(get("/v1/providers/me/finance/export.pdf")
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-03-31")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_PDF))
+                .andExpect(header().string("Content-Disposition",
+                        org.hamcrest.Matchers.containsString("relatorio_financeiro_")))
+                .andReturn();
+        byte[] body = result.getResponse().getContentAsByteArray();
+        org.assertj.core.api.Assertions.assertThat(body).isNotEmpty();
+        org.assertj.core.api.Assertions.assertThat(new String(body, 0, 4)).isEqualTo("%PDF");
+    }
+
+    @Test
+    @Order(17)
+    void exportPdf_givenInvalidDateFormat_shouldReturn400() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/finance/export.pdf")
+                        .param("from", "not-a-date")
+                        .param("to", "2026-01-31")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Order(18)
+    void exportPdf_givenFromAfterTo_shouldReturn400() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/finance/export.pdf")
+                        .param("from", "2026-03-31")
+                        .param("to", "2026-01-01")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Order(19)
+    void exportPdf_givenRangeOver12Months_shouldReturn400() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/finance/export.pdf")
+                        .param("from", "2024-01-01")
+                        .param("to", "2026-01-01")
+                        .header("Authorization", "Bearer " + providerToken))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Order(20)
+    void exportPdf_unauthenticated_shouldReturn401() throws Exception {
+        mockMvc.perform(get("/v1/providers/me/finance/export.pdf")
+                        .param("from", "2026-01-01")
+                        .param("to", "2026-01-31"))
+                .andExpect(status().isUnauthorized());
     }
 }

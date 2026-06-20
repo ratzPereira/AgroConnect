@@ -1,0 +1,10 @@
+PAGE: debug [vite] connecting...
+PAGE: debug [vite] connected.
+PAGE: info %cDownload the React DevTools for a better development experience: https://react.dev/link/react-devtools font-weight:bold
+PROXY POST /api/v1/auth/login -> 403
+RESP 403 http://localhost:13000/api/v1/auth/login
+PAGE: error Failed to load resource: the server responded with a status of 403 (Forbidden)
+URL after login: http://localhost:13000/login
+accessToken present: NO
+BODY: Voltar ao início | Bem-vindo de volta | Introduza as suas credenciais para continuar. | Verifique o seu email antes de iniciar sessão. | Email | Palavra-passe | Esqueceu a palavra-passe? | Entrar | Não tem conta? Criar conta | Utilizamos cookies para melhorar a sua experiência. Consulte a nossa Política de Privacidade para mais informações. | Rejeitar | Aceitar | Sem permissão para realizar esta ação.
+DONE

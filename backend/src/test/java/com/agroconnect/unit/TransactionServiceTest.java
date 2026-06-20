@@ -26,6 +26,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.util.Optional;
@@ -58,6 +59,9 @@ class TransactionServiceTest {
     @Mock
     private NotificationService notificationService;
 
+    @Mock
+    private ApplicationEventPublisher eventPublisher;
+
     private TransactionService service;
 
     private User clientUser;
@@ -69,7 +73,7 @@ class TransactionServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new TransactionService(transactionRepository, auditService, stripeService, notificationService);
+        service = new TransactionService(transactionRepository, auditService, stripeService, notificationService, eventPublisher);
 
         clientUser = UserFixture.aClientUser().build();
         providerUser = UserFixture.aProviderUser().build();

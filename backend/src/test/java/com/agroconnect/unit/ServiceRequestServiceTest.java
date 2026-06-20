@@ -38,6 +38,7 @@ import com.agroconnect.service.AuditService;
 import com.agroconnect.service.NotificationService;
 import com.agroconnect.service.ServiceRequestService;
 import com.agroconnect.service.TransactionService;
+import com.agroconnect.service.UserDisplayNameResolver;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MinioClient;
 import org.junit.jupiter.api.BeforeEach;
@@ -47,6 +48,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.math.BigDecimal;
@@ -85,6 +87,8 @@ class ServiceRequestServiceTest {
     @Mock private ExecutionAssignmentRepository assignmentRepository;
     @Mock private AuditService auditService;
     @Mock private MinioClient minioClient;
+    @Mock private ApplicationEventPublisher eventPublisher;
+    @Mock private UserDisplayNameResolver nameResolver;
 
     private ServiceRequestService service;
 
@@ -99,7 +103,8 @@ class ServiceRequestServiceTest {
                 clientProfileRepository, providerProfileRepository,
                 photoRepository, proposalRepository, transactionRepository,
                 transactionService, notificationService,
-                executionRepository, assignmentRepository, auditService, minioClient);
+                executionRepository, assignmentRepository, auditService, minioClient,
+                eventPublisher, nameResolver);
 
         // Set @Value fields that would normally be injected by Spring
         ReflectionTestUtils.setField(service, "minioBucket", "agroconnect");
