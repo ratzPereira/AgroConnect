@@ -1,5 +1,5 @@
 -- ═══════════════════════════════════════════════════════════════
--- V35 — July Demo Data (defesa anchor 2026-07-10)
+-- V1006 — July Demo Data (defesa anchor 2026-07-10)
 -- ═══════════════════════════════════════════════════════════════
 -- Purpose
 --   Add a fresh, dated slice of activity for the live defence on
@@ -46,13 +46,13 @@
 -- ═══════════════════════════════════════════════════════════════
 DO $$ BEGIN
   IF EXISTS (SELECT 1 FROM service_requests   WHERE id BETWEEN 2001 AND 2020) THEN
-    RAISE EXCEPTION 'V35 aborted: service_requests.id 2001-2020 already in use. Bump V35 ID range.';
+    RAISE EXCEPTION 'V1006 aborted: service_requests.id 2001-2020 already in use. Bump V1006 ID range.';
   END IF;
   IF EXISTS (SELECT 1 FROM proposals          WHERE id BETWEEN 2001 AND 2022) THEN
-    RAISE EXCEPTION 'V35 aborted: proposals.id 2001-2022 already in use. Bump V35 ID range.';
+    RAISE EXCEPTION 'V1006 aborted: proposals.id 2001-2022 already in use. Bump V1006 ID range.';
   END IF;
   IF EXISTS (SELECT 1 FROM service_executions WHERE id BETWEEN 2001 AND 2018) THEN
-    RAISE EXCEPTION 'V35 aborted: service_executions.id 2001-2018 already in use. Bump V35 ID range.';
+    RAISE EXCEPTION 'V1006 aborted: service_executions.id 2001-2018 already in use. Bump V1006 ID range.';
   END IF;
 END $$;
 
@@ -373,7 +373,7 @@ BEGIN
   FOR m IN SELECT * FROM _july_mov ORDER BY seq LOOP
     SELECT quantity, cost_per_unit INTO cur_qty, cur_wac FROM inventory WHERE id = m.item_id FOR UPDATE;
     IF cur_qty IS NULL THEN
-      RAISE EXCEPTION 'V35: inventory item % not found (expected from V1002).', m.item_id;
+      RAISE EXCEPTION 'V1006: inventory item % not found (expected from V1002).', m.item_id;
     END IF;
 
     IF m.mtype IN ('PURCHASE', 'ADJUSTMENT_IN') THEN
@@ -390,7 +390,7 @@ BEGIN
       eff_cost := NULL;
       new_wac  := cur_wac;
       IF new_qty < 0 THEN
-        RAISE EXCEPTION 'V35: consumption on item % would drive stock negative (% + %).', m.item_id, cur_qty, m.delta;
+        RAISE EXCEPTION 'V1006: consumption on item % would drive stock negative (% + %).', m.item_id, cur_qty, m.delta;
       END IF;
     END IF;
 
