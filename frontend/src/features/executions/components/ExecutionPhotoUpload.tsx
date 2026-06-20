@@ -38,7 +38,8 @@ export function ExecutionPhotoUpload({ executionId, requestId }: ExecutionPhotoU
           const position = await new Promise<GeolocationPosition>((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(resolve, reject, {
               enableHighAccuracy: true,
-              timeout: 5_000,
+              timeout: 15_000,
+              maximumAge: 60_000,
             });
           });
           latitude = position.coords.latitude;

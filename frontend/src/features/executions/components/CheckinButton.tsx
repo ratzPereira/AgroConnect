@@ -58,7 +58,11 @@ export function CheckinButton({ executionId, requestId }: CheckinButtonProps) {
             setGeoError('Não foi possível obter a localização.');
         }
       },
-      { enableHighAccuracy: true, timeout: 10_000 },
+      // maximumAge lets us reuse a recent fix (the page already obtained one to show the
+      // distance) instead of forcing a fresh high-accuracy fix every time — essential on
+      // desktop/Edge where there is no GPS and a fresh fix often times out. Longer timeout
+      // for the fallback fresh-fix path.
+      { enableHighAccuracy: true, timeout: 25_000, maximumAge: 60_000 },
     );
   }
 
