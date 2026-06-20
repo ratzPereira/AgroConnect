@@ -33,7 +33,11 @@ public class SanitizationAdvice extends RequestBodyAdviceAdapter {
     @Override
     public boolean supports(MethodParameter methodParameter, Type targetType,
                             Class<? extends HttpMessageConverter<?>> converterType) {
-        return true;
+        // Raw-body endpoints (e.g. the Stripe webhook, which verifies an HMAC over the exact
+        // bytes received) must NOT be re-serialized — re-parsing and re-writing the JSON changes
+        // the byte stream and breaks signature verification. Sanitization only applies to
+        // structured JSON DTOs, never to raw String/byte[] payloads.
+        return !String.class.equals(targetType) && !byte[].class.equals(targetType);
     }
 
     @Override

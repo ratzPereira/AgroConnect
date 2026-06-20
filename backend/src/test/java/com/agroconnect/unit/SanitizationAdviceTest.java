@@ -5,6 +5,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class SanitizationAdviceTest {
 
@@ -48,5 +50,21 @@ class SanitizationAdviceTest {
         String input = "{\"text\":\"Price: 5 > 3\"}";
         String result = advice.sanitizeJsonString(input);
         assertEquals("{\"text\":\"Price: 5 > 3\"}", result);
+    }
+
+    @Test
+    void supports_givenRawStringBody_shouldReturnFalse() {
+        // Raw String bodies (e.g. Stripe webhook) must not be re-serialized — would break the HMAC.
+        assertFalse(advice.supports(null, String.class, null));
+    }
+
+    @Test
+    void supports_givenRawByteArrayBody_shouldReturnFalse() {
+        assertFalse(advice.supports(null, byte[].class, null));
+    }
+
+    @Test
+    void supports_givenStructuredDtoBody_shouldReturnTrue() {
+        assertTrue(advice.supports(null, Object.class, null));
     }
 }
