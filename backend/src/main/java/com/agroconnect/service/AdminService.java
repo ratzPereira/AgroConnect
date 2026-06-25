@@ -1,5 +1,9 @@
 package com.agroconnect.service;
 
+import com.agroconnect.dto.response.AdminAnalyticsResponse;
+import com.agroconnect.dto.response.AdminAnalyticsResponse.DayCount;
+import com.agroconnect.dto.response.AdminAnalyticsResponse.DayRevenue;
+import com.agroconnect.dto.response.AdminAnalyticsResponse.LabelCount;
 import com.agroconnect.dto.response.AdminDashboardResponse;
 import com.agroconnect.dto.response.AdminDisputeResponse;
 import com.agroconnect.dto.response.AdminUserResponse;
@@ -34,6 +38,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -43,6 +53,8 @@ public class AdminService {
     private static final Logger log = LoggerFactory.getLogger(AdminService.class);
 
     private static final String ERR_USER_NOT_FOUND = "Utilizador não encontrado.";
+
+    private static final int ANALYTICS_DAYS = 14;
 
     private final UserRepository userRepository;
     private final ServiceRequestRepository requestRepository;
@@ -75,6 +87,38 @@ public class AdminService {
                 pendingDisputes, avgPlatformRating,
                 totalListings, activeListings, soldListings
         );
+    }
+
+    public AdminAnalyticsResponse getAnalytics() {
+        List<LabelCount> usersByRole = Arrays.stream(Role.values())
+                .map(role -> new LabelCount(role.name(), userRepository.countByRole(role)))
+                .toList();
+
+        List<LabelCount> requestsByStatus = Arrays.stream(RequestStatus.values())
+                .map(status -> new LabelCount(status.name(), requestRepository.countByStatus(status)))
+                .toList();
+
+        LocalDate today = LocalDate.now(ZoneOffset.UTC);
+        List<DayCount> registrationsDaily = new ArrayList<>();
+        List<DayCount> requestsDaily = new ArrayList<>();
+        List<DayRevenue> revenueDaily = new ArrayList<>();
+
+        for (int i = ANALYTICS_DAYS - 1; i >= 0; i--) {
+            LocalDate day = today.minusDays(i);
+            Instant from = day.atStartOfDay(ZoneOffset.UTC).toInstant();
+            Instant to = day.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant();
+
+            registrationsDaily.add(new DayCount(day,
+                    userRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from, to)));
+            requestsDaily.add(new DayCount(day,
+                    requestRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(from, to)));
+            revenueDaily.add(new DayRevenue(day,
+                    transactionRepository.sumAmountBetween(from, to),
+                    transactionRepository.sumCommissionsBetween(from, to)));
+        }
+
+        return new AdminAnalyticsResponse(usersByRole, requestsByStatus,
+                registrationsDaily, requestsDaily, revenueDaily);
     }
 
     public Page<AdminUserResponse> listUsers(Role role, Pageable pageable) {

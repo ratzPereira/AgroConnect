@@ -152,6 +152,18 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     @Query("""
             SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t
+            WHERE t.createdAt >= :from AND t.createdAt < :to
+            """)
+    BigDecimal sumAmountBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("""
+            SELECT COALESCE(SUM(t.commissionAmount), 0) FROM Transaction t
+            WHERE t.createdAt >= :from AND t.createdAt < :to
+            """)
+    BigDecimal sumCommissionsBetween(@Param("from") Instant from, @Param("to") Instant to);
+
+    @Query("""
+            SELECT COALESCE(SUM(t.amount), 0) FROM Transaction t
             WHERE t.request.client.id = :clientId
             AND t.status = com.agroconnect.model.enums.TransactionStatus.RELEASED
             """)

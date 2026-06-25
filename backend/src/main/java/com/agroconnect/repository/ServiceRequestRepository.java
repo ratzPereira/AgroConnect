@@ -42,6 +42,8 @@ public interface ServiceRequestRepository extends JpaRepository<ServiceRequest, 
 
     long countByStatus(RequestStatus status);
 
+    long countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(Instant start, Instant end);
+
     @Query("""
             SELECT COUNT(sr) FROM ServiceRequest sr
             WHERE sr.status NOT IN (

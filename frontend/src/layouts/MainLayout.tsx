@@ -45,6 +45,7 @@ function buildNavItems(role?: Role): NavItem[] {
   const adminItems: NavItem[] = [
     { to: '/admin/dashboard', label: 'Administração', icon: Shield },
     { to: '/admin/users', label: 'Utilizadores', icon: UserCog },
+    { to: '/admin/listings', label: 'Moderação', icon: Store },
   ];
 
   if (role === 'PROVIDER_MANAGER') {

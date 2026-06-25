@@ -10,6 +10,9 @@ export interface AdminDashboard {
   totalCommissions: number;
   pendingDisputes: number;
   avgPlatformRating: number;
+  totalListings: number;
+  activeListings: number;
+  soldListings: number;
 }
 
 export interface AdminUser {
@@ -31,3 +34,29 @@ export interface AdminDispute {
   amount: number;
   createdAt: string;
 }
+
+export interface LabelCount {
+  label: string;
+  count: number;
+}
+
+export interface DayCount {
+  date: string;
+  count: number;
+}
+
+export interface DayRevenue {
+  date: string;
+  amount: number;
+  commission: number;
+}
+
+export interface AdminAnalytics {
+  usersByRole: LabelCount[];
+  requestsByStatus: LabelCount[];
+  registrationsDaily: DayCount[];
+  requestsDaily: DayCount[];
+  revenueDaily: DayRevenue[];
+}
+
+export type DisputeResolution = 'RELEASE' | 'REFUND';

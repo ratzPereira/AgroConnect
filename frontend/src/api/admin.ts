@@ -1,9 +1,15 @@
 import { apiClient } from './client';
-import type { AdminDashboard, AdminUser, AdminDispute } from '@/types/admin';
+import type { AdminDashboard, AdminUser, AdminDispute, AdminAnalytics } from '@/types/admin';
 import type { Page } from '@/types/request';
+import type { ListingSummary } from '@/types/listing';
 
 export async function getAdminDashboard(): Promise<AdminDashboard> {
   const response = await apiClient.get<AdminDashboard>('/admin/dashboard');
+  return response.data;
+}
+
+export async function getAdminAnalytics(): Promise<AdminAnalytics> {
+  const response = await apiClient.get<AdminAnalytics>('/admin/analytics');
   return response.data;
 }
 
@@ -32,4 +38,15 @@ export async function listDisputes(page = 0, size = 20): Promise<Page<AdminDispu
     params: { page, size },
   });
   return response.data;
+}
+
+export async function listAdminListings(status?: string, page = 0, size = 20): Promise<Page<ListingSummary>> {
+  const params: Record<string, string | number> = { page, size };
+  if (status) params.status = status;
+  const response = await apiClient.get<Page<ListingSummary>>('/admin/listings', { params });
+  return response.data;
+}
+
+export async function removeAdminListing(id: number): Promise<void> {
+  await apiClient.delete(`/admin/listings/${id}`);
 }

@@ -192,4 +192,25 @@ class AdminControllerIT extends TestContainersConfig {
                 .andExpect(jsonPath("$.id").value(listingId))
                 .andExpect(jsonPath("$.status").value("REMOVED"));
     }
+
+    @Test
+    @Order(13)
+    void getAnalytics_givenAdmin_shouldReturnDistributionsAndSeries() throws Exception {
+        mockMvc.perform(get("/v1/admin/analytics")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.usersByRole").isArray())
+                .andExpect(jsonPath("$.requestsByStatus").isArray())
+                .andExpect(jsonPath("$.registrationsDaily").isArray())
+                .andExpect(jsonPath("$.registrationsDaily.length()").value(14))
+                .andExpect(jsonPath("$.requestsDaily.length()").value(14))
+                .andExpect(jsonPath("$.revenueDaily.length()").value(14));
+    }
+
+    @Test
+    @Order(14)
+    void getAnalytics_givenNoAuth_shouldReturn401() throws Exception {
+        mockMvc.perform(get("/v1/admin/analytics"))
+                .andExpect(status().isUnauthorized());
+    }
 }

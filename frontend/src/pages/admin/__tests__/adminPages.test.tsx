@@ -10,9 +10,26 @@ vi.mock('@/api/admin', () => ({
   getAdminDashboard: vi.fn(() =>
     Promise.resolve({
       totalUsers: 150,
+      totalClients: 100,
+      totalProviders: 40,
       totalRequests: 42,
+      activeRequests: 10,
       totalVolume: 12500.5,
+      totalCommissions: 1500.06,
+      pendingDisputes: 2,
       avgPlatformRating: 4.3,
+      totalListings: 30,
+      activeListings: 20,
+      soldListings: 8,
+    }),
+  ),
+  getAdminAnalytics: vi.fn(() =>
+    Promise.resolve({
+      usersByRole: [{ label: 'CLIENT', count: 100 }, { label: 'PROVIDER_MANAGER', count: 40 }],
+      requestsByStatus: [{ label: 'PUBLISHED', count: 3 }, { label: 'DISPUTED', count: 2 }],
+      registrationsDaily: [{ date: '2026-06-01', count: 1 }],
+      requestsDaily: [{ date: '2026-06-01', count: 2 }],
+      revenueDaily: [{ date: '2026-06-01', amount: 100, commission: 12 }],
     }),
   ),
   listDisputes: vi.fn(() =>

@@ -97,3 +97,11 @@ export async function disputeRequest(
   const response = await apiClient.post<ServiceRequestResponse>(`/requests/${id}/dispute`, data);
   return response.data;
 }
+
+export async function resolveDispute(
+  id: number,
+  data: { resolution: 'RELEASE' | 'REFUND'; notes: string },
+): Promise<ServiceRequestResponse> {
+  const response = await apiClient.post<ServiceRequestResponse>(`/requests/${id}/resolve`, data);
+  return response.data;
+}

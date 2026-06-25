@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { screen, waitFor, fireEvent } from '@testing-library/react';
 import { renderWithProviders } from '@/test/utils';
 
 /* ── Mocks ───────────────────────────────────────────────── */
 
 const mockNavigate = vi.fn();
 const mockGetAdminDashboard = vi.fn();
+const mockGetAdminAnalytics = vi.fn();
 const mockListDisputes = vi.fn();
 
 vi.mock('react-router-dom', async () => {
@@ -16,8 +16,25 @@ vi.mock('react-router-dom', async () => {
 
 vi.mock('@/api/admin', () => ({
   getAdminDashboard: (...args: unknown[]) => mockGetAdminDashboard(...args),
+  getAdminAnalytics: (...args: unknown[]) => mockGetAdminAnalytics(...args),
   listDisputes: (...args: unknown[]) => mockListDisputes(...args),
 }));
+
+vi.mock('@/api/requests', () => ({
+  resolveDispute: vi.fn(() => Promise.resolve({})),
+}));
+
+vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
+
+// recharts: passthrough so charts don't need a real layout in jsdom
+vi.mock('recharts', () => {
+  const C = ({ children }: { children?: React.ReactNode }) => <div>{children}</div>;
+  return {
+    ResponsiveContainer: C, AreaChart: C, Area: C, BarChart: C, Bar: C,
+    PieChart: C, Pie: C, Cell: C, CartesianGrid: C, XAxis: C, YAxis: C,
+    Tooltip: C, Legend: C,
+  };
+});
 
 vi.mock('@/components/AnimatedPage', () => ({
   AnimatedPage: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -36,41 +53,6 @@ vi.mock('@/features/dashboard/components/DashboardStatCards', () => ({
   ),
 }));
 
-vi.mock('@/components/ui/DataTable', () => ({
-  DataTable: ({ data, columns, emptyTitle, onRowClick, loading }: {
-    data: Array<Record<string, unknown>>;
-    columns: Array<{ key: string; header: string; render: (row: Record<string, unknown>) => React.ReactNode }>;
-    emptyTitle?: string;
-    emptyDescription?: string;
-    onRowClick?: (row: Record<string, unknown>) => void;
-    loading?: boolean;
-    keyExtractor?: (row: Record<string, unknown>) => string | number;
-  }) => {
-    if (loading) return <div data-testid="data-table-loading">Loading...</div>;
-    if (data.length === 0) return <div data-testid="data-table-empty">{emptyTitle}</div>;
-    return (
-      <div data-testid="data-table">
-        <div data-testid="table-headers">
-          {columns.map((c) => (
-            <span key={c.key} data-testid={`header-${c.key}`}>{c.header}</span>
-          ))}
-        </div>
-        {data.map((d, i) => (
-          <div
-            key={i}
-            data-testid="table-row"
-            onClick={() => onRowClick?.(d)}
-          >
-            {columns.map((c) => (
-              <span key={c.key} data-testid={`cell-${c.key}`}>{c.render(d)}</span>
-            ))}
-          </div>
-        ))}
-      </div>
-    );
-  },
-}));
-
 vi.mock('@/components/ui/Skeleton', () => ({
   Skeleton: Object.assign(
     ({ children, ...props }: Record<string, unknown>) => <div data-testid="skeleton" {...props}>{children as React.ReactNode}</div>,
@@ -85,63 +67,38 @@ vi.mock('@/components/ui/Skeleton', () => ({
 /* ── Test data ───────────────────────────────────────────── */
 
 const dashboardData = {
-  totalUsers: 150,
-  totalClients: 100,
-  totalProviders: 50,
-  totalRequests: 42,
-  activeRequests: 10,
-  totalVolume: 12500.5,
-  totalCommissions: 625.0,
-  pendingDisputes: 2,
-  avgPlatformRating: 4.3,
+  totalUsers: 150, totalClients: 100, totalProviders: 50, totalRequests: 42,
+  activeRequests: 10, totalVolume: 12500.5, totalCommissions: 625.0,
+  pendingDisputes: 2, avgPlatformRating: 4.3, totalListings: 30, activeListings: 20, soldListings: 8,
+};
+
+const analyticsData = {
+  usersByRole: [{ label: 'CLIENT', count: 100 }, { label: 'PROVIDER_MANAGER', count: 50 }],
+  requestsByStatus: [{ label: 'PUBLISHED', count: 3 }, { label: 'DISPUTED', count: 2 }],
+  registrationsDaily: [{ date: '2026-06-01', count: 1 }, { date: '2026-06-02', count: 2 }],
+  requestsDaily: [{ date: '2026-06-01', count: 2 }, { date: '2026-06-02', count: 3 }],
+  revenueDaily: [{ date: '2026-06-01', amount: 100, commission: 12 }, { date: '2026-06-02', amount: 200, commission: 24 }],
 };
 
 const disputesData = {
   content: [
-    {
-      requestId: 101,
-      clientName: 'Maria Santos',
-      providerName: 'AgroTech Lda',
-      requestTitle: 'Lavoura de terreno',
-      amount: 250.75,
-      createdAt: '2026-03-15T10:30:00Z',
-    },
-    {
-      requestId: 202,
-      clientName: 'Ana Costa',
-      providerName: 'Verde Campo',
-      requestTitle: 'Poda de fruteiras',
-      amount: 180.0,
-      createdAt: '2026-03-20T14:00:00Z',
-    },
+    { requestId: 101, clientName: 'Maria Santos', providerName: 'AgroTech Lda', requestTitle: 'Lavoura de terreno', amount: 250.75, createdAt: '2026-03-15T10:30:00Z' },
+    { requestId: 202, clientName: 'Ana Costa', providerName: 'Verde Campo', requestTitle: 'Poda de fruteiras', amount: 180.0, createdAt: '2026-03-20T14:00:00Z' },
   ],
-  totalPages: 1,
-  totalElements: 2,
-  number: 0,
-  size: 20,
-  first: true,
-  last: true,
+  totalPages: 1, totalElements: 2, number: 0, size: 20, first: true, last: true,
 };
 
-const emptyDisputesData = {
-  content: [],
-  totalPages: 0,
-  totalElements: 0,
-  number: 0,
-  size: 20,
-  first: true,
-  last: true,
-};
+const emptyDisputesData = { content: [], totalPages: 0, totalElements: 0, number: 0, size: 20, first: true, last: true };
 
 /* ── Tests ───────────────────────────────────────────────── */
 
 describe('AdminDashboard — deeper coverage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockGetAdminAnalytics.mockResolvedValue(analyticsData);
   });
 
   it('renders loading state with title and skeletons', async () => {
-    // Never resolve so loading stays true
     mockGetAdminDashboard.mockReturnValue(new Promise(() => {}));
     mockListDisputes.mockReturnValue(new Promise(() => {}));
 
@@ -153,54 +110,18 @@ describe('AdminDashboard — deeper coverage', () => {
     expect(screen.getByTestId('skeleton-table')).toBeInTheDocument();
   });
 
-  it('renders stat cards with correct values after loading', async () => {
+  it('renders stat cards with values and labels after loading', async () => {
     mockGetAdminDashboard.mockResolvedValue(dashboardData);
     mockListDisputes.mockResolvedValue(emptyDisputesData);
 
     const { AdminDashboard } = await import('../Dashboard');
     renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('stat-cards')).toBeInTheDocument();
-    });
-
+    await waitFor(() => expect(screen.getByTestId('stat-cards')).toBeInTheDocument());
     expect(screen.getByText('150')).toBeInTheDocument();
     expect(screen.getByText('42')).toBeInTheDocument();
-  });
-
-  it('renders stat card labels: Utilizadores, Pedidos, Volume total, Rating medio', async () => {
-    mockGetAdminDashboard.mockResolvedValue(dashboardData);
-    mockListDisputes.mockResolvedValue(emptyDisputesData);
-
-    const { AdminDashboard } = await import('../Dashboard');
-    renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('stat-cards')).toBeInTheDocument();
-    });
-
     expect(screen.getByText('Utilizadores')).toBeInTheDocument();
-    expect(screen.getByText('Pedidos')).toBeInTheDocument();
-    expect(screen.getByText('Volume total')).toBeInTheDocument();
-    expect(screen.getByText('Rating médio')).toBeInTheDocument();
-  });
-
-  it('renders dispute table with correct column headers', async () => {
-    mockGetAdminDashboard.mockResolvedValue(dashboardData);
-    mockListDisputes.mockResolvedValue(disputesData);
-
-    const { AdminDashboard } = await import('../Dashboard');
-    renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('data-table')).toBeInTheDocument();
-    });
-
-    expect(screen.getByTestId('header-requestTitle')).toHaveTextContent('Pedido');
-    expect(screen.getByTestId('header-clientName')).toHaveTextContent('Cliente');
-    expect(screen.getByTestId('header-providerName')).toHaveTextContent('Prestador');
-    expect(screen.getByTestId('header-amount')).toHaveTextContent('Valor');
-    expect(screen.getByTestId('header-createdAt')).toHaveTextContent('Data');
+    expect(screen.getByTestId('stat-Disputas pendentes')).toBeInTheDocument();
   });
 
   it('shows empty disputes message when there are none', async () => {
@@ -210,66 +131,44 @@ describe('AdminDashboard — deeper coverage', () => {
     const { AdminDashboard } = await import('../Dashboard');
     renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('data-table-empty')).toBeInTheDocument();
-    });
-
-    expect(screen.getByText('Sem disputas pendentes')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Sem disputas pendentes/i)).toBeInTheDocument());
   });
 
-  it('navigates to correct request on dispute row click', async () => {
-    const user = userEvent.setup();
+  it('lists disputes with title and amount', async () => {
     mockGetAdminDashboard.mockResolvedValue(dashboardData);
     mockListDisputes.mockResolvedValue(disputesData);
 
     const { AdminDashboard } = await import('../Dashboard');
     renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('data-table')).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText('Lavoura de terreno')).toBeInTheDocument());
+    expect(screen.getByText('Poda de fruteiras')).toBeInTheDocument();
+    expect(screen.getByText('€250.75')).toBeInTheDocument();
+  });
 
-    const rows = screen.getAllByTestId('table-row');
-    await user.click(rows[0]);
+  it('navigates to the request when a dispute title is clicked', async () => {
+    mockGetAdminDashboard.mockResolvedValue(dashboardData);
+    mockListDisputes.mockResolvedValue(disputesData);
+
+    const { AdminDashboard } = await import('../Dashboard');
+    renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
+
+    await waitFor(() => expect(screen.getByText('Lavoura de terreno')).toBeInTheDocument());
+    fireEvent.click(screen.getByText('Lavoura de terreno'));
     expect(mockNavigate).toHaveBeenCalledWith('/requests/101');
-
-    await user.click(rows[1]);
-    expect(mockNavigate).toHaveBeenCalledWith('/requests/202');
   });
 
-  it('disputes show formatted amount with euro symbol', async () => {
+  it('opens the resolve modal when "Resolver" is clicked', async () => {
     mockGetAdminDashboard.mockResolvedValue(dashboardData);
     mockListDisputes.mockResolvedValue(disputesData);
 
     const { AdminDashboard } = await import('../Dashboard');
     renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('data-table')).toBeInTheDocument();
-    });
+    await waitFor(() => expect(screen.getByText('Lavoura de terreno')).toBeInTheDocument());
+    const resolveButtons = screen.getAllByRole('button', { name: /Resolver/i });
+    fireEvent.click(resolveButtons[0]);
 
-    const amountCells = screen.getAllByTestId('cell-amount');
-    expect(amountCells[0]).toHaveTextContent('€250.75');
-    expect(amountCells[1]).toHaveTextContent('€180.00');
-  });
-
-  it('disputes show formatted date in pt-PT locale', async () => {
-    mockGetAdminDashboard.mockResolvedValue(dashboardData);
-    mockListDisputes.mockResolvedValue(disputesData);
-
-    const { AdminDashboard } = await import('../Dashboard');
-    renderWithProviders(<AdminDashboard />, { route: '/admin/dashboard' });
-
-    await waitFor(() => {
-      expect(screen.getByTestId('data-table')).toBeInTheDocument();
-    });
-
-    const dateCells = screen.getAllByTestId('cell-createdAt');
-    // Verify date cells have content (locale formatting varies by environment)
-    expect(dateCells[0].textContent).toBeTruthy();
-    expect(dateCells[1].textContent).toBeTruthy();
-    // The dates should contain the day/month from the createdAt values
-    expect(dateCells[0].textContent).toContain('15');
-    expect(dateCells[1].textContent).toContain('20');
+    await waitFor(() => expect(screen.getByText('Resolver disputa')).toBeInTheDocument());
   });
 });

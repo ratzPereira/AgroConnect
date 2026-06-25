@@ -59,6 +59,7 @@ const StripeReturn = lazyWithReload(() => import('@/pages/provider/StripeReturn'
 const StripeRefresh = lazyWithReload(() => import('@/pages/provider/StripeRefresh').then(m => ({ default: m.StripeRefresh })));
 const AdminDashboard = lazyWithReload(() => import('@/pages/admin/Dashboard').then(m => ({ default: m.AdminDashboard })));
 const AdminUsers = lazyWithReload(() => import('@/pages/admin/Users').then(m => ({ default: m.AdminUsers })));
+const AdminListings = lazyWithReload(() => import('@/pages/admin/Listings').then(m => ({ default: m.AdminListings })));
 const Marketplace = lazyWithReload(() => import('@/pages/Marketplace').then(m => ({ default: m.Marketplace })));
 const ListingDetail = lazyWithReload(() => import('@/pages/ListingDetail').then(m => ({ default: m.ListingDetail })));
 const CreateListing = lazyWithReload(() => import('@/pages/CreateListing').then(m => ({ default: m.CreateListing })));
@@ -122,6 +123,7 @@ export const router = createBrowserRouter([
                 children: [
                   { path: '/admin/dashboard', element: <PageSuspense><AdminDashboard /></PageSuspense>, handle: { breadcrumb: 'Administração' } },
                   { path: '/admin/users', element: <PageSuspense><AdminUsers /></PageSuspense>, handle: { breadcrumb: 'Utilizadores' } },
+                  { path: '/admin/listings', element: <PageSuspense><AdminListings /></PageSuspense>, handle: { breadcrumb: 'Moderação' } },
                 ],
               },
             ],

@@ -1,5 +1,6 @@
 package com.agroconnect.controller;
 
+import com.agroconnect.dto.response.AdminAnalyticsResponse;
 import com.agroconnect.dto.response.AdminDashboardResponse;
 import com.agroconnect.dto.response.AdminDisputeResponse;
 import com.agroconnect.dto.response.AdminUserResponse;
@@ -53,6 +54,19 @@ public class AdminController {
     public ResponseEntity<AdminDashboardResponse> getDashboard() {
         var result = adminService.getDashboard();
         return ResponseEntity.ok(result);
+    }
+
+    @GetMapping("/analytics")
+    @Operation(summary = "Get platform analytics",
+            description = "Returns distributions (users by role, requests by status) and 14-day time series "
+                    + "(registrations, requests, revenue) for the admin dashboard charts.")
+    @ApiResponse(responseCode = "200", description = "Analytics data")
+    @ApiResponse(responseCode = "401", description = "Not authenticated",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    @ApiResponse(responseCode = "403", description = "Not an admin",
+            content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    public ResponseEntity<AdminAnalyticsResponse> getAnalytics() {
+        return ResponseEntity.ok(adminService.getAnalytics());
     }
 
     @GetMapping("/users")

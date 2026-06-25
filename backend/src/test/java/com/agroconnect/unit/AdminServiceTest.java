@@ -1,5 +1,6 @@
 package com.agroconnect.unit;
 
+import com.agroconnect.dto.response.AdminAnalyticsResponse;
 import com.agroconnect.dto.response.AdminDashboardResponse;
 import com.agroconnect.dto.response.AdminUserResponse;
 import com.agroconnect.dto.response.ListingResponse;
@@ -91,6 +92,32 @@ class AdminServiceTest {
         assertEquals(30, response.totalListings());
         assertEquals(20, response.activeListings());
         assertEquals(8, response.soldListings());
+    }
+
+    @Test
+    void getAnalytics_shouldReturnDistributionsAndFourteenDayTimeSeries() {
+        when(userRepository.countByRole(any())).thenReturn(10L);
+        when(requestRepository.countByStatus(any())).thenReturn(5L);
+        when(userRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(any(), any())).thenReturn(2L);
+        when(requestRepository.countByCreatedAtGreaterThanEqualAndCreatedAtLessThan(any(), any())).thenReturn(3L);
+        when(transactionRepository.sumAmountBetween(any(), any())).thenReturn(new BigDecimal("100.00"));
+        when(transactionRepository.sumCommissionsBetween(any(), any())).thenReturn(new BigDecimal("12.00"));
+
+        AdminAnalyticsResponse r = service.getAnalytics();
+
+        assertEquals(Role.values().length, r.usersByRole().size());
+        assertEquals(10L, r.usersByRole().get(0).count());
+        assertEquals(RequestStatus.values().length, r.requestsByStatus().size());
+        assertEquals(5L, r.requestsByStatus().get(0).count());
+        assertEquals(14, r.registrationsDaily().size());
+        assertEquals(2L, r.registrationsDaily().get(0).count());
+        assertEquals(14, r.requestsDaily().size());
+        assertEquals(3L, r.requestsDaily().get(0).count());
+        assertEquals(14, r.revenueDaily().size());
+        assertEquals(new BigDecimal("100.00"), r.revenueDaily().get(0).amount());
+        assertEquals(new BigDecimal("12.00"), r.revenueDaily().get(0).commission());
+        assertEquals(true, r.registrationsDaily().get(0).date()
+                .isBefore(r.registrationsDaily().get(13).date()));
     }
 
     @Test
