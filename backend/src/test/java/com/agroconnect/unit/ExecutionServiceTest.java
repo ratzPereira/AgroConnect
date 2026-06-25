@@ -776,7 +776,7 @@ class ExecutionServiceTest {
             when(executionRepository.findByProposalId(1L)).thenReturn(Optional.of(execution));
 
             // Client user (id=1) is the client of the request
-            ServiceExecutionResponse response = service.getByRequestId(1L, clientUser.getId());
+            ServiceExecutionResponse response = service.getByRequestId(1L, clientUser.getId(), false);
 
             assertNotNull(response);
             assertEquals(execution.getId(), response.id());
@@ -789,7 +789,7 @@ class ExecutionServiceTest {
             when(executionRepository.findByProposalId(1L)).thenReturn(Optional.of(execution));
 
             // Provider user (id=2) is the provider of the proposal
-            ServiceExecutionResponse response = service.getByRequestId(1L, providerUser.getId());
+            ServiceExecutionResponse response = service.getByRequestId(1L, providerUser.getId(), false);
 
             assertNotNull(response);
             assertEquals(execution.getId(), response.id());
@@ -802,7 +802,20 @@ class ExecutionServiceTest {
 
             // User id=50 is neither client nor provider
             assertThrows(ForbiddenException.class,
-                    () -> service.getByRequestId(1L, 50L));
+                    () -> service.getByRequestId(1L, 50L, false));
+        }
+
+        @Test
+        void getByRequestId_givenAdmin_shouldReturnResponseEvenIfNotParticipant() {
+            when(requestRepository.findById(1L)).thenReturn(Optional.of(awardedRequest));
+            when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(acceptedProposal));
+            when(executionRepository.findByProposalId(1L)).thenReturn(Optional.of(execution));
+
+            // User id=50 is neither client nor provider, but is admin → allowed
+            ServiceExecutionResponse response = service.getByRequestId(1L, 50L, true);
+
+            assertNotNull(response);
+            assertEquals(execution.getId(), response.id());
         }
 
         @Test
@@ -812,7 +825,7 @@ class ExecutionServiceTest {
             when(executionRepository.findByProposalId(1L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
-                    () -> service.getByRequestId(1L, clientUser.getId()));
+                    () -> service.getByRequestId(1L, clientUser.getId(), false));
         }
 
         @Test
@@ -820,7 +833,7 @@ class ExecutionServiceTest {
             when(requestRepository.findById(999L)).thenReturn(Optional.empty());
 
             assertThrows(ResourceNotFoundException.class,
-                    () -> service.getByRequestId(999L, clientUser.getId()));
+                    () -> service.getByRequestId(999L, clientUser.getId(), false));
         }
 
         @Test
@@ -834,7 +847,7 @@ class ExecutionServiceTest {
             when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(pendingProposal));
 
             assertThrows(ResourceNotFoundException.class,
-                    () -> service.getByRequestId(1L, clientUser.getId()));
+                    () -> service.getByRequestId(1L, clientUser.getId(), false));
         }
     }
 

@@ -828,7 +828,23 @@ class ProposalServiceTest {
         when(requestRepository.findById(1L)).thenReturn(Optional.of(publishedRequest));
         when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal1, proposal2));
 
-        List<ProposalResponse> responses = service.listByRequest(1L, 1L);
+        List<ProposalResponse> responses = service.listByRequest(1L, 1L, false);
+
+        assertEquals(2, responses.size());
+    }
+
+    @Test
+    void listByRequest_givenAdmin_shouldReturnAllProposalsRegardlessOfOwnership() {
+        Proposal proposal1 = ProposalFixture.aProposal()
+                .id(1L).request(publishedRequest).provider(providerProfile).build();
+        Proposal proposal2 = ProposalFixture.aProposal()
+                .id(2L).request(publishedRequest).provider(otherProviderProfile).build();
+
+        when(requestRepository.findById(1L)).thenReturn(Optional.of(publishedRequest));
+        when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(proposal1, proposal2));
+
+        // Non-owner user, but admin → sees all proposals (dispute review)
+        List<ProposalResponse> responses = service.listByRequest(1L, 999L, true);
 
         assertEquals(2, responses.size());
     }
@@ -844,7 +860,7 @@ class ProposalServiceTest {
         when(providerProfileRepository.findByUserId(2L)).thenReturn(Optional.of(providerProfile));
         when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(ownProposal, otherProposal));
 
-        List<ProposalResponse> responses = service.listByRequest(1L, 2L);
+        List<ProposalResponse> responses = service.listByRequest(1L, 2L, false);
 
         assertEquals(1, responses.size());
         assertEquals(providerProfile.getId(), responses.get(0).providerId());
@@ -855,14 +871,14 @@ class ProposalServiceTest {
         when(requestRepository.findById(1L)).thenReturn(Optional.of(publishedRequest));
         when(providerProfileRepository.findByUserId(50L)).thenReturn(Optional.empty());
 
-        assertThrows(ForbiddenException.class, () -> service.listByRequest(1L, 50L));
+        assertThrows(ForbiddenException.class, () -> service.listByRequest(1L, 50L, false));
     }
 
     @Test
     void listByRequest_givenNonExistentRequest_shouldThrowNotFound() {
         when(requestRepository.findById(999L)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.listByRequest(999L, 1L));
+        assertThrows(ResourceNotFoundException.class, () -> service.listByRequest(999L, 1L, false));
     }
 
     // ── LIST MY PROPOSALS ──

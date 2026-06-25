@@ -99,16 +99,16 @@ public class ExecutionService {
         return execution;
     }
 
-    public ServiceExecutionResponse getByRequestId(Long requestId, Long userId) {
+    public ServiceExecutionResponse getByRequestId(Long requestId, Long userId, boolean isAdmin) {
         ServiceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException("Pedido de serviço não encontrado."));
 
         Proposal acceptedProposal = findAcceptedProposal(requestId);
 
-        // Validate authorization: must be the client or the provider's user
+        // Validate authorization: client, the provider's user, or an admin (dispute review)
         boolean isClient = request.getClient().getId().equals(userId);
         boolean isProviderUser = acceptedProposal.getProvider().getUser().getId().equals(userId);
-        if (!isClient && !isProviderUser) {
+        if (!isAdmin && !isClient && !isProviderUser) {
             throw new ForbiddenException("Não tem permissão para ver esta execução.");
         }
 

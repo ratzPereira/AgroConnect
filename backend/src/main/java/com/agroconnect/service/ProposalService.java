@@ -356,9 +356,16 @@ public class ProposalService {
         return ProposalMapper.toResponse(proposal);
     }
 
-    public List<ProposalResponse> listByRequest(Long requestId, Long userId) {
+    public List<ProposalResponse> listByRequest(Long requestId, Long userId, boolean isAdmin) {
         ServiceRequest request = requestRepository.findById(requestId)
                 .orElseThrow(() -> new ResourceNotFoundException(ERR_REQUEST_NOT_FOUND));
+
+        // Admin sees all proposals (e.g. when reviewing a dispute)
+        if (isAdmin) {
+            return proposalRepository.findByRequestId(requestId).stream()
+                    .map(ProposalMapper::toResponse)
+                    .toList();
+        }
 
         // Client who owns the request sees all proposals
         if (request.getClient().getId().equals(userId)) {

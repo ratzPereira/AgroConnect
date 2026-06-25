@@ -59,7 +59,7 @@ public class ExecutionController {
     public ResponseEntity<ServiceExecutionResponse> getByRequest(
             @Parameter(description = "Service request ID") @PathVariable Long requestId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        var response = executionService.getByRequestId(requestId, principal.getId());
+        var response = executionService.getByRequestId(requestId, principal.getId(), principal.isAdmin());
         return ResponseEntity.ok(response);
     }
 

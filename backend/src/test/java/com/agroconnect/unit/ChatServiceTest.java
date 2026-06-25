@@ -134,7 +134,7 @@ class ChatServiceTest {
         when(chatMessageRepository.findByRequestIdOrderBySentAtAsc(eq(1L), any()))
                 .thenReturn(org.springframework.data.domain.Page.empty());
 
-        var result = service.getMessages(1L, 1L, org.springframework.data.domain.PageRequest.of(0, 50));
+        var result = service.getMessages(1L, 1L, false, org.springframework.data.domain.PageRequest.of(0, 50));
 
         assertNotNull(result);
     }
@@ -177,7 +177,19 @@ class ChatServiceTest {
         when(proposalRepository.findByRequestId(1L)).thenReturn(List.of(acceptedProposal));
 
         assertThrows(ForbiddenException.class,
-                () -> service.getMessages(1L, 99L, org.springframework.data.domain.PageRequest.of(0, 50)));
+                () -> service.getMessages(1L, 99L, false, org.springframework.data.domain.PageRequest.of(0, 50)));
+    }
+
+    @Test
+    void getMessages_givenAdmin_shouldReturnMessagesWithoutParticipantCheck() {
+        when(requestRepository.findById(1L)).thenReturn(Optional.of(awardedRequest));
+        when(chatMessageRepository.findByRequestIdOrderBySentAtAsc(eq(1L), any()))
+                .thenReturn(org.springframework.data.domain.Page.empty());
+
+        // User id=99 is not a participant, but is admin → allowed
+        var result = service.getMessages(1L, 99L, true, org.springframework.data.domain.PageRequest.of(0, 50));
+
+        assertNotNull(result);
     }
 
     @Test

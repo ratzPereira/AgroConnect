@@ -73,7 +73,7 @@ public class ProposalController {
     public ResponseEntity<List<ProposalResponse>> listByRequest(
             @Parameter(description = "Service request ID") @PathVariable Long requestId,
             @AuthenticationPrincipal UserPrincipal principal) {
-        var response = proposalService.listByRequest(requestId, principal.getId());
+        var response = proposalService.listByRequest(requestId, principal.getId(), principal.isAdmin());
         return ResponseEntity.ok(response);
     }
 

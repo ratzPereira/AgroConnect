@@ -50,7 +50,7 @@ public class ChatController {
             @Parameter(description = "Page size") @RequestParam(defaultValue = "50") int size,
             @AuthenticationPrincipal UserPrincipal principal) {
         var pageable = PageRequest.of(page, size);
-        var result = chatService.getMessages(requestId, principal.getId(), pageable);
+        var result = chatService.getMessages(requestId, principal.getId(), principal.isAdmin(), pageable);
         return ResponseEntity.ok(result);
     }
 

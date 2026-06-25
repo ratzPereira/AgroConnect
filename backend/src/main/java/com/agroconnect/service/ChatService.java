@@ -54,9 +54,11 @@ public class ChatService {
     private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
 
-    public Page<ChatMessageResponse> getMessages(Long requestId, Long userId, Pageable pageable) {
+    public Page<ChatMessageResponse> getMessages(Long requestId, Long userId, boolean isAdmin, Pageable pageable) {
         ServiceRequest request = getRequest(requestId);
-        validateParticipant(request, userId);
+        if (!isAdmin) {
+            validateParticipant(request, userId);
+        }
 
         return chatMessageRepository.findByRequestIdOrderBySentAtAsc(requestId, pageable)
                 .map(msg -> ChatMessageMapper.toResponse(msg, getDisplayName(msg.getSender().getId())));
