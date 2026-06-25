@@ -38,7 +38,7 @@ export function Login() {
       const response = await login(request);
       setTokens(response.accessToken, response.refreshToken);
       setUser(response.user);
-      navigate('/dashboard');
+      navigate(response.user.role === 'ADMIN' ? '/admin/dashboard' : '/dashboard');
     } catch (err: unknown) {
       if (
         typeof err === 'object' &&

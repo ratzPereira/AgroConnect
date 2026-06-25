@@ -147,14 +147,14 @@ describe('MainLayout — deeper coverage', () => {
   it('renders admin nav items for ADMIN role', () => {
     mockUser = { id: 3, name: 'Admin', email: 'admin@agro.pt', role: 'ADMIN' };
     renderLayout();
-    // Admin should NOT see Dashboard (filtered out)
-    expect(screen.queryByText('Dashboard')).not.toBeInTheDocument();
-    // Common items minus Dashboard
-    expect(screen.getByText('Pedidos')).toBeInTheDocument();
-    expect(screen.getByText('Marketplace')).toBeInTheDocument();
-    // Admin-specific items
+    // Admin-specific items only
     expect(screen.getByText('Administração')).toBeInTheDocument();
     expect(screen.getByText('Utilizadores')).toBeInTheDocument();
+    expect(screen.getByText('Moderação')).toBeInTheDocument();
+    // Admin has no client/provider profile → generic pages are hidden
+    expect(screen.queryByText('Pedidos')).not.toBeInTheDocument();
+    expect(screen.queryByText('Marketplace')).not.toBeInTheDocument();
+    expect(screen.queryByText('Perfil')).not.toBeInTheDocument();
     // Should NOT see provider items
     expect(screen.queryByText('Equipa')).not.toBeInTheDocument();
   });

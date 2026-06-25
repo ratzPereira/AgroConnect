@@ -23,14 +23,21 @@ function buildMobileNavItems(role: Role | undefined, unreadCount: number): Mobil
   const isProvider = role === 'PROVIDER_MANAGER' || role === 'PROVIDER_LEAD' || role === 'PROVIDER_OPERATOR';
   const isAdmin = role === 'ADMIN';
 
+  if (isAdmin) {
+    // Admin-only pages — generic client/provider pages would hit unauthorized endpoints.
+    return [
+      { to: '/admin/dashboard', label: 'Admin', icon: Shield },
+      { to: '/admin/users', label: 'Utilizadores', icon: User },
+      { to: '/admin/listings', label: 'Moderação', icon: Store },
+      { to: '/notifications', label: 'Alertas', icon: Bell, badge: unreadCount > 0 ? unreadCount : undefined },
+    ];
+  }
+
   if (isProvider) {
     base.push(
       { to: '/provider/team', label: 'Equipa', icon: Briefcase },
       { to: '/provider/finance', label: 'Finanças', icon: DollarSign },
     );
-  }
-  if (isAdmin) {
-    base.push({ to: '/admin/dashboard', label: 'Admin', icon: Shield });
   }
 
   base.push(

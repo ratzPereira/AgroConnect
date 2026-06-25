@@ -55,7 +55,12 @@ function buildNavItems(role?: Role): NavItem[] {
     return [...common, ...providerItems];
   }
   if (role === 'ADMIN') {
-    return [...common.filter((item) => item.to !== '/dashboard'), ...adminItems];
+    // Admin has no client/provider profile, so the generic pages (pedidos, perfil,
+    // transações) call endpoints it cannot access. Show only admin-specific pages.
+    return [
+      ...adminItems,
+      { to: '/notifications', label: 'Notificações', icon: Bell },
+    ];
   }
   return common;
 }
