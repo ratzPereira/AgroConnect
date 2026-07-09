@@ -303,6 +303,11 @@ public class AuthService {
             if (request.nif() == null || request.nif().isBlank()) {
                 throw new ValidationException("O NIF é obrigatório para prestadores.");
             }
+            // Pre-check the unique constraint so a duplicate NIF surfaces as a clean
+            // validation error instead of a 500 from the DB constraint violation.
+            if (providerProfileRepository.existsByNif(request.nif())) {
+                throw new ValidationException("Este NIF já está registado noutra conta de prestador.");
+            }
             ProviderProfile profile = ProviderProfile.builder()
                     .user(user)
                     .companyName(request.companyName())

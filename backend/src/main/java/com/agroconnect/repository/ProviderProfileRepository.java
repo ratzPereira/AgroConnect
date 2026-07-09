@@ -15,6 +15,8 @@ public interface ProviderProfileRepository extends JpaRepository<ProviderProfile
 
     Optional<ProviderProfile> findByStripeAccountId(String stripeAccountId);
 
+    boolean existsByNif(String nif);
+
     @Query(value = """
             SELECT pp.* FROM provider_profiles pp
             WHERE pp.location IS NOT NULL

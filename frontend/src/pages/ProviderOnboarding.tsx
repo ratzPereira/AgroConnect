@@ -85,8 +85,11 @@ export function ProviderOnboarding() {
         description: data.description || undefined,
       });
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-profile'] });
+    onSuccess: (updatedProfile) => {
+      // Write the fresh profile straight into the cache BEFORE navigating.
+      // invalidateQueries alone races with the redirect: OnboardingGuard would
+      // still read the stale profileComplete=false and bounce back to step 1.
+      queryClient.setQueryData(['my-profile'], updatedProfile);
       toast.success('Perfil configurado com sucesso!');
       navigate('/dashboard', { replace: true });
     },

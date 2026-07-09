@@ -174,6 +174,22 @@ class AuthServiceTest {
     }
 
     @Test
+    void register_givenDuplicateNif_shouldThrowValidation() {
+        RegisterRequest request = new RegisterRequest(
+                "provider2@example.pt", "Password1", "Password1",
+                "Provider", null, "PROVIDER_MANAGER", "Outra Empresa Lda", "123123123");
+
+        User savedUser = UserFixture.aProviderUser().build();
+        when(userRepository.existsByEmail("provider2@example.pt")).thenReturn(false);
+        when(passwordEncoder.encode("Password1")).thenReturn("$2a$12$encoded");
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(providerProfileRepository.existsByNif("123123123")).thenReturn(true);
+
+        assertThrows(ValidationException.class, () -> authService.register(request));
+        verify(providerProfileRepository, never()).save(any());
+    }
+
+    @Test
     void register_givenValidProviderData_shouldCreateProviderProfile() {
         RegisterRequest request = new RegisterRequest(
                 "provider@example.pt", "Password1", "Password1",
