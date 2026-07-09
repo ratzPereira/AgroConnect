@@ -11,6 +11,8 @@ import { cn } from '@/utils/cn';
 
 interface ChatPanelProps {
   readonly requestId: number;
+  /** Read-only mode (e.g. admin reviewing a dispute) — messages are shown but the composer is hidden. */
+  readonly readOnly?: boolean;
 }
 
 function formatDaySeparator(dateStr: string): string {
@@ -30,7 +32,7 @@ function isSameGroup(a: string, b: string, aSender: number, bSender: number): bo
   return diff < 120_000;
 }
 
-export function ChatPanel({ requestId }: ChatPanelProps) {
+export function ChatPanel({ requestId, readOnly = false }: ChatPanelProps) {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const [content, setContent] = useState('');
@@ -92,7 +94,9 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
           {!isLoading && messages.length === 0 && (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <MessageSquare className="h-10 w-10 text-neutral-300 mb-3" />
-              <p className="text-sm text-neutral-500">Sem mensagens. Inicie a conversa.</p>
+              <p className="text-sm text-neutral-500">
+                {readOnly ? 'Sem mensagens nesta conversa.' : 'Sem mensagens. Inicie a conversa.'}
+              </p>
             </div>
           )}
           {!isLoading && messages.length > 0 && (
@@ -133,29 +137,35 @@ export function ChatPanel({ requestId }: ChatPanelProps) {
           </button>
         )}
 
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (content.trim()) sendMut.mutate();
-          }}
-          className="flex gap-2"
-        >
-          <textarea
-            value={content}
-            onChange={(e) => setContent(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Escreva uma mensagem..."
-            maxLength={2000}
-            rows={1}
-            className={cn(
-              'flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm resize-none',
-              'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
-            )}
-          />
-          <Button type="submit" size="sm" loading={sendMut.isPending} disabled={!content.trim()}>
-            <Send className="h-4 w-4" />
-          </Button>
-        </form>
+        {readOnly ? (
+          <p className="text-xs text-neutral-500 text-center rounded-lg bg-neutral-50 border border-neutral-200 px-3 py-2">
+            Modo de leitura — como administrador pode consultar a conversa, mas não participar.
+          </p>
+        ) : (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              if (content.trim()) sendMut.mutate();
+            }}
+            className="flex gap-2"
+          >
+            <textarea
+              value={content}
+              onChange={(e) => setContent(e.target.value)}
+              onKeyDown={handleKeyDown}
+              placeholder="Escreva uma mensagem..."
+              maxLength={2000}
+              rows={1}
+              className={cn(
+                'flex-1 rounded-lg border border-neutral-300 px-3 py-2 text-sm resize-none',
+                'focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500',
+              )}
+            />
+            <Button type="submit" size="sm" loading={sendMut.isPending} disabled={!content.trim()}>
+              <Send className="h-4 w-4" />
+            </Button>
+          </form>
+        )}
       </CardBody>
     </Card>
   );

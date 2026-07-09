@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { useNotificationStore } from '@/stores/notificationStore';
 import type { UserResponse } from '@/types/auth';
 
 interface AuthState {
@@ -52,6 +53,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    // Session identity changed — a stale unread badge from the previous user must not survive.
+    useNotificationStore.getState().resetUnread();
     set({ accessToken: null, refreshToken: null, user: null, isAuthenticated: false });
   },
 
@@ -59,6 +62,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
     localStorage.removeItem('user');
+    useNotificationStore.getState().resetUnread();
     set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false });
   },
 }));

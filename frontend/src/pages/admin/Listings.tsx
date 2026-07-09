@@ -1,6 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import { listAdminListings, removeAdminListing } from '@/api/admin';
 import { Card } from '@/components/ui/Card';
@@ -77,7 +78,16 @@ export function AdminListings() {
                 <tr><td colSpan={7} className="text-center py-10 text-neutral-500">Sem anúncios para mostrar.</td></tr>
               ) : data?.content?.map((listing) => (
                 <tr key={listing.id} className="border-b border-neutral-100">
-                  <td className="px-3 sm:px-6 py-3 font-medium text-neutral-900">{listing.title}</td>
+                  <td className="px-3 sm:px-6 py-3 font-medium text-neutral-900 max-w-[260px]">
+                    <Link
+                      to={`/marketplace/${listing.id}`}
+                      className="inline-flex items-center gap-1.5 hover:text-primary-600 hover:underline"
+                      title="Ver anúncio"
+                    >
+                      <span className="truncate">{listing.title}</span>
+                      <ExternalLink className="h-3.5 w-3.5 shrink-0 text-neutral-400" />
+                    </Link>
+                  </td>
                   <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{CATEGORY_LABELS[listing.category] ?? listing.category}</td>
                   <td className="hidden lg:table-cell px-6 py-3 text-neutral-600">{listing.island}</td>
                   <td className="px-3 sm:px-6 py-3 text-neutral-700 tabular-nums">{listing.price !== null ? `€${listing.price.toFixed(2)}` : 'Sob consulta'}</td>

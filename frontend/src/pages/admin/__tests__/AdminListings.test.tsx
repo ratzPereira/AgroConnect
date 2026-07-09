@@ -48,6 +48,15 @@ describe('AdminListings (moderação)', () => {
     await waitFor(() => expect(mockRemove).toHaveBeenCalledWith(7));
   });
 
+  it('links the listing title to its marketplace detail page', async () => {
+    const { AdminListings } = await import('../Listings');
+    renderWithProviders(<AdminListings />, { route: '/admin/listings' });
+
+    await waitFor(() => expect(screen.getByText('Trator usado')).toBeInTheDocument());
+    const link = screen.getByRole('link', { name: /Trator usado/i });
+    expect(link).toHaveAttribute('href', '/marketplace/7');
+  });
+
   it('shows empty state when there are no listings', async () => {
     mockList.mockResolvedValue({ ...page, content: [], totalElements: 0 });
     const { AdminListings } = await import('../Listings');

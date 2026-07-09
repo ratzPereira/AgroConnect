@@ -185,6 +185,11 @@ vi.mock('@/features/requests/components/PhotoUpload', () => ({
   PhotoUpload: () => <div data-testid="photo-upload">PhotoUpload</div>,
 }));
 
+vi.mock('@/features/admin/components/ResolveDisputeModal', () => ({
+  ResolveDisputeModal: ({ open }: { open: boolean }) =>
+    open ? <div data-testid="resolve-dispute-modal">ResolveDisputeModal</div> : null,
+}));
+
 /* ── Helpers ─────────────────────────────────────────────── */
 
 function renderRequestDetail() {
@@ -331,5 +336,53 @@ describe('RequestDetail — deeper coverage', () => {
       expect(titles.length).toBeGreaterThanOrEqual(1);
     });
     expect(screen.queryByText('Submeter Proposta')).not.toBeInTheDocument();
+  });
+
+  describe('DISPUTED request', () => {
+    beforeEach(() => {
+      state.request = { ...baseRequest, status: 'DISPUTED' };
+      state.proposals = [
+        { id: 10, providerName: 'AgroServiços', price: 200, status: 'ACCEPTED', requestId: 1, providerId: 3 },
+      ];
+    });
+
+    it('timeline branches Em Disputa right after Aguarda Confirmação (no Concluído/Avaliado)', async () => {
+      renderRequestDetail();
+      await waitFor(() => {
+        expect(screen.getByTestId('status-timeline')).toBeInTheDocument();
+      });
+      const labels = Array.from(
+        screen.getByTestId('status-timeline').querySelectorAll('span'),
+      ).map((el) => el.textContent);
+      expect(labels).toEqual([
+        'Rascunho', 'Publicado', 'Com Propostas', 'Adjudicado',
+        'Em Curso', 'Aguarda Confirmação', 'Em Disputa',
+      ]);
+      expect(labels).not.toContain('Concluído');
+      expect(labels).not.toContain('Avaliado');
+      const disputeStep = screen.getByText('Em Disputa');
+      expect(disputeStep.getAttribute('data-status')).toBe('active');
+    });
+
+    it('shows "Resolver Disputa" for admin and opens the modal', async () => {
+      state.user = { id: 1, name: 'Admin', email: 'admin@test.pt', role: 'ADMIN' };
+      renderRequestDetail();
+      await waitFor(() => {
+        expect(screen.getByText('Resolver Disputa')).toBeInTheDocument();
+      });
+      screen.getByText('Resolver Disputa').click();
+      await waitFor(() => {
+        expect(screen.getByTestId('resolve-dispute-modal')).toBeInTheDocument();
+      });
+    });
+
+    it('hides "Resolver Disputa" for non-admin users', async () => {
+      renderRequestDetail();
+      await waitFor(() => {
+        const titles = screen.getAllByText('Lavoura de terreno');
+        expect(titles.length).toBeGreaterThanOrEqual(1);
+      });
+      expect(screen.queryByText('Resolver Disputa')).not.toBeInTheDocument();
+    });
   });
 });

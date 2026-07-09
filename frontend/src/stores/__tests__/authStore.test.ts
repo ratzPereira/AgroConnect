@@ -56,6 +56,22 @@ describe('authStore', () => {
     expect(mod.useAuthStore.getState().isAuthenticated).toBe(false);
   });
 
+  it('logout resets the unread notification badge', async () => {
+    const mod = await import('../authStore');
+    const notif = await import('../notificationStore');
+    notif.useNotificationStore.getState().setUnreadCount(6);
+    mod.useAuthStore.getState().logout();
+    expect(notif.useNotificationStore.getState().unreadCount).toBe(0);
+  });
+
+  it('clearTokens resets the unread notification badge', async () => {
+    const mod = await import('../authStore');
+    const notif = await import('../notificationStore');
+    notif.useNotificationStore.getState().setUnreadCount(3);
+    mod.useAuthStore.getState().clearTokens();
+    expect(notif.useNotificationStore.getState().unreadCount).toBe(0);
+  });
+
   it('initializes from localStorage on load', async () => {
     localStorage.setItem('accessToken', 'saved-token');
     localStorage.setItem('refreshToken', 'saved-refresh');

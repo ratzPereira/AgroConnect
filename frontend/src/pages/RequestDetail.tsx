@@ -14,6 +14,7 @@ import { ConfirmationPanel } from '@/features/requests/components/ConfirmationPa
 import { ReviewForm } from '@/features/reviews/components/ReviewForm';
 import { ReviewCard } from '@/features/reviews/components/ReviewCard';
 import { ChatPanel } from '@/features/chat/components/ChatPanel';
+import { ResolveDisputeModal } from '@/features/admin/components/ResolveDisputeModal';
 import { PhotoUpload } from '@/features/requests/components/PhotoUpload';
 import { PhotoLightbox } from '@/components/ui/PhotoLightbox';
 import { AnimatedPage } from '@/components/AnimatedPage';
@@ -22,9 +23,10 @@ import { StatusTimeline } from '@/components/ui/StatusTimeline';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Card, CardBody, CardHeader } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
-import { MapPin, Layers, Clock, X } from 'lucide-react';
+import { MapPin, Layers, Clock, X, Scale } from 'lucide-react';
 import type { CreateProposalDto } from '@/types/proposal';
 import type { ProposalAcceptResponse } from '@/types/stripe';
+import type { AdminDispute } from '@/types/admin';
 import { NotFound } from '@/pages/NotFound';
 
 const urgencyLabels: Record<string, string> = {
@@ -108,8 +110,17 @@ function computeRequestFlags(
   };
 }
 
+// Terminal branch states enter the timeline right after the state they branch
+// from in the FSM (DISPUTED only happens from AWAITING_CONFIRMATION; EXPIRED
+// only from PUBLISHED) — the happy-path steps they never reached are dropped,
+// otherwise the timeline would show e.g. "Avaliado ✓" before "Em Disputa".
+const TERMINAL_BRANCH_AFTER: Record<string, string> = {
+  DISPUTED: 'AWAITING_CONFIRMATION',
+  EXPIRED: 'PUBLISHED',
+};
+
 function buildTimelineSteps(status: string): Array<{ label: string; status: 'completed' | 'active' | 'upcoming' }> {
-  const allSteps = [
+  let allSteps = [
     { key: 'DRAFT', label: 'Rascunho' },
     { key: 'PUBLISHED', label: 'Publicado' },
     { key: 'WITH_PROPOSALS', label: 'Com Propostas' },
@@ -122,6 +133,10 @@ function buildTimelineSteps(status: string): Array<{ label: string; status: 'com
 
   let currentIndex = allSteps.findIndex((s) => s.key === status);
   if (currentIndex === -1 && status in TERMINAL_LABELS) {
+    const branchAfter = TERMINAL_BRANCH_AFTER[status];
+    if (branchAfter) {
+      allSteps = allSteps.slice(0, allSteps.findIndex((s) => s.key === branchAfter) + 1);
+    }
     allSteps.push({ key: status, label: TERMINAL_LABELS[status] });
     currentIndex = allSteps.length - 1;
   }
@@ -133,6 +148,7 @@ export function RequestDetail() {
   const queryClient = useQueryClient();
   const { user } = useAuthStore();
   const [showProposalModal, setShowProposalModal] = useState(false);
+  const [showResolveModal, setShowResolveModal] = useState(false);
   const [acceptingId, setAcceptingId] = useState<number | null>(null);
   const [paymentAcceptance, setPaymentAcceptance] = useState<ProposalAcceptResponse | null>(null);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -202,6 +218,28 @@ export function RequestDetail() {
   const flags = computeRequestFlags(request, user, proposals, reviews);
   const { isProvider, isOwner, canPropose, canCancel, canUploadPhotos, showExecution, showChat, showConfirmation, showReviewForm } = flags;
 
+  const isAdmin = user?.role === 'ADMIN';
+  const canResolveDispute = isAdmin && request?.status === 'DISPUTED';
+
+  // Built from data already on the page so the admin can arbitrate without
+  // navigating back to the disputes list on the admin dashboard.
+  const acceptedProposal = proposals?.find((p) => p.status === 'ACCEPTED');
+  const disputeForModal: AdminDispute | null = canResolveDispute && request
+    ? {
+        requestId,
+        requestTitle: request.title,
+        clientName: request.clientName,
+        providerName: acceptedProposal?.providerName ?? '—',
+        amount: acceptedProposal?.price ?? 0,
+        createdAt: request.createdAt,
+      }
+    : null;
+
+  function handleResolveClose() {
+    setShowResolveModal(false);
+    queryClient.invalidateQueries({ queryKey: ['request', requestId] });
+  }
+
   if (requestLoading) {
     return (
       <AnimatedPage className="max-w-3xl mx-auto">
@@ -239,6 +277,12 @@ export function RequestDetail() {
           <h1 className="text-xl font-bold text-neutral-900">{request.title}</h1>
         </div>
         <div className="flex gap-2">
+          {canResolveDispute && (
+            <Button size="sm" onClick={() => setShowResolveModal(true)}>
+              <Scale className="h-4 w-4" />
+              Resolver Disputa
+            </Button>
+          )}
           {canPropose && (
             <Button size="sm" onClick={() => setShowProposalModal(true)}>
               Submeter Proposta
@@ -336,8 +380,9 @@ export function RequestDetail() {
             />
           )}
 
-          {/* Chat Panel (>=AWARDED, for both client and provider) */}
-          {showChat && <ChatPanel requestId={requestId} />}
+          {/* Chat Panel (>=AWARDED). Admin sees it read-only: the backend allows
+              admins to read messages for dispute arbitration but not to send. */}
+          {showChat && <ChatPanel requestId={requestId} readOnly={isAdmin} />}
 
           {/* Confirmation Panel (AWAITING_CONFIRMATION, client only) */}
           {showConfirmation && <ConfirmationPanel requestId={requestId} />}
@@ -433,6 +478,15 @@ export function RequestDetail() {
         acceptance={paymentAcceptance}
         onSucceeded={handlePaymentSucceeded}
       />
+
+      {/* Resolve Dispute Modal (admin only, DISPUTED) */}
+      {canResolveDispute && (
+        <ResolveDisputeModal
+          open={showResolveModal}
+          onClose={handleResolveClose}
+          dispute={disputeForModal}
+        />
+      )}
 
       {/* Photo Lightbox */}
       {lightboxIndex !== null && (

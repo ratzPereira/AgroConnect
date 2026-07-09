@@ -78,4 +78,25 @@ describe('ChatPanel', () => {
     expect(screen.getByText('Olá!')).toBeInTheDocument();
     expect(screen.getByText('Bom dia!')).toBeInTheDocument();
   });
+
+  describe('readOnly mode (admin)', () => {
+    it('hides the composer and shows the read-only note', () => {
+      render(<ChatPanel requestId={1} readOnly />);
+      expect(screen.queryByPlaceholderText('Escreva uma mensagem...')).not.toBeInTheDocument();
+      expect(screen.getByText(/Modo de leitura/)).toBeInTheDocument();
+    });
+
+    it('still renders the messages', () => {
+      render(<ChatPanel requestId={1} readOnly />);
+      expect(screen.getByText('Olá!')).toBeInTheDocument();
+      expect(screen.getByText('Bom dia!')).toBeInTheDocument();
+    });
+
+    it('shows neutral empty state without call-to-action', () => {
+      mockReturnMessages = [];
+      render(<ChatPanel requestId={1} readOnly />);
+      expect(screen.getByText('Sem mensagens nesta conversa.')).toBeInTheDocument();
+      expect(screen.queryByText('Sem mensagens. Inicie a conversa.')).not.toBeInTheDocument();
+    });
+  });
 });

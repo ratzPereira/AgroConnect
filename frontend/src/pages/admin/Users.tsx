@@ -64,8 +64,12 @@ export function AdminUsers() {
                 <tr><td colSpan={8} className="text-center py-8"><Loader2 className="h-5 w-5 animate-spin text-neutral-400 mx-auto" /></td></tr>
               ) : data?.content?.map((user) => (
                 <tr key={user.id} className="border-b border-neutral-100">
-                  <td className="px-3 sm:px-6 py-3 font-medium text-neutral-900">{user.name}</td>
-                  <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{user.email}</td>
+                  <td className="px-3 sm:px-6 py-3 font-medium text-neutral-900 max-w-[180px]">
+                    <span className="block truncate" title={user.name}>{user.name}</span>
+                  </td>
+                  <td className="hidden md:table-cell px-6 py-3 text-neutral-600 max-w-[220px]">
+                    <span className="block truncate" title={user.email}>{user.email}</span>
+                  </td>
                   <td className="px-3 sm:px-6 py-3"><span className="text-xs font-medium px-2 py-0.5 rounded-full bg-neutral-100 text-neutral-700">{roleLabels[user.role]}</span></td>
                   <td className="px-3 sm:px-6 py-3">{user.active
                     ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-green-100 text-green-700">Ativo</span>
@@ -73,8 +77,8 @@ export function AdminUsers() {
                   </td>
                   <td className="hidden lg:table-cell px-6 py-3 text-neutral-600">{user.requestCount}</td>
                   <td className="hidden lg:table-cell px-6 py-3 text-neutral-600">{user.proposalCount}</td>
-                  <td className="hidden sm:table-cell px-6 py-3 text-neutral-500">{new Date(user.createdAt).toLocaleDateString('pt-PT')}</td>
-                  <td className="px-3 sm:px-6 py-3">
+                  <td className="hidden sm:table-cell px-6 py-3 text-neutral-500 whitespace-nowrap">{new Date(user.createdAt).toLocaleDateString('pt-PT')}</td>
+                  <td className="px-3 sm:px-6 py-3 whitespace-nowrap">
                     {user.active ? (
                       <Button size="sm" variant="danger" onClick={() => banMut.mutate(user.id)} loading={banMut.isPending}>
                         <Ban className="h-3.5 w-3.5" /><span className="hidden sm:inline">Banir</span>
