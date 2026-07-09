@@ -91,13 +91,14 @@ export function MainLayout() {
       >
         Saltar para o conteúdo principal
       </a>
-      {/* Desktop sidebar */}
-      <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200">
+      {/* Desktop sidebar — sticky so the user info + logout footer stays in view on
+          long pages; the nav list scrolls internally if it overflows. */}
+      <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200 lg:sticky lg:top-0 lg:h-svh">
         <div className="flex flex-col items-center px-5 pt-7 pb-5">
           <img src="/logotipo.png" alt="AgroConnect" className="w-36" />
         </div>
         <div className="mx-5 border-t border-neutral-700/60 mb-4" />
-        <nav className="flex-1 px-3 space-y-1">
+        <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
           {navItems.map((item) => (
             <NavLink
               key={item.to}

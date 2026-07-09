@@ -76,7 +76,9 @@ export function ProviderCalendar() {
         </div>
         <div className="flex items-center gap-2 flex-wrap">
           <FilterPopover events={events} filters={filters} onChange={updateFilters} onClear={clearFilters} />
-          <LaneSwitcher value={lane} onChange={setLane} />
+          {/* Lanes (operadores/máquinas/trabalhos) only shape the day/week grids —
+              the month grid has no per-resource rows, so hide the switcher there. */}
+          {view !== 'month' && <LaneSwitcher value={lane} onChange={setLane} />}
           <ViewSwitcher value={view} onChange={setView} />
         </div>
       </div>

@@ -1,5 +1,7 @@
 {
-  "annotations": { "list": [] },
+  "annotations": {
+    "list": []
+  },
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -9,29 +11,46 @@
     {
       "title": "Registrations (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 0, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "#22C55E", "value": null }
+              {
+                "color": "#22C55E",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area",
         "textMode": "value_and_name"
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/auth/register\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/auth/register\", method=\"POST\", status=\"201\"}[24h])",
           "legendFormat": "New Users",
           "refId": "A"
         }
@@ -40,29 +59,46 @@
     {
       "title": "Requests Created (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 6, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "#3B82F6", "value": null }
+              {
+                "color": "#3B82F6",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area",
         "textMode": "value_and_name"
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/requests\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/requests\", method=\"POST\", status=\"201\"}[24h])",
           "legendFormat": "Service Requests",
           "refId": "A"
         }
@@ -71,29 +107,46 @@
     {
       "title": "Proposals (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 12, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "#8B5CF6", "value": null }
+              {
+                "color": "#8B5CF6",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area",
         "textMode": "value_and_name"
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/api/v1/requests/.*/proposals\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/proposals\", method=\"POST\", status=\"201\"}[24h])",
           "legendFormat": "Proposals Sent",
           "refId": "A"
         }
@@ -102,29 +155,46 @@
     {
       "title": "Messages (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 6, "x": 18, "y": 0 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "#F97316", "value": null }
+              {
+                "color": "#F97316",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area",
         "textMode": "value_and_name"
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/api/v1/requests/.*/messages\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/messages\", method=\"POST\", status=\"201\"}[24h])",
           "legendFormat": "Chat Messages",
           "refId": "A"
         }
@@ -133,22 +203,39 @@
     {
       "title": "API Calls (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 8, "x": 0, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 0,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "#06B6D4", "value": null }
+              {
+                "color": "#06B6D4",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area",
         "textMode": "value_and_name"
@@ -164,29 +251,46 @@
     {
       "title": "Logins (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 8, "x": 8, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 8,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "#10B981", "value": null }
+              {
+                "color": "#10B981",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area",
         "textMode": "value_and_name"
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/auth/login\", method=\"POST\", status=\"200\"}[24h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/auth/login\", method=\"POST\", status=\"200\"}[24h])",
           "legendFormat": "Successful Logins",
           "refId": "A"
         }
@@ -195,29 +299,46 @@
     {
       "title": "Marketplace Listings (24h)",
       "type": "stat",
-      "gridPos": { "h": 5, "w": 8, "x": 16, "y": 5 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 5,
+        "w": 8,
+        "x": 16,
+        "y": 5
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
-          "color": { "mode": "thresholds" },
+          "color": {
+            "mode": "thresholds"
+          },
           "thresholds": {
             "steps": [
-              { "color": "#EC4899", "value": null }
+              {
+                "color": "#EC4899",
+                "value": null
+              }
             ]
           }
         },
         "overrides": []
       },
       "options": {
-        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
         "colorMode": "value",
         "graphMode": "area",
         "textMode": "value_and_name"
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/listings\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/listings\", method=\"POST\", status=\"201\"}[24h])",
           "legendFormat": "New Listings",
           "refId": "A"
         }
@@ -226,8 +347,16 @@
     {
       "title": "User Registrations",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 10 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -238,13 +367,16 @@
             "drawStyle": "bars",
             "barAlignment": 0
           },
-          "color": { "fixedColor": "#22C55E", "mode": "fixed" }
+          "color": {
+            "fixedColor": "#22C55E",
+            "mode": "fixed"
+          }
         },
         "overrides": []
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/auth/register\", method=\"POST\", status=\"201\"}[1h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/auth/register\", method=\"POST\", status=\"201\"}[1h])",
           "legendFormat": "Registrations/hour",
           "refId": "A"
         }
@@ -253,8 +385,16 @@
     {
       "title": "Service Requests Created",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 10 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 10
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -264,13 +404,16 @@
             "gradientMode": "scheme",
             "drawStyle": "bars"
           },
-          "color": { "fixedColor": "#3B82F6", "mode": "fixed" }
+          "color": {
+            "fixedColor": "#3B82F6",
+            "mode": "fixed"
+          }
         },
         "overrides": []
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/api/v1/requests\", method=\"POST\", status=\"201\"}[1h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/requests\", method=\"POST\", status=\"201\"}[1h])",
           "legendFormat": "Requests/hour",
           "refId": "A"
         }
@@ -279,8 +422,16 @@
     {
       "title": "Proposals Submitted",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 18 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 0,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -290,13 +441,16 @@
             "gradientMode": "scheme",
             "drawStyle": "bars"
           },
-          "color": { "fixedColor": "#8B5CF6", "mode": "fixed" }
+          "color": {
+            "fixedColor": "#8B5CF6",
+            "mode": "fixed"
+          }
         },
         "overrides": []
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/api/v1/requests/.*/proposals\", method=\"POST\", status=\"201\"}[1h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/proposals\", method=\"POST\", status=\"201\"}[1h])",
           "legendFormat": "Proposals/hour",
           "refId": "A"
         }
@@ -305,8 +459,16 @@
     {
       "title": "Chat Messages Sent",
       "type": "timeseries",
-      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 18 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 8,
+        "w": 12,
+        "x": 12,
+        "y": 18
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
           "unit": "short",
@@ -316,13 +478,16 @@
             "gradientMode": "scheme",
             "drawStyle": "bars"
           },
-          "color": { "fixedColor": "#F97316", "mode": "fixed" }
+          "color": {
+            "fixedColor": "#F97316",
+            "mode": "fixed"
+          }
         },
         "overrides": []
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/api/v1/requests/.*/messages\", method=\"POST\", status=\"201\"}[1h])",
+          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/messages\", method=\"POST\", status=\"201\"}[1h])",
           "legendFormat": "Messages/hour",
           "refId": "A"
         }
@@ -331,11 +496,21 @@
     {
       "title": "API Endpoint Usage (Top 10)",
       "type": "barchart",
-      "gridPos": { "h": 10, "w": 12, "x": 0, "y": 26 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 0,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {
-          "color": { "mode": "continuous-blues" }
+          "color": {
+            "mode": "continuous-blues"
+          }
         },
         "overrides": []
       },
@@ -356,41 +531,96 @@
     {
       "title": "HTTP Status Distribution (24h)",
       "type": "piechart",
-      "gridPos": { "h": 10, "w": 12, "x": 12, "y": 26 },
-      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "gridPos": {
+        "h": 10,
+        "w": 12,
+        "x": 12,
+        "y": 26
+      },
+      "datasource": {
+        "type": "prometheus",
+        "uid": "prometheus"
+      },
       "fieldConfig": {
         "defaults": {},
         "overrides": [
           {
-            "matcher": { "id": "byName", "options": "2xx" },
+            "matcher": {
+              "id": "byName",
+              "options": "2xx"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#22C55E", "mode": "fixed" } }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#22C55E",
+                  "mode": "fixed"
+                }
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "3xx" },
+            "matcher": {
+              "id": "byName",
+              "options": "3xx"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#3B82F6", "mode": "fixed" } }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#3B82F6",
+                  "mode": "fixed"
+                }
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "4xx" },
+            "matcher": {
+              "id": "byName",
+              "options": "4xx"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#EAB308", "mode": "fixed" } }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EAB308",
+                  "mode": "fixed"
+                }
+              }
             ]
           },
           {
-            "matcher": { "id": "byName", "options": "5xx" },
+            "matcher": {
+              "id": "byName",
+              "options": "5xx"
+            },
             "properties": [
-              { "id": "color", "value": { "fixedColor": "#EF4444", "mode": "fixed" } }
+              {
+                "id": "color",
+                "value": {
+                  "fixedColor": "#EF4444",
+                  "mode": "fixed"
+                }
+              }
             ]
           }
         ]
       },
       "options": {
         "pieType": "donut",
-        "reduceOptions": { "calcs": ["lastNotNull"] },
-        "legend": { "displayMode": "table", "placement": "right", "values": ["value", "percent"] }
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ]
+        },
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "values": [
+            "value",
+            "percent"
+          ]
+        }
       },
       "targets": [
         {
@@ -421,9 +651,17 @@
     }
   ],
   "schemaVersion": 39,
-  "tags": ["agroconnect", "business"],
-  "templating": { "list": [] },
-  "time": { "from": "now-24h", "to": "now" },
+  "tags": [
+    "agroconnect",
+    "business"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-24h",
+    "to": "now"
+  },
   "timepicker": {},
   "timezone": "browser",
   "title": "AgroConnect - Business Metrics",

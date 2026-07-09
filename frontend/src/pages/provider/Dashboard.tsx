@@ -99,7 +99,7 @@ export function ProviderDashboard({ inline }: ProviderDashboardProps) {
           <AzoresMap
             pins={pins ?? []}
             providerLocation={providerLocation}
-            height="420px"
+            height="560px"
             colorBy="status"
           />
         </div>
