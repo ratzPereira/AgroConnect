@@ -93,12 +93,13 @@ describe('PriceHistory', () => {
     });
 
     expect(screen.getByTestId('rc-area-chart')).toBeInTheDocument();
+    // formatUnitCost: min 2 decimals, trailing zeros beyond that stripped
     const latestTile = screen.getByText('Último preço').parentElement;
-    expect(latestTile?.textContent).toContain('€1.5000');
+    expect(latestTile?.textContent).toContain('€1.50');
     const wacTile = screen.getByText('Preço médio (WAC)').parentElement;
-    expect(wacTile?.textContent).toContain('€1.2500');
+    expect(wacTile?.textContent).toContain('€1.25');
     const minTile = screen.getByText('Mais barato').parentElement;
-    expect(minTile?.textContent).toContain('€1.0000');
+    expect(minTile?.textContent).toContain('€1.00');
     expect(screen.getByText('Repsol')).toBeInTheDocument();
   });
 
@@ -134,7 +135,7 @@ describe('PriceHistory', () => {
     await waitFor(() => {
       expect(screen.getByText('Compras registadas')).toBeInTheDocument();
     });
-    expect(screen.getByText(/\+€0\.2000/)).toBeInTheDocument();
+    expect(screen.getByText(/\+€0\.20/)).toBeInTheDocument();
   });
 
   it('renders total accumulated spend in footer', async () => {

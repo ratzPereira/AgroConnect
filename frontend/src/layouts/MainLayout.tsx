@@ -91,9 +91,10 @@ export function MainLayout() {
       >
         Saltar para o conteúdo principal
       </a>
-      {/* Desktop sidebar — sticky so the user info + logout footer stays in view on
-          long pages; the nav list scrolls internally if it overflows. */}
-      <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200 lg:sticky lg:top-0 lg:h-svh">
+      {/* Desktop sidebar — fixed to the viewport so the user info + logout footer is
+          always visible regardless of page scroll (sticky breaks under the container's
+          overflow-x-hidden); main compensates with lg:ml-60. */}
+      <aside className="hidden lg:flex w-60 flex-col bg-neutral-900 text-neutral-200 lg:fixed lg:inset-y-0 lg:left-0 lg:z-30">
         <div className="flex flex-col items-center px-5 pt-7 pb-5">
           <img src="/logotipo.png" alt="AgroConnect" className="w-36" />
         </div>
@@ -134,7 +135,7 @@ export function MainLayout() {
 
       <main
         id="main"
-        className="flex-1 bg-neutral-50 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 overflow-x-hidden"
+        className="flex-1 bg-neutral-50 pb-[calc(4rem+env(safe-area-inset-bottom))] lg:pb-0 overflow-x-hidden lg:ml-60"
       >
         {/* Mobile top header */}
         <div className="flex items-center justify-between px-4 py-3 pt-[calc(0.75rem+env(safe-area-inset-top))] border-b border-neutral-200 bg-white lg:hidden">

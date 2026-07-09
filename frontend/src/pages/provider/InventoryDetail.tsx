@@ -17,6 +17,7 @@ import { Alert } from '@/components/ui/Alert';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { AnimatedPage } from '@/components/AnimatedPage';
 import { PriceHistory } from '@/features/inventory/components/PriceHistory';
+import { formatUnitCost } from '@/utils/formatCurrency';
 import {
   ArrowLeft,
   ShoppingCart,
@@ -163,7 +164,7 @@ export function InventoryDetail() {
         <StatCard label="Stock atual" value={`${item.quantity} ${unitLabels[item.unit]}`} />
         <StatCard
           label="Custo médio"
-          value={item.costPerUnit == null ? '—' : `€${item.costPerUnit}`}
+          value={item.costPerUnit == null ? '—' : `€${formatUnitCost(item.costPerUnit)}`}
           hint="Preço médio ponderado"
         />
         <StatCard
@@ -225,7 +226,7 @@ export function InventoryDetail() {
                       {m.quantityDelta >= 0 ? '+' : ''}{m.quantityDelta} {unitLabels[item.unit]}
                     </td>
                     <td className="hidden sm:table-cell px-6 py-3 text-neutral-600">{m.quantityAfter}</td>
-                    <td className="hidden md:table-cell px-6 py-3 text-neutral-600">€{m.wacAfter}</td>
+                    <td className="hidden md:table-cell px-6 py-3 text-neutral-600">€{formatUnitCost(m.wacAfter)}</td>
                     <td className="hidden md:table-cell px-6 py-3 text-neutral-600">{m.reason ?? '—'}</td>
                     <td className="hidden lg:table-cell px-6 py-3 text-neutral-600">{m.actorName ?? '—'}</td>
                     <td className="px-3 sm:px-6 py-3 text-neutral-500 text-xs">

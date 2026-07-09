@@ -15,6 +15,7 @@ import { listMovements } from '@/api/inventory';
 import { Card, CardBody } from '@/components/ui/Card';
 import type { InventoryMovement, InventoryUnit } from '@/types/inventory';
 import { cn } from '@/utils/cn';
+import { formatUnitCost } from '@/utils/formatCurrency';
 
 const UNIT_LABELS: Record<InventoryUnit, string> = { KG: 'kg', L: 'L', UNIT: 'un' };
 
@@ -92,7 +93,7 @@ function PriceTooltip({ active, payload, unit }: { active?: boolean; payload?: T
         {new Date(point.dateIso).toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}
       </p>
       <p className="text-neutral-700">
-        <span className="font-semibold">€{point.unitCost.toFixed(4)}</span>
+        <span className="font-semibold">€{formatUnitCost(point.unitCost)}</span>
         <span className="text-neutral-500"> / {UNIT_LABELS[unit]}</span>
       </p>
       <p className="text-neutral-500">
@@ -174,10 +175,10 @@ export function PriceHistory({ itemId, unit, currentWac }: PriceHistoryProps) {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-5">
-            <StatTile label="Último preço" value={`€${stats!.latest.toFixed(4)}`} sub={`por ${UNIT_LABELS[unit]}`} tone="primary" />
-            <StatTile label="Preço médio (WAC)" value={currentWac == null ? '—' : `€${currentWac.toFixed(4)}`} sub={`por ${UNIT_LABELS[unit]}`} tone="leaf" />
-            <StatTile label="Mais barato" value={`€${stats!.min.toFixed(4)}`} sub={showMinMax ? 'mínimo histórico' : '—'} tone="neutral" />
-            <StatTile label="Mais caro" value={`€${stats!.max.toFixed(4)}`} sub={showMinMax ? 'máximo histórico' : '—'} tone="neutral" />
+            <StatTile label="Último preço" value={`€${formatUnitCost(stats!.latest)}`} sub={`por ${UNIT_LABELS[unit]}`} tone="primary" />
+            <StatTile label="Preço médio (WAC)" value={currentWac == null ? '—' : `€${formatUnitCost(currentWac)}`} sub={`por ${UNIT_LABELS[unit]}`} tone="leaf" />
+            <StatTile label="Mais barato" value={`€${formatUnitCost(stats!.min)}`} sub={showMinMax ? 'mínimo histórico' : '—'} tone="neutral" />
+            <StatTile label="Mais caro" value={`€${formatUnitCost(stats!.max)}`} sub={showMinMax ? 'máximo histórico' : '—'} tone="neutral" />
           </div>
 
           {points.length >= 2 && (
@@ -262,13 +263,13 @@ export function PriceHistory({ itemId, unit, currentWac }: PriceHistoryProps) {
                     </td>
                     <td className="px-4 py-2.5">
                       <div className="flex items-center gap-2">
-                        <span className="font-semibold text-neutral-900">€{p.unitCost.toFixed(4)}</span>
+                        <span className="font-semibold text-neutral-900">€{formatUnitCost(p.unitCost)}</span>
                         {showDiff && (
                           <span className={cn(
                             'inline-flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-semibold',
                             diff > 0 ? 'bg-warning-50 text-warning-700' : 'bg-leaf-50 text-leaf-700',
                           )}>
-                            {diff > 0 ? '+' : ''}€{diff.toFixed(4)}
+                            {diff > 0 ? '+' : ''}€{formatUnitCost(diff)}
                           </span>
                         )}
                       </div>

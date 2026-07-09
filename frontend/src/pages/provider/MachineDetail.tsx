@@ -197,6 +197,10 @@ export function MachineDetail() {
 
   const closeAction = () => { setAction(null); setError(null); };
 
+  // "2026-07-06" < "2026-07-09" — ISO date strings compare correctly as strings
+  const maintenanceOverdue =
+    !!analytics?.nextMaintenanceAt && analytics.nextMaintenanceAt < new Date().toISOString().slice(0, 10);
+
   return (
     <AnimatedPage>
       <button
@@ -281,6 +285,8 @@ export function MachineDetail() {
           <StatCard
             label="Próx. manutenção"
             value={analytics.nextMaintenanceAt ?? '—'}
+            danger={maintenanceOverdue}
+            hint={maintenanceOverdue ? 'Em atraso' : undefined}
           />
         </div>
       )}
@@ -676,13 +682,13 @@ export function MachineDetail() {
   );
 }
 
-function StatCard({ label, value, hint }: { readonly label: string; readonly value: string; readonly hint?: string }) {
+function StatCard({ label, value, hint, danger }: { readonly label: string; readonly value: string; readonly hint?: string; readonly danger?: boolean }) {
   return (
     <Card>
       <CardBody>
         <p className="text-xs text-neutral-500 mb-1">{label}</p>
-        <p className="text-lg font-semibold text-neutral-900">{value}</p>
-        {hint && <p className="text-xs text-neutral-400 mt-1">{hint}</p>}
+        <p className={`text-lg font-semibold ${danger ? 'text-danger-600' : 'text-neutral-900'}`}>{value}</p>
+        {hint && <p className={`text-xs mt-1 ${danger ? 'text-danger-500 font-medium' : 'text-neutral-400'}`}>{hint}</p>}
       </CardBody>
     </Card>
   );
