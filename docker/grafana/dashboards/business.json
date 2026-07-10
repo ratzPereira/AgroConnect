@@ -9,7 +9,7 @@
   "links": [],
   "panels": [
     {
-      "title": "Registrations (24h)",
+      "title": "Registrations (total)",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -50,14 +50,14 @@
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/auth/register\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "sum(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/auth/register\", method=\"POST\", status=\"201\"}) or vector(0)",
           "legendFormat": "New Users",
           "refId": "A"
         }
       ]
     },
     {
-      "title": "Requests Created (24h)",
+      "title": "Requests Created (total)",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -98,14 +98,14 @@
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/requests\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "sum(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/requests\", method=\"POST\", status=\"201\"}) or vector(0)",
           "legendFormat": "Service Requests",
           "refId": "A"
         }
       ]
     },
     {
-      "title": "Proposals (24h)",
+      "title": "Proposals (total)",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -146,14 +146,14 @@
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/proposals\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "sum(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/proposals\", method=\"POST\", status=\"201\"}) or vector(0)",
           "legendFormat": "Proposals Sent",
           "refId": "A"
         }
       ]
     },
     {
-      "title": "Messages (24h)",
+      "title": "Messages (total)",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -194,7 +194,7 @@
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/messages\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "sum(http_server_requests_seconds_count{application=\"agroconnect\", uri=~\"/v1/requests/.*/messages\", method=\"POST\", status=\"201\"}) or vector(0)",
           "legendFormat": "Chat Messages",
           "refId": "A"
         }
@@ -249,7 +249,7 @@
       ]
     },
     {
-      "title": "Logins (24h)",
+      "title": "Logins (total)",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -290,14 +290,14 @@
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/auth/login\", method=\"POST\", status=\"200\"}[24h])",
+          "expr": "sum(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/auth/login\", method=\"POST\", status=\"200\"}) or vector(0)",
           "legendFormat": "Successful Logins",
           "refId": "A"
         }
       ]
     },
     {
-      "title": "Marketplace Listings (24h)",
+      "title": "Marketplace Listings (total)",
       "type": "stat",
       "gridPos": {
         "h": 5,
@@ -338,7 +338,7 @@
       },
       "targets": [
         {
-          "expr": "increase(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/listings\", method=\"POST\", status=\"201\"}[24h])",
+          "expr": "sum(http_server_requests_seconds_count{application=\"agroconnect\", uri=\"/v1/listings\", method=\"POST\", status=\"201\"}) or vector(0)",
           "legendFormat": "New Listings",
           "refId": "A"
         }
