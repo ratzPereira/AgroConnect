@@ -52,7 +52,9 @@ const TERMINAL_LABELS: Record<string, string> = {
 };
 
 const PROPOSE_STATUSES = new Set(['PUBLISHED', 'WITH_PROPOSALS']);
-const CANCEL_BLOCKED_STATUSES = new Set(['COMPLETED', 'RATED', 'DISPUTED', 'EXPIRED', 'CANCELLED']);
+// Once work starts (check-in → IN_PROGRESS) the client can no longer cancel:
+// the protected path is confirm-or-dispute. Mirrors CANCELLABLE_STATES no backend.
+const CANCEL_BLOCKED_STATUSES = new Set(['IN_PROGRESS', 'AWAITING_CONFIRMATION', 'COMPLETED', 'RATED', 'DISPUTED', 'EXPIRED', 'CANCELLED']);
 const UPLOAD_STATUSES = new Set(['DRAFT', 'PUBLISHED', 'WITH_PROPOSALS']);
 
 function stepStatus(index: number, currentIndex: number): 'completed' | 'active' | 'upcoming' {
@@ -119,7 +121,25 @@ const TERMINAL_BRANCH_AFTER: Record<string, string> = {
   EXPIRED: 'PUBLISHED',
 };
 
-function buildTimelineSteps(status: string): Array<{ label: string; status: 'completed' | 'active' | 'upcoming' }> {
+interface TimelineHints {
+  hasAcceptedProposal?: boolean;
+  proposalCount?: number;
+  wasPublished?: boolean;
+}
+
+// CANCELLED can branch from several states and the current status alone doesn't
+// say which — infer the furthest confirmed milestone from data already on the page.
+function cancelledBranchAfter(hints: TimelineHints): string {
+  if (hints.hasAcceptedProposal) return 'AWARDED';
+  if ((hints.proposalCount ?? 0) > 0) return 'WITH_PROPOSALS';
+  if (hints.wasPublished) return 'PUBLISHED';
+  return 'DRAFT';
+}
+
+function buildTimelineSteps(
+  status: string,
+  hints: TimelineHints = {},
+): Array<{ label: string; status: 'completed' | 'active' | 'upcoming' }> {
   let allSteps = [
     { key: 'DRAFT', label: 'Rascunho' },
     { key: 'PUBLISHED', label: 'Publicado' },
@@ -133,7 +153,9 @@ function buildTimelineSteps(status: string): Array<{ label: string; status: 'com
 
   let currentIndex = allSteps.findIndex((s) => s.key === status);
   if (currentIndex === -1 && status in TERMINAL_LABELS) {
-    const branchAfter = TERMINAL_BRANCH_AFTER[status];
+    const branchAfter = status === 'CANCELLED'
+      ? cancelledBranchAfter(hints)
+      : TERMINAL_BRANCH_AFTER[status];
     if (branchAfter) {
       allSteps = allSteps.slice(0, allSteps.findIndex((s) => s.key === branchAfter) + 1);
     }
@@ -455,7 +477,13 @@ export function RequestDetail() {
               <h2 className="font-semibold text-neutral-900 text-sm">Progresso</h2>
             </CardHeader>
             <CardBody>
-              <StatusTimeline steps={buildTimelineSteps(request.status)} />
+              <StatusTimeline
+                steps={buildTimelineSteps(request.status, {
+                  hasAcceptedProposal: proposals?.some((p) => p.status === 'ACCEPTED') ?? false,
+                  proposalCount: proposals?.length ?? request.proposalCount,
+                  wasPublished: request.expiresAt !== null,
+                })}
+              />
             </CardBody>
           </Card>
         </div>

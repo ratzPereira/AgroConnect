@@ -385,4 +385,35 @@ describe('RequestDetail — deeper coverage', () => {
       expect(screen.queryByText('Resolver Disputa')).not.toBeInTheDocument();
     });
   });
+
+  describe('CANCELLED request', () => {
+    it('timeline branches Cancelado after the furthest confirmed milestone (no Concluído/Avaliado)', async () => {
+      state.request = { ...baseRequest, status: 'CANCELLED', expiresAt: '2026-08-01T00:00:00Z' };
+      state.proposals = [
+        { id: 10, providerName: 'AgroServiços', price: 666, status: 'ACCEPTED', requestId: 1, providerId: 3 },
+      ];
+      renderRequestDetail();
+      await waitFor(() => {
+        expect(screen.getByTestId('status-timeline')).toBeInTheDocument();
+      });
+      const labels = Array.from(
+        screen.getByTestId('status-timeline').querySelectorAll('span'),
+      ).map((el) => el.textContent);
+      expect(labels).toEqual([
+        'Rascunho', 'Publicado', 'Com Propostas', 'Adjudicado', 'Cancelado',
+      ]);
+      expect(labels).not.toContain('Concluído');
+      expect(labels).not.toContain('Avaliado');
+    });
+
+    it('hides the cancel button once work is in progress', async () => {
+      state.request = { ...baseRequest, status: 'IN_PROGRESS' };
+      renderRequestDetail();
+      await waitFor(() => {
+        const titles = screen.getAllByText('Lavoura de terreno');
+        expect(titles.length).toBeGreaterThanOrEqual(1);
+      });
+      expect(screen.queryByText('Cancelar')).not.toBeInTheDocument();
+    });
+  });
 });

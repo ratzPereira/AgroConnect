@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MapContainer, TileLayer, Marker, useMapEvents, useMap } from 'react-leaflet';
 import L from 'leaflet';
+import { LocateFixed, Loader2 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 
 // Custom SVG marker icon (avoids Leaflet's broken PNG imports with Vite)
@@ -57,8 +58,32 @@ function MapCenterUpdater({ center }: { center: { lat: number; lng: number; zoom
 
 const DEFAULT_CENTER = { lat: 38.7, lng: -27.2, zoom: 6 };
 
+// Mirrors the backend DTO validation bounds — coordinates outside the Azores
+// would be rejected on submit, so we warn instead of dropping the pin.
+const AZORES_BOUNDS = { latMin: 36.9, latMax: 39.8, lngMin: -31.3, lngMax: -24.7 };
+
+interface FlyTarget {
+  lat: number;
+  lng: number;
+  zoom: number;
+  seq: number;
+}
+
+function FlyTo({ target }: { readonly target: FlyTarget | null }) {
+  const map = useMap();
+  useEffect(() => {
+    if (target) {
+      map.flyTo([target.lat, target.lng], target.zoom, { duration: 0.8 });
+    }
+  }, [map, target]);
+  return null;
+}
+
 export function LocationPicker({ lat, lng, onChange, center }: LocationPickerProps) {
   const mapCenter = center ?? DEFAULT_CENTER;
+  const [locating, setLocating] = useState(false);
+  const [geoError, setGeoError] = useState<string | null>(null);
+  const [flyTarget, setFlyTarget] = useState<FlyTarget | null>(null);
 
   const markerPosition = useMemo(() => {
     if (lat !== null && lng !== null) {
@@ -66,6 +91,36 @@ export function LocationPicker({ lat, lng, onChange, center }: LocationPickerPro
     }
     return null;
   }, [lat, lng]);
+
+  function handleUseMyLocation() {
+    if (!navigator.geolocation) {
+      setGeoError('O seu dispositivo não suporta geolocalização.');
+      return;
+    }
+    setLocating(true);
+    setGeoError(null);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setLocating(false);
+        const myLat = Math.round(pos.coords.latitude * 10000) / 10000;
+        const myLng = Math.round(pos.coords.longitude * 10000) / 10000;
+        if (
+          myLat < AZORES_BOUNDS.latMin || myLat > AZORES_BOUNDS.latMax ||
+          myLng < AZORES_BOUNDS.lngMin || myLng > AZORES_BOUNDS.lngMax
+        ) {
+          setGeoError('A sua localização atual está fora dos Açores — marque o local no mapa.');
+          return;
+        }
+        onChange(myLat, myLng);
+        setFlyTarget({ lat: myLat, lng: myLng, zoom: 15, seq: Date.now() });
+      },
+      () => {
+        setLocating(false);
+        setGeoError('Não foi possível obter a localização. Verifique as permissões do browser.');
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }
 
   return (
     <div className="space-y-2">
@@ -86,6 +141,7 @@ export function LocationPicker({ lat, lng, onChange, center }: LocationPickerPro
           />
           <ClickHandler onChange={onChange} />
           <MapCenterUpdater center={mapCenter} />
+          <FlyTo target={flyTarget} />
           {markerPosition && <Marker position={markerPosition} icon={markerIcon} />}
         </MapContainer>
         <div
@@ -96,7 +152,24 @@ export function LocationPicker({ lat, lng, onChange, center }: LocationPickerPro
             Clique no mapa para marcar a localização
           </p>
         </div>
+        <button
+          type="button"
+          onClick={handleUseMyLocation}
+          disabled={locating}
+          className="absolute top-3 right-3 inline-flex items-center gap-1.5 rounded-lg bg-white/95 backdrop-blur-sm px-3 py-2 text-xs font-medium text-primary-700 shadow-sm border border-neutral-200 hover:bg-primary-50 transition-colors disabled:opacity-60"
+          style={{ zIndex: 1000 }}
+        >
+          {locating
+            ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            : <LocateFixed className="h-3.5 w-3.5" />}
+          {locating ? 'A localizar…' : 'Usar a minha localização'}
+        </button>
       </div>
+      {geoError && (
+        <p className="text-xs text-warning-700 bg-warning-50 border border-warning-200 rounded-lg px-3 py-2">
+          {geoError}
+        </p>
+      )}
       {lat !== null && lng !== null && (
         <div className="flex gap-4 text-sm text-neutral-600">
           <span>Lat: <strong>{lat}</strong></span>

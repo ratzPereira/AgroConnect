@@ -79,9 +79,13 @@ public class ServiceRequestService {
     private static final String EVENT_DISPUTE_RESOLVED = "DISPUTE_RESOLVED";
     private static final String LABEL_DISPUTE_RESOLVED = "Disputa resolvida";
 
+    // The client may cancel freely only while no work has happened yet. Once the
+    // provider checks in (IN_PROGRESS onwards) the work is being performed — a free
+    // cancel with full refund would let the client keep the work AND the money.
+    // From there the protected path applies: wait for completion, then confirm or dispute.
     private static final Set<RequestStatus> CANCELLABLE_STATES = Set.of(
             RequestStatus.DRAFT, RequestStatus.PUBLISHED, RequestStatus.WITH_PROPOSALS,
-            RequestStatus.AWARDED, RequestStatus.IN_PROGRESS, RequestStatus.AWAITING_CONFIRMATION);
+            RequestStatus.AWARDED);
 
     private static final Set<RequestStatus> PHOTO_ALLOWED_STATES = Set.of(
             RequestStatus.DRAFT, RequestStatus.PUBLISHED);
@@ -91,8 +95,8 @@ public class ServiceRequestService {
             RequestStatus.PUBLISHED, EnumSet.of(RequestStatus.WITH_PROPOSALS, RequestStatus.EXPIRED, RequestStatus.CANCELLED),
             RequestStatus.WITH_PROPOSALS, EnumSet.of(RequestStatus.AWARDED, RequestStatus.CANCELLED),
             RequestStatus.AWARDED, EnumSet.of(RequestStatus.IN_PROGRESS, RequestStatus.CANCELLED),
-            RequestStatus.IN_PROGRESS, EnumSet.of(RequestStatus.AWAITING_CONFIRMATION, RequestStatus.CANCELLED),
-            RequestStatus.AWAITING_CONFIRMATION, EnumSet.of(RequestStatus.COMPLETED, RequestStatus.DISPUTED, RequestStatus.CANCELLED),
+            RequestStatus.IN_PROGRESS, EnumSet.of(RequestStatus.AWAITING_CONFIRMATION),
+            RequestStatus.AWAITING_CONFIRMATION, EnumSet.of(RequestStatus.COMPLETED, RequestStatus.DISPUTED),
             RequestStatus.COMPLETED, EnumSet.of(RequestStatus.RATED),
             RequestStatus.DISPUTED, EnumSet.of(RequestStatus.COMPLETED, RequestStatus.CANCELLED)
     );
@@ -237,6 +241,12 @@ public class ServiceRequestService {
         validateOwnership(request, userId);
 
         if (!CANCELLABLE_STATES.contains(request.getStatus())) {
+            if (request.getStatus() == RequestStatus.IN_PROGRESS
+                    || request.getStatus() == RequestStatus.AWAITING_CONFIRMATION) {
+                throw new InvalidStateException(
+                        "O trabalho já começou — já não é possível cancelar. "
+                        + "Aguarde a conclusão e confirme o serviço ou abra uma disputa.");
+            }
             throw new InvalidStateException("Não é possível cancelar um pedido no estado " + request.getStatus());
         }
 

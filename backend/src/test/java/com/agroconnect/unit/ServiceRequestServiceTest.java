@@ -508,37 +508,30 @@ class ServiceRequestServiceTest {
         }
 
         @Test
-        void cancel_givenInProgressRequest_shouldCancel() {
+        void cancel_givenInProgressRequest_shouldThrowInvalidState() {
+            // Work has started (provider checked in) — a free cancel with full refund
+            // would let the client keep the work and the money.
             ServiceRequest request = ServiceRequestFixture.aRequest()
                     .status(RequestStatus.IN_PROGRESS)
                     .client(clientUser).category(category).build();
 
             when(requestRepository.findById(1L)).thenReturn(Optional.of(request));
-            when(requestRepository.save(any(ServiceRequest.class))).thenReturn(request);
-            when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.of(clientProfile));
-            when(proposalRepository.findByRequestId(1L)).thenReturn(List.of());
-            when(transactionRepository.findByRequestId(1L)).thenReturn(Optional.empty());
 
-            service.cancel(1L, 1L);
-
-            assertEquals(RequestStatus.CANCELLED, request.getStatus());
+            assertThrows(InvalidStateException.class, () -> service.cancel(1L, 1L));
+            verify(transactionService, never()).refund(any());
         }
 
         @Test
-        void cancel_givenAwaitingConfirmationRequest_shouldCancel() {
+        void cancel_givenAwaitingConfirmationRequest_shouldThrowInvalidState() {
+            // After completion the protected path applies: confirm or dispute.
             ServiceRequest request = ServiceRequestFixture.aRequest()
                     .status(RequestStatus.AWAITING_CONFIRMATION)
                     .client(clientUser).category(category).build();
 
             when(requestRepository.findById(1L)).thenReturn(Optional.of(request));
-            when(requestRepository.save(any(ServiceRequest.class))).thenReturn(request);
-            when(clientProfileRepository.findByUserId(1L)).thenReturn(Optional.of(clientProfile));
-            when(proposalRepository.findByRequestId(1L)).thenReturn(List.of());
-            when(transactionRepository.findByRequestId(1L)).thenReturn(Optional.empty());
 
-            service.cancel(1L, 1L);
-
-            assertEquals(RequestStatus.CANCELLED, request.getStatus());
+            assertThrows(InvalidStateException.class, () -> service.cancel(1L, 1L));
+            verify(transactionService, never()).refund(any());
         }
 
         @Test
