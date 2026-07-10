@@ -21,6 +21,7 @@ import {
   findIsland,
   findMunicipality,
   findParish,
+  findNearestLocation,
 } from '@/features/requests/data/azoresLocations';
 import {
   ArrowLeft, Beef, Sprout, Wheat, Apple, Wrench,
@@ -240,6 +241,14 @@ export function CreateListing() {
   function handleMapClick(lat: number, lng: number) {
     setValue('latitude', lat);
     setValue('longitude', lng);
+    // Local reverse geocoding — same behaviour as CreateRequest: a dropped pin
+    // auto-fills the required island/municipality selects (user can override).
+    const nearest = findNearestLocation(lat, lng);
+    if (nearest) {
+      setValue('island', nearest.island, { shouldValidate: true });
+      setValue('municipality', nearest.municipality, { shouldValidate: true });
+      setValue('parish', nearest.parish, { shouldValidate: true });
+    }
   }
 
   // --- Photo handling ---

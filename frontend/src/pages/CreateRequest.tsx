@@ -22,6 +22,7 @@ import {
   findIsland,
   findMunicipality,
   findParish,
+  findNearestLocation,
 } from '@/features/requests/data/azoresLocations';
 import type { CreateServiceRequestDto, Urgency } from '@/types/request';
 
@@ -266,6 +267,15 @@ export function CreateRequest() {
   function handleMapClick(lat: number, lng: number) {
     setValue('latitude', lat);
     setValue('longitude', lng);
+    // Local reverse geocoding: dropping a pin (map click or "use my location")
+    // auto-fills island/municipality/parish from the nearest known parish, so the
+    // user isn't blocked by the required selects. They can still override them.
+    const nearest = findNearestLocation(lat, lng);
+    if (nearest) {
+      setValue('island', nearest.island, { shouldValidate: true });
+      setValue('municipality', nearest.municipality, { shouldValidate: true });
+      setValue('parish', nearest.parish, { shouldValidate: true });
+    }
   }
 
   const pinTooFar = useMemo(() => {

@@ -414,3 +414,38 @@ export function findParish(
   const municipality = findMunicipality(islandName, municipalityName);
   return municipality?.parishes.find((p) => p.name === parishName);
 }
+
+export interface NearestLocation {
+  island: string;
+  municipality: string;
+  parish: string;
+}
+
+/**
+ * Local reverse geocoding: finds the parish closest to the given coordinates
+ * and returns its full administrative path (island → municipality → parish).
+ * Works entirely offline against the built-in dataset — no external API.
+ *
+ * Uses an equirectangular approximation (longitude scaled by cos(latitude)),
+ * which is more than accurate enough at island scale.
+ */
+export function findNearestLocation(lat: number, lng: number): NearestLocation | null {
+  const cosLat = Math.cos((lat * Math.PI) / 180);
+  let best: NearestLocation | null = null;
+  let bestDistSq = Number.POSITIVE_INFINITY;
+
+  for (const island of AZORES_ISLANDS) {
+    for (const municipality of island.municipalities) {
+      for (const parish of municipality.parishes) {
+        const dLat = parish.lat - lat;
+        const dLng = (parish.lng - lng) * cosLat;
+        const distSq = dLat * dLat + dLng * dLng;
+        if (distSq < bestDistSq) {
+          bestDistSq = distSq;
+          best = { island: island.name, municipality: municipality.name, parish: parish.name };
+        }
+      }
+    }
+  }
+  return best;
+}
